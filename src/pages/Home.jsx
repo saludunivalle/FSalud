@@ -55,9 +55,13 @@ const Home = () => {
       }}
     >
       <HeroSection elevation={0}>
-        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-          Sistema de Gestión Documental
+        <Typography variant="h4" component="h1" gutterBottom fontWeight="bold" color="#B22222" marginX={10}>
+          Facultad de Salud
         </Typography>
+        <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
+          Gestor documentos profesionales en escenarios de practica 
+        </Typography>
+        
         <Typography variant="body1" paragraph>
           Gestiona tus solicitudes y documentos de forma eficiente
         </Typography>

@@ -122,7 +122,7 @@ const Header = ({ userData }) => {
       </Logo>
       
       <TitleContainer>
-        <Title>Solicitud Actividades de Extensión</Title>
+        <Title>Gestor de documentos profesionales</Title>
         {userData && <UserName>{`${capitalizeWords(userData.name)}`}</UserName>}
       </TitleContainer>
       
