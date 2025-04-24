@@ -43,11 +43,15 @@ const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B2222
     };
   }, [showSingleButton]);
 
-  const handleCredentialResponse = async (response) => {
+
+const handleCredentialResponse = async (response) => {
     try {
       const idToken = response.credential;
+      console.log("Enviando token a servidor...");
       
-      const result = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/api/auth/google', { idToken });
+      const result = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/api/auth/google', { 
+        idToken: idToken 
+      });
       
       if (result.data.success) {
         localStorage.setItem('google_token', idToken);
@@ -64,7 +68,7 @@ const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B2222
       }
     } catch (error) {
       console.error('Error durante la autenticación:', error);
-      alert(error.response?.data?.error || 'Error durante la autenticación');
+      alert(`Error de autenticación: ${error.response?.data?.error || error.message}`);
     }
   };
 
