@@ -1,18 +1,18 @@
-// src/pages/Home.jsx
 import React from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import GoogleLogin from '../components/auth/GoogleLogin';
 import { Box, Typography, Button, Paper, Container } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 const HeroSection = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(8),
-  marginTop: theme.spacing(16), // Aumentado el espacio con respecto al header
+  padding: theme.spacing(12),
+  marginTop: theme.spacing(18), 
   textAlign: 'center',
   color: theme.palette.text.primary,
   borderRadius: theme.spacing(2),
   backgroundImage: 'linear-gradient(120deg, #e3e4e5 0%, #f5f5f5 100%)',
-  opacity: 0.9, // Añadida opacidad al bloque
+  opacity: 0.85, // Añadida opacidad al contenedor principal
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
@@ -21,38 +21,44 @@ const ActionButton = styled(Button)(({ theme }) => ({
   borderRadius: theme.spacing(5),
   backgroundColor: '#B22222', // Color rojo sangre toro
   '&:hover': {
-    backgroundColor: '#8B0000', // Un poco más oscuro al hover
+    backgroundColor: '#8B0000', // Un tono más oscuro al hacer hover
   },
 }));
 
 const Home = () => {
-  const { isLogin, user } = useUser();
+  const { isLogin, user, setUser, setIsLogin } = useUser();
+  const navigate = useNavigate();
+  
+  // Esta función se llamará cuando la autenticación sea exitosa
+  const handleLoginSuccess = (userData) => {
+    navigate('/dashboard');
+  };
   
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth="sm">
       <HeroSection elevation={0}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight="bold">
-          Gestión Documental - Área de Salud Univalle
+          Sistema de Gestión Documental
         </Typography>
-        <Typography variant="h6" color="textSecondary" paragraph>
-          Sube, gestiona y consulta el estado de tus documentos de forma sencilla
+        <Typography variant="body1" paragraph>
+          Gestiona tus solicitudes y documentos de forma eficiente
         </Typography>
         
         {!isLogin ? (
-          <ActionButton
-            variant="contained"
-            size="large"
-            component={RouterLink}
-            to="/login"
-          >
-            Iniciar Sesión
-          </ActionButton>
+          <Box sx={{ marginTop: 4 }}>
+            <GoogleLogin 
+              setIsLogin={setIsLogin} 
+              setUserInfo={setUser} 
+              onSuccess={handleLoginSuccess}
+              buttonColor="#B22222"
+              showSingleButton={true}
+            />
+          </Box>
         ) : (
           <ActionButton
             variant="contained"
             size="large"
-            component={RouterLink}
-            to="/dashboard"
+            onClick={() => navigate('/dashboard')}
           >
             Ir al Dashboard
           </ActionButton>

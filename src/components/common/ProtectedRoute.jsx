@@ -1,4 +1,4 @@
-// src/components/common/ProtectedRoute.jsx
+// src/components/common/ProtectedRoute.jsx (modificado)
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
@@ -14,8 +14,8 @@ const ProtectedRoute = ({ children }) => {
 
   // Verificar si el usuario está autenticado
   if (!isLogin || !user) {
-    // Redirigir a login guardando la ubicación actual
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Redirigir a home guardando la ubicación actual
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Verificar si el usuario tiene correo @correounivalle.edu.co
@@ -24,9 +24,10 @@ const ProtectedRoute = ({ children }) => {
     localStorage.removeItem('google_token');
     localStorage.removeItem('email');
     localStorage.removeItem('user_id');
+    localStorage.removeItem('name');
     return (
       <Navigate
-        to="/login"
+        to="/"
         state={{ error: 'Por favor ingrese con un correo institucional (@correounivalle.edu.co)' }}
         replace
       />

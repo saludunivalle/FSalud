@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export const getUserData = async (userId) => {
   try {
-    const response = await axios.get(`https://siac-extension-server.vercel.app/getUser`, {
+    const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
       params: { userId }
     });
     return response.data;
@@ -15,7 +15,7 @@ export const getUserData = async (userId) => {
 
 export const updateUserData = async (userId, userData) => {
   try {
-    const response = await axios.post(`https://siac-extension-server.vercel.app/updateUser`, {
+    const response = await axios.post(`https://fsalud-server-saludunivalles-projects.vercel.app/updateUser`, {
       userId,
       ...userData
     });

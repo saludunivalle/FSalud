@@ -27,7 +27,7 @@ export const DocumentProvider = ({ children }) => {
       try {
         // Ejemplo de cómo podrías obtener los documentos activos
         const activeResponse = await axios.get(
-          'https://siac-extension-server.vercel.app/getActiveRequests',
+          'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
           { params: { userId: user.id } }
         );
         
@@ -62,7 +62,7 @@ export const DocumentProvider = ({ children }) => {
     setLoading(true);
     try {
       const activeResponse = await axios.get(
-        'https://siac-extension-server.vercel.app/getActiveRequests',
+        'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
         { params: { userId: user.id } }
       );
       

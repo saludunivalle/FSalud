@@ -1,10 +1,9 @@
-// src/services/authService.js
+// src/services/authService.js - Actualizado
 import api from './api';
-import axios from 'axios';
 
 export const saveUser = async (userInfo) => {
   try {
-    const response = await axios.post('https://siac-extension-server.vercel.app/saveUser', userInfo);
+    const response = await api.post('/auth/google', userInfo);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Error al guardar usuario');

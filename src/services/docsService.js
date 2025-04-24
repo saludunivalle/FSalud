@@ -5,7 +5,7 @@ import axios from 'axios';
 export const getActiveRequests = async (userId) => {
   try {
     const response = await axios.get(
-      'https://siac-extension-server.vercel.app/getActiveRequests',
+      'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
       { params: { userId } }
     );
     return response.data;
@@ -19,7 +19,7 @@ export const getActiveRequests = async (userId) => {
 
 export const createNewRequest = async (requestData) => {
   try {
-    const response = await axios.post('https://siac-extension-server.vercel.app/createNewRequest', requestData);
+    const response = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/createNewRequest', requestData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Error al crear solicitud');
@@ -28,7 +28,7 @@ export const createNewRequest = async (requestData) => {
 
 export const getSolicitud = async (id_solicitud) => {
   try {
-    const response = await axios.get('https://siac-extension-server.vercel.app/getSolicitud', {
+    const response = await axios.get('https://fsalud-server-saludunivalles-projects.vercel.app/getSolicitud', {
       params: { id_solicitud }
     });
     return response.data;
@@ -39,7 +39,7 @@ export const getSolicitud = async (id_solicitud) => {
 
 export const getLastId = async (sheetName) => {
   try {
-    const response = await axios.get('https://siac-extension-server.vercel.app/getLastId', {
+    const response = await axios.get('https://fsalud-server-saludunivalles-projects.vercel.app/getLastId', {
       params: { sheetName }
     });
     return response.data;
@@ -50,7 +50,7 @@ export const getLastId = async (sheetName) => {
 
 export const generateReport = async (solicitudId, formNumber) => {
   try {
-    const response = await axios.post('https://siac-extension-server.vercel.app/generateReport', {
+    const response = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/generateReport', {
       solicitudId,
       formNumber
     });

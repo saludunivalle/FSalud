@@ -1,10 +1,9 @@
-// src/routes/AppRoutes.jsx
+// src/routes/AppRoutes.jsx (modificado)
 import React from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Layout from '../components/common/Layout';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 import Home from '../pages/Home';
-import Login from '../pages/Login';
 import Dashboard from '../pages/Dashboard';
 import NotFound from '../pages/NotFound';
 import { useUser } from '../context/UserContext';
@@ -24,10 +23,9 @@ const AppRoutes = () => {
         path="/" 
         element={<Layout userData={user}><Home /></Layout>} 
       />
-      <Route 
-        path="/login" 
-        element={<Layout userData={user}><Login /></Layout>} 
-      />
+      
+      {/* Ya no necesitamos esta ruta */}
+      {/* <Route path="/login" element={<Layout userData={user}><Login /></Layout>} /> */}
       
       {/* Rutas protegidas */}
       <Route 
