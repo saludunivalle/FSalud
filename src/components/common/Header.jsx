@@ -88,8 +88,10 @@ const Logo = styled("div")(({ theme }) => ({
 const ActionContainer = styled("div")(({ theme }) => ({
   display: "flex",
   alignItems: "center",
+  marginRight: "50px",
   [theme.breakpoints.down("sm")]: {
     marginTop: "10px",
+    marginRight: "0",
     width: "100%",
     justifyContent: "center",
   },

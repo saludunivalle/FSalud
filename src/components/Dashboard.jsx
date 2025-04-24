@@ -194,7 +194,7 @@ const Dashboard = ({ userData }) => {
                           size="small"
                           onClick={() => handleUpload(doc.id)}
                           sx={{ 
-                            minWidth: '100px',
+                            minWidth: '140px',
                             px: 2,
                             py: 0.7
                           }}
