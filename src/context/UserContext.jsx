@@ -1,4 +1,4 @@
-// src/context/UserContext.jsx
+// src/context/UserContext.jsx (Updated)
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 
@@ -21,14 +21,44 @@ export const UserProvider = ({ children }) => {
         const googleToken = localStorage.getItem('google_token');
         const email = localStorage.getItem('email');
         const userId = localStorage.getItem('user_id');
+        const isFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
         
         if (googleToken && email && userId) {
           // Si tenemos la información básica del usuario en localStorage
-          setUser({
-            id: userId,
-            email: email,
-            name: localStorage.getItem('name') || email.split('@')[0]
-          });
+          
+          // Obtener datos adicionales del usuario
+          try {
+            const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
+              params: { userId }
+            });
+            
+            // Verificar si es primer inicio de sesión basado en los datos recibidos
+            const userData = response.data;
+            const isNewUser = !userData.documentNumber || !userData.documentType;
+            const calculatedIsFirstLogin = isFirstLogin || isNewUser;
+            
+            setUser({
+              id: userId,
+              email: email,
+              name: localStorage.getItem('name') || email.split('@')[0],
+              ...userData,
+              isFirstLogin: calculatedIsFirstLogin
+            });
+            
+            // Actualizar localStorage con la bandera correcta
+            if (calculatedIsFirstLogin !== isFirstLogin) {
+              localStorage.setItem('isFirstLogin', String(calculatedIsFirstLogin));
+            }
+          } catch (error) {
+            // Si falla obtener datos adicionales, usar datos básicos
+            setUser({
+              id: userId,
+              email: email,
+              name: localStorage.getItem('name') || email.split('@')[0],
+              isFirstLogin: isFirstLogin
+            });
+          }
+          
           setIsLogin(true);
         }
       } catch (error) {
@@ -53,6 +83,7 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem('email');
     localStorage.removeItem('user_id');
     localStorage.removeItem('name');
+    localStorage.removeItem('isFirstLogin');
     setUser(null);
     setIsLogin(false);
   };

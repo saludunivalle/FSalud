@@ -1,8 +1,9 @@
+// src/pages/Home.jsx (Updated)
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import GoogleLogin from '../components/auth/GoogleLogin';
-import { Box, Typography, Button, Paper, Container } from '@mui/material';
+import { Box, Typography, Button, Paper, Container, Alert } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 const HeroSection = styled(Paper)(({ theme }) => ({
@@ -36,10 +37,16 @@ const ActionButton = styled(Button)(({ theme }) => ({
 const Home = () => {
   const { isLogin, user, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Esta función se llamará cuando la autenticación sea exitosa
   const handleLoginSuccess = (userData) => {
-    navigate('/dashboard');
+    // Verificar si es el primer inicio de sesión
+    if (userData.isFirstLogin) {
+      navigate('/completar-registro');
+    } else {
+      navigate('/dashboard');
+    }
   };
   
   return (
@@ -47,6 +54,7 @@ const Home = () => {
       maxWidth="md" 
       sx={{
         display: 'flex',
+        flexDirection: 'column',
         justifyContent: 'center',
         minHeight: '100vh',
         alignItems: 'center',
@@ -54,6 +62,21 @@ const Home = () => {
         paddingBottom: 4
       }}
     >
+      {/* Mostrar mensaje de error si viene de redireccionamiento */}
+      {location.state?.error && (
+        <Alert 
+          severity="error" 
+          sx={{ 
+            width: '100%', 
+            maxWidth: '550px', 
+            marginTop: 12, 
+            marginBottom: -8 
+          }}
+        >
+          {location.state.error}
+        </Alert>
+      )}
+      
       <HeroSection elevation={0}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight="bold" color="#B22222" marginX={10}>
           Facultad de Salud
@@ -80,9 +103,15 @@ const Home = () => {
           <ActionButton
             variant="contained"
             size="large"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => {
+              if (user.isFirstLogin) {
+                navigate('/completar-registro');
+              } else {
+                navigate('/dashboard');
+              }
+            }}
           >
-            Ir al Dashboard
+            {user.isFirstLogin ? 'Completar Registro' : 'Ir al Dashboard'}
           </ActionButton>
         )}
       </HeroSection>

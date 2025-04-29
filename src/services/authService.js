@@ -4,7 +4,11 @@ import api from './api';
 export const saveUser = async (userInfo) => {
   try {
     const response = await api.post('/auth/google', userInfo);
-    return response.data;
+    // Asegurarse de que isFirstLogin esté presente en la respuesta
+    return {
+      ...response.data,
+      isFirstLogin: response.data.isFirstLogin || false 
+    };
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Error al guardar usuario');
   }
