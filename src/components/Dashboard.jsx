@@ -1,124 +1,189 @@
 // src/components/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
+import {
+  Box,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
   TableRow,
   Button,
   Chip,
   Container,
   TablePagination,
-  CircularProgress
+  CircularProgress,
+  IconButton, // Added
+  Tooltip, // Added
+  TextField, // Added
+  InputAdornment // Added
 } from '@mui/material';
-import { Upload, CheckCircle, Cancel } from '@mui/icons-material';
+import { Upload, CheckCircle, Cancel, Visibility, Search, Warning, HourglassEmpty, Block, CloudOff } from '@mui/icons-material'; // Added Visibility, Search
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { useUser } from '../context/UserContext'; // Added useUser
+import { useDocuments } from '../context/DocumentContext'; // Added useDocuments
+import { useNavigate } from 'react-router-dom'; // Added useNavigate
 
-// Lista de documentos (normalmente se cargaría desde una API)
-const documentList = [
-  "Anticuerpos de Hepatitis_B",
-  "Anticuerpos de Varicela",
-  "COVID-19_Dosis_1",
-  "COVID-19_Dosis_2",
-  "Capacitación Control de Infecciones",
-  "Capacitación Historia Clínica",
-  "Capacitación Humanización de la Atención",
-  "Capacitación Seguridad del Paciente",
-  "Capacitación en DARUMA",
-  "Certificación de ARL",
-  "Certificado de Curso RCP o Soporte Vital",
-  "Certificado de EPS (ADRES)",
-  "Certificado de vinculación laboral",
-  "DPTa",
-  "Diploma de posgrado en docencia/pedagogía o certificación de experiencia docente (mín. tres años)",
-  "Diploma o Título Profesional",
-  "Documento de identificación (TI, CC, CE, Visa)",
-  "Hep_A_Dosis_1",
-  "Hep_A_Dosis_2",
-  "Hep_B_Dosis_1",
-  "Hep_B_Dosis_2",
-  "Hep_B_Dosis_3",
-  "Hoja de vida",
-  "Inducción Institucional",
-  "Inducción Institucional (General)",
-  "Influenza",
-  "Prueba PPD",
-  "Póliza de responsabilidad civil",
-  "Registro ReTHUS",
-  "Tetano_Dosis_1",
-  "Tetano_Dosis_2",
-  "Tetano_Dosis_3",
-  "Triple_Viral_MMR",
-  "Var_Dosis_1",
-  "Var_Dosis_2"
-];
-
-// Tema personalizado
+// Tema personalizado (mantener el existente)
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#B22222', // Color rojo sangre toro (Universidad del Valle)
+      main: '#B22222',
     },
     secondary: {
       main: '#1976d2',
     },
-    approved: {
-      light: '#e8f5e9', // Light green background for approved documents
-      main: '#81c784',
+    success: { // Renamed from approved
+      light: '#e8f5e9',
+      main: '#4caf50', // Use main color for consistency
     },
-    rejected: {
-      light: '#ffebee', // Light red background for rejected documents
-      main: '#ef9a9a',
+    error: { // Renamed from rejected
+      light: '#ffebee',
+      main: '#f44336', // Use main color for consistency
+    },
+    warning: { // Added for expired/pending
+      light: '#fff3e0',
+      main: '#ff9800',
+    },
+    info: { // Added for pending/sin revisar
+      light: '#e3f2fd',
+      main: '#2196f3',
+    },
+    default: { // Added for 'sin cargar'
+        light: '#f5f5f5',
+        main: '#9e9e9e',
     }
   },
 });
 
-const Dashboard = ({ userData }) => {
-  const [loading, setLoading] = useState(true);
+// Componente para el chip de estado (similar a DocumentHistory)
+const StatusChip = ({ status }) => {
+  let icon, color, label;
+
+  switch (status?.toLowerCase()) {
+    case 'cumplido':
+    case 'aprobado': // Assuming backend uses 'Cumplido' but frontend shows 'Aprobado'
+      icon = <CheckCircle />;
+      color = 'success';
+      label = 'Aprobado';
+      break;
+    case 'rechazado':
+      icon = <Cancel />; // Changed icon for consistency
+      color = 'error';
+      label = 'Rechazado';
+      break;
+    case 'expirado':
+    case 'vencido': // Allow both terms
+      icon = <Warning />;
+      color = 'warning';
+      label = 'Vencido';
+      break;
+    case 'sin revisar': // Map backend 'Sin revisar'
+    case 'pendiente': // Allow both terms
+      icon = <HourglassEmpty />;
+      color = 'info';
+      label = 'Pendiente';
+      break;
+    case 'no aplica':
+        icon = <Block />; // Example icon, choose appropriate one
+        color = 'default';
+        label = 'No Aplica';
+        break;
+    case 'sin cargar':
+    default:
+      icon = <CloudOff />; // Example icon
+      color = 'default';
+      label = 'Sin Cargar';
+      break;
+  }
+
+  return (
+    <Chip
+      icon={icon}
+      label={label}
+      color={color}
+      size="small"
+      variant="outlined"
+      sx={{ minWidth: '110px' }} // Ensure consistent width
+    />
+  );
+};
+
+const Dashboard = () => {
+  const { user } = useUser(); // Get user data
+  // Destructure isDocumentExpired if needed later for vencimiento column
+  const { userDocuments, documentTypes, loading: documentsLoading, getDocumentStatus, isDocumentExpired } = useDocuments(); // Use context
+  const navigate = useNavigate(); // For navigation
+
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [documents, setDocuments] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [combinedDocuments, setCombinedDocuments] = useState([]);
+  const [filteredDocuments, setFilteredDocuments] = useState([]);
 
-  // Simulamos la carga de datos
+  // Combine documentTypes with userDocuments
   useEffect(() => {
-    // Crear datos de ejemplo para los documentos
-    const mockDocuments = documentList.map((doc, index) => {
-      // Generamos datos aleatorios para simular el estado de los documentos
-      const isUploaded = Math.random() > 0.5;
-      const isApproved = isUploaded ? Math.random() > 0.3 : false;
-      
-      // Fechas aleatorias para simular el proceso
-      const today = new Date();
-      const uploadDate = isUploaded ? new Date(today.getTime() - Math.random() * 30 * 24 * 60 * 60 * 1000) : null;
-      const expeditionDate = isUploaded ? new Date(uploadDate.getTime() - Math.random() * 365 * 24 * 60 * 60 * 1000) : null;
-      const expirationDate = expeditionDate ? new Date(expeditionDate.getTime() + (365 + Math.floor(Math.random() * 365)) * 24 * 60 * 60 * 1000) : null;
-      const reviewDate = isApproved ? new Date(uploadDate.getTime() + Math.random() * 14 * 24 * 60 * 60 * 1000) : null;
-      
-      return {
-        id: index + 1,
-        name: doc,
-        uploaded: isUploaded,
-        uploadDate: uploadDate,
-        expeditionDate: expeditionDate,
-        expirationDate: expirationDate,
-        approved: isApproved,
-        reviewDate: reviewDate
-      };
-    });
-    
-    setDocuments(mockDocuments);
-    setLoading(false);
-  }, []);
+    if (documentTypes.length > 0) {
+      const combined = documentTypes.map(docType => {
+        const userDoc = userDocuments.find(ud => ud.id_doc === docType.id_doc);
+        // Determine status - map backend 'Sin revisar' to 'Pendiente' for consistency
+        let status = 'Sin cargar';
+        if (userDoc) {
+            status = userDoc.estado || 'Pendiente'; // Default to Pendiente if null/empty
+            if (status.toLowerCase() === 'sin revisar') {
+                status = 'Pendiente';
+            }
+            // Add check for expiration if needed for the status chip itself
+            // if (status.toLowerCase() === 'aprobado' || status.toLowerCase() === 'cumplido') {
+            //    const expires = docType.vence === 'si';
+            //    // Need fecha_vencimiento on userDoc for accurate check
+            //    // if (expires && userDoc.fecha_vencimiento && new Date(userDoc.fecha_vencimiento) < new Date()) {
+            //    //    status = 'Vencido';
+            //    // }
+            // }
+        }
 
-  // Formato de fecha
+        return {
+          id_doc: docType.id_doc,
+          name: docType.nombre_doc,
+          vence: docType.vence === 'si', // Convert to boolean
+          tiempo_vencimiento: docType.tiempo_vencimiento, // Keep this if needed for calculations
+          userDocData: userDoc || null, // Store the user document data or null
+          status: status, // Use the determined status
+          // Add specific dates if available in userDocData, otherwise null
+          fecha_expedicion: userDoc?.fecha_expedicion || null, // Assuming backend provides this
+          fecha_vencimiento: userDoc?.fecha_vencimiento || null, // Assuming backend provides this
+        };
+      });
+      setCombinedDocuments(combined);
+    } else {
+        setCombinedDocuments([]);
+    }
+  }, [documentTypes, userDocuments]);
+
+  // Filter documents based on search term
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDocuments(combinedDocuments);
+    } else {
+      const filtered = combinedDocuments.filter(doc =>
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredDocuments(filtered);
+    }
+    setPage(0); // Reset page when search term changes
+  }, [searchTerm, combinedDocuments]);
+
+
+  // Formato de fecha (mantener el existente)
   const formatDate = (date) => {
     if (!date) return '—';
-    return new Date(date).toLocaleDateString('es-CO', {
+    // Ensure date is parsed correctly, backend might send strings
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) return '—'; // Return dash for invalid dates too
+    return dateObj.toLocaleDateString('es-CO', {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit'
@@ -134,13 +199,38 @@ const Dashboard = ({ userData }) => {
     setPage(0);
   };
 
-  const handleUpload = (documentId) => {
-    alert(`Función para cargar documento ${documentId} (se implementará en próximas versiones)`);
+  // Navigate to the uploader page, passing the document type ID
+  const handleUpload = (documentTypeId) => {
+    // You might want to pass the document name as state too for better UX in the uploader
+    const docType = documentTypes.find(dt => dt.id_doc === documentTypeId);
+    navigate('/upload-document', { state: { documentId: documentTypeId, documentName: docType?.nombre_doc } });
   };
 
-  if (loading) {
+  // Determine row background color based on status
+   const getRowBackground = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'cumplido':
+      case 'aprobado':
+        return theme.palette.success.light;
+      case 'rechazado':
+        return theme.palette.error.light;
+      case 'expirado':
+      case 'vencido':
+        return theme.palette.warning.light;
+      case 'sin revisar':
+      case 'pendiente':
+        return theme.palette.info.light;
+       case 'no aplica':
+       case 'sin cargar':
+      default:
+        return 'inherit'; // Or theme.palette.default.light for 'sin cargar'/'no aplica'
+    }
+  };
+
+
+  if (documentsLoading) { // Use loading state from context
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px" sx={{ mt: 12 }}>
         <CircularProgress />
       </Box>
     );
@@ -151,100 +241,141 @@ const Dashboard = ({ userData }) => {
       <Container maxWidth="xl">
         <Box sx={{ padding: 3, marginTop: 12 }}>
           <Typography variant="h5" gutterBottom>
-            Bienvenido, {userData?.name || 'Usuario'}
+            Bienvenido, {user?.name || 'Usuario'}
           </Typography>
-          
+
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
-            Por favor cargar cada documento en donde corresponde
+            Por favor cargue o actualice cada documento requerido en la tabla.
           </Typography>
-          
+
+           {/* Barra de búsqueda */}
+           <Box sx={{ mb: 3 }}>
+             <TextField
+               fullWidth
+               placeholder="Buscar documento por nombre..."
+               variant="outlined"
+               value={searchTerm}
+               onChange={(e) => setSearchTerm(e.target.value)}
+               InputProps={{
+                 startAdornment: (
+                   <InputAdornment position="start">
+                     <Search />
+                   </InputAdornment>
+                 ),
+                 endAdornment: searchTerm && (
+                   <InputAdornment position="end">
+                     <IconButton onClick={() => setSearchTerm('')} edge="end">
+                       <Cancel />
+                     </IconButton>
+                   </InputAdornment>
+                 )
+               }}
+             />
+           </Box>
+
           <Paper sx={{ width: '100%', overflow: 'hidden', mb: 4 }}>
             <TableContainer sx={{ maxHeight: 540 }}>
               <Table stickyHeader aria-label="tabla de documentos">
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Documentos</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Cargue los documentos</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Fecha cargue</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Fecha de expedición</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Fecha de vencimiento</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Aprobado</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Fecha Revisión</TableCell>
+                    {/* Updated Headers based on request */}
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 180 }}>Documentos</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 150 }}>Cargue los documentos</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 130 }}>Estado</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 110 }}>Fecha cargue</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 110 }}>Fecha de expedición</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 110 }}>Fecha de vencimiento</TableCell>
+                    {/* 'Aprobado' column removed as it's part of 'Estado' */}
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 110 }}>Fecha Revisión</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 80 }}>Ver</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {documents
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((doc) => (
-                    <TableRow 
-                      hover 
-                      key={doc.id}
-                      sx={{ 
-                        backgroundColor: doc.uploaded ? 
-                          (doc.approved ? theme.palette.approved.light : theme.palette.rejected.light) : 
-                          'inherit' 
-                      }}
-                    >
-                      <TableCell>{doc.name}</TableCell>
-                      <TableCell>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<Upload />}
-                          size="small"
-                          onClick={() => handleUpload(doc.id)}
-                          sx={{ 
-                            minWidth: '140px',
-                            px: 2,
-                            py: 0.7
-                          }}
-                        >
-                          {doc.uploaded ? 'Actualizar' : 'Cargar'}
-                        </Button>
-                      </TableCell>
-                      <TableCell>{formatDate(doc.uploadDate)}</TableCell>
-                      <TableCell>{formatDate(doc.expeditionDate)}</TableCell>
-                      <TableCell>{formatDate(doc.expirationDate)}</TableCell>
-                      <TableCell>
-                        {doc.uploaded ? (
-                          doc.approved ? (
-                            <Chip 
-                              icon={<CheckCircle />} 
-                              label="Sí" 
-                              color="success" 
-                              size="small" 
-                              variant="outlined"
-                            />
+                  {filteredDocuments.length === 0 ? (
+                     <TableRow>
+                       {/* Adjusted colSpan to match new number of columns */}
+                       <TableCell colSpan={8} align="center">
+                         <Typography variant="body1" sx={{ py: 2 }}>
+                           {combinedDocuments.length === 0 ? "No hay tipos de documentos definidos." : "No se encontraron documentos con ese nombre."}
+                         </Typography>
+                       </TableCell>
+                     </TableRow>
+                   ) : (
+                    filteredDocuments
+                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                      .map((doc) => (
+                      <TableRow
+                        hover
+                        key={doc.id_doc} // Use document type ID as key
+                        sx={{ backgroundColor: getRowBackground(doc.status) }}
+                      >
+                        {/* Documentos */}
+                        <TableCell>{doc.name}</TableCell>
+                        {/* Cargue los documentos */}
+                        <TableCell>
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<Upload />}
+                            size="small"
+                            onClick={() => handleUpload(doc.id_doc)}
+                            sx={{
+                              minWidth: '120px', // Adjusted width
+                              px: 1.5, // Adjusted padding
+                              py: 0.7
+                            }}
+                          >
+                            {doc.userDocData ? 'Actualizar' : 'Cargar'}
+                          </Button>
+                        </TableCell>
+                        {/* Estado */}
+                        <TableCell>
+                          <StatusChip status={doc.status} />
+                        </TableCell>
+                        {/* Fecha cargue */}
+                        <TableCell>{formatDate(doc.userDocData?.fecha_cargue)}</TableCell>
+                        {/* Fecha de expedición - Placeholder, requires backend data */}
+                        <TableCell>{formatDate(doc.fecha_expedicion)}</TableCell>
+                        {/* Fecha de vencimiento - Placeholder, requires backend data */}
+                        <TableCell>{formatDate(doc.fecha_vencimiento)}</TableCell>
+                        {/* Fecha Revisión */}
+                        <TableCell>{formatDate(doc.userDocData?.fecha_revision)}</TableCell>
+                        {/* Ver */}
+                        <TableCell>
+                          {doc.userDocData?.ruta_archivo ? (
+                            <Tooltip title="Ver documento cargado">
+                              <IconButton
+                                color="primary"
+                                component="a"
+                                href={doc.userDocData.ruta_archivo}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Visibility />
+                              </IconButton>
+                            </Tooltip>
                           ) : (
-                            <Chip 
-                              icon={<Cancel />} 
-                              label="No" 
-                              color="error" 
-                              size="small" 
-                              variant="outlined"
-                            />
-                          )
-                        ) : (
-                          '—'
-                        )}
-                      </TableCell>
-                      <TableCell>{formatDate(doc.reviewDate)}</TableCell>
-                    </TableRow>
-                  ))}
+                            '—' // Show dash if no file path
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                   )}
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
-              component="div"
-              count={documents.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="Filas por página:"
-              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-            />
+            {/* ... TablePagination ... */}
+             <TablePagination
+               rowsPerPageOptions={[10, 25, 50]}
+               component="div"
+               count={filteredDocuments.length} // Use filtered length for count
+               rowsPerPage={rowsPerPage}
+               page={page}
+               onPageChange={handleChangePage}
+               onRowsPerPageChange={handleChangeRowsPerPage}
+               labelRowsPerPage="Filas por página:"
+               labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+             />
           </Paper>
         </Box>
       </Container>

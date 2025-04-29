@@ -1,61 +1,154 @@
-// src/services/docsService.js
+// src/services/documentService.js
 import api from './api';
 import axios from 'axios';
 
-export const getActiveRequests = async (userId) => {
+const BASE_URL = 'https://fsalud-server-saludunivalles-projects.vercel.app';
+
+/**
+ * Obtiene la lista de tipos de documentos disponibles
+ */
+export const getDocumentTypes = async () => {
   try {
-    const response = await axios.get(
-      'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
-      { params: { userId } }
-    );
+    const response = await axios.get(`${BASE_URL}/getDocumentos`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || 'Error al obtener tipos de documentos');
+  }
+};
+
+/**
+ * Obtiene los documentos cargados por un usuario
+ * @param {string} userId - ID del usuario
+ */
+export const getUserDocuments = async (userId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/getUserDocuments`, {
+      params: { userId }
+    });
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) {
-      return [];
+      return []; // Si no hay documentos, devolver array vacío
     }
-    throw new Error(error.response?.data?.message || 'Error al obtener solicitudes activas');
+    throw new Error(error.response?.data?.message || 'Error al obtener documentos del usuario');
   }
 };
 
-export const createNewRequest = async (requestData) => {
+/**
+ * Sube un documento a la plataforma
+ * @param {FormData} formData - Formulario con el archivo y metadatos
+ */
+export const uploadDocument = async (formData) => {
   try {
-    const response = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/createNewRequest', requestData);
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || 'Error al crear solicitud');
-  }
-};
-
-export const getSolicitud = async (id_solicitud) => {
-  try {
-    const response = await axios.get('https://fsalud-server-saludunivalles-projects.vercel.app/getSolicitud', {
-      params: { id_solicitud }
+    const response = await axios.post(`${BASE_URL}/uploadDocument`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Error al obtener detalles de la solicitud');
+    throw new Error(error.response?.data?.message || 'Error al cargar el documento');
   }
 };
 
-export const getLastId = async (sheetName) => {
+/**
+ * Actualiza un documento existente
+ * @param {string} documentId - ID del documento del usuario
+ * @param {FormData} formData - Formulario con el archivo y metadatos
+ */
+export const updateDocument = async (documentId, formData) => {
   try {
-    const response = await axios.get('https://fsalud-server-saludunivalles-projects.vercel.app/getLastId', {
-      params: { sheetName }
+    formData.append('documentId', documentId);
+    const response = await axios.post(`${BASE_URL}/updateDocument`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
     });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Error al obtener último ID');
+    throw new Error(error.response?.data?.message || 'Error al actualizar el documento');
   }
 };
 
-export const generateReport = async (solicitudId, formNumber) => {
+/**
+ * Elimina un documento del usuario
+ * @param {string} documentId - ID del documento del usuario a eliminar
+ */
+export const deleteDocument = async (documentId) => {
   try {
-    const response = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/generateReport', {
-      solicitudId,
-      formNumber
+    const response = await axios.delete(`${BASE_URL}/deleteDocument`, {
+      params: { documentId }
     });
     return response.data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || 'Error al generar reporte');
+    throw new Error(error.response?.data?.message || 'Error al eliminar el documento');
   }
+};
+
+/**
+ * Obtiene un documento específico del usuario
+ * @param {string} userId - ID del usuario
+ * @param {string} documentId - ID del tipo de documento
+ */
+export const getUserDocument = async (userId, documentId) => {
+  try {
+    const response = await axios.get(`${BASE_URL}/getUserDocument`, {
+      params: { userId, documentId }
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return null; // Si no existe, devolver null
+    }
+    throw new Error(error.response?.data?.message || 'Error al obtener el documento');
+  }
+};
+
+/**
+ * Verifica si un documento está vigente o ha expirado
+ * @param {object} document - Documento del usuario
+ * @param {object} documentType - Tipo de documento
+ */
+export const isDocumentExpired = (document, documentType) => {
+  // Si el documento no vence, nunca está expirado
+  if (documentType.vence !== 'si') {
+    return false;
+  }
+  
+  // Si no tiene fecha de vencimiento, no podemos determinar si está expirado
+  if (!document || !document.fecha_vencimiento) {
+    return false;
+  }
+  
+  const expirationDate = new Date(document.fecha_vencimiento);
+  const today = new Date();
+  
+  return expirationDate < today;
+};
+
+/**
+ * Calcula la fecha de vencimiento basada en la fecha de expedición y el tiempo de vencimiento
+ * @param {string} expeditionDate - Fecha de expedición (YYYY-MM-DD)
+ * @param {number} expirationTime - Tiempo de vencimiento en meses
+ */
+export const calculateExpirationDate = (expeditionDate, expirationTime) => {
+  if (!expeditionDate || !expirationTime) {
+    return null;
+  }
+  
+  const date = new Date(expeditionDate);
+  date.setMonth(date.getMonth() + parseInt(expirationTime));
+  
+  return date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+};
+
+export default {
+  getDocumentTypes,
+  getUserDocuments,
+  uploadDocument,
+  updateDocument,
+  deleteDocument,
+  getUserDocument,
+  isDocumentExpired,
+  calculateExpirationDate
 };

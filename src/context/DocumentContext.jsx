@@ -12,82 +12,98 @@ export const useDocuments = () => useContext(DocumentContext);
 // Proveedor del contexto
 export const DocumentProvider = ({ children }) => {
   const { user, isLogin } = useUser();
-  const [documents, setDocuments] = useState([]);
-  const [activeRequests, setActiveRequests] = useState([]);
-  const [completedRequests, setCompletedRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [userDocuments, setUserDocuments] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   // Cargar documentos cuando el usuario inicia sesión
   useEffect(() => {
-    const fetchDocuments = async () => {
-      if (!isLogin || !user) return;
-      
-      setLoading(true);
-      try {
-        // Ejemplo de cómo podrías obtener los documentos activos
-        const activeResponse = await axios.get(
-          'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
-          { params: { userId: user.id } }
-        );
-        
-        // Procesar y guardar las solicitudes activas
-        const requests = activeResponse.data;
-        const requestsWithStages = requests.map((request) => ({
-          ...request,
-          etapa_actual: Number(request.formulario) || 0,
-        }));
-        
-        setActiveRequests(requestsWithStages);
-        setError(null);
-      } catch (err) {
-        if (err.response?.status === 404) {
-          setActiveRequests([]);
-        } else {
-          setError(err.message || 'Error al cargar documentos');
-          console.error('Error fetching documents:', err);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchDocuments();
+    if (!isLogin || !user) {
+      setLoading(false);
+      return;
+    }
+    
+    fetchUserDocuments();
+    fetchDocumentTypes();
   }, [user, isLogin]);
 
-  // Función para actualizar documentos
-  const refreshDocuments = async () => {
-    if (!isLogin || !user) return;
-    
+  // Obtener los documentos del usuario
+  const fetchUserDocuments = async () => {
     setLoading(true);
     try {
-      const activeResponse = await axios.get(
-        'https://fsalud-server-saludunivalles-projects.vercel.app/getActiveRequests',
+      const response = await axios.get(
+        'https://fsalud-server-saludunivalles-projects.vercel.app/getUserDocuments',
         { params: { userId: user.id } }
       );
       
-      const requests = activeResponse.data;
-      const requestsWithStages = requests.map((request) => ({
-        ...request,
-        etapa_actual: Number(request.formulario) || 0,
-      }));
-      
-      setActiveRequests(requestsWithStages);
-    } catch (error) {
-      console.error('Error refreshing documents:', error);
+      setUserDocuments(response.data || []);
+      setError(null);
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setUserDocuments([]);
+      } else {
+        setError(err.message || 'Error al cargar documentos');
+        console.error('Error fetching user documents:', err);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Obtener los tipos de documentos disponibles
+  const fetchDocumentTypes = async () => {
+    try {
+      const response = await axios.get(
+        'https://fsalud-server-saludunivalles-projects.vercel.app/getDocumentos'
+      );
+      setDocumentTypes(response.data || []);
+    } catch (error) {
+      console.error('Error fetching document types:', error);
+    }
+  };
+
+  // Función para actualizar documentos
+  const refreshDocuments = async () => {
+    if (!isLogin || !user) return;
+    
+    await fetchUserDocuments();
+  };
+
+  // Función para obtener el estado de un documento
+  const getDocumentStatus = (documentId) => {
+    const document = userDocuments.find(doc => doc.id_doc === documentId);
+    
+    if (!document) {
+      return 'sin cargar';
+    }
+    
+    return document.estado || 'pendiente';
+  };
+
+  // Función para verificar si un documento está vencido
+  const isDocumentExpired = (documentId) => {
+    const document = userDocuments.find(doc => doc.id_doc === documentId);
+    
+    if (!document || !document.fecha_vencimiento) {
+      return false;
+    }
+    
+    const expirationDate = new Date(document.fecha_vencimiento);
+    const today = new Date();
+    
+    return expirationDate < today;
+  };
+
   // Valores disponibles en el contexto
   const value = {
-    documents,
-    activeRequests,
-    completedRequests,
+    userDocuments,
+    documentTypes,
     loading,
     error,
-    refreshDocuments
+    refreshDocuments,
+    getDocumentStatus,
+    isDocumentExpired
   };
 
   return (

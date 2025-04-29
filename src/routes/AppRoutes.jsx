@@ -1,65 +1,90 @@
-// src/routes/AppRoutes.jsx (modificado)
+// src/routes/AppRoutes.jsx
 import React from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import Layout from '../components/common/Layout';
-import ProtectedRoute from '../components/common/ProtectedRoute';
-import Home from '../pages/Home';
-import Dashboard from '../pages/Dashboard';
-import NotFound from '../pages/NotFound';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-
-// Componentes de estudiante (para rutas anidadas)
-import StudentDashboard from '../components/student/StudentDashboard';
+import HomePage from '../pages/Home';
+import DashboardPage from '../pages/Dashboard';
+import FirstLoginForm from '../components/auth/FirstLoginForm';
+import NotFoundPage from '../pages/NotFound';
+import Header from '../components/common/Header';
 import DocumentUploader from '../components/student/DocumentUploader';
 import DocumentHistory from '../components/student/DocumentHistory';
 
+// Componente para proteger rutas
+const ProtectedRoute = ({ children }) => {
+  const { isLogin, loading, user } = useUser();
+
+  if (loading) {
+    // Optional: Show a global loading spinner here
+    return <div>Cargando...</div>;
+  }
+
+  if (!isLogin) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Check for first login after ensuring user data is loaded
+  if (user && user.isFirstLogin) {
+     // Allow access only to the first login form if it's the first login
+     if (window.location.pathname !== '/complete-profile') {
+       return <Navigate to="/complete-profile" replace />;
+     }
+  } else if (window.location.pathname === '/complete-profile') {
+     // If not first login, redirect away from complete-profile
+     return <Navigate to="/dashboard" replace />;
+  }
+
+
+  return children;
+};
+
 const AppRoutes = () => {
-  const { user } = useUser();
+  const { isLogin } = useUser(); // Get login status for header
 
   return (
-    <Routes>
-      {/* Rutas públicas */}
-      <Route 
-        path="/" 
-        element={<Layout userData={user}><Home /></Layout>} 
-      />
-      
-      {/* Ya no necesitamos esta ruta */}
-      {/* <Route path="/login" element={<Layout userData={user}><Login /></Layout>} /> */}
-      
-      {/* Rutas protegidas */}
-      <Route 
-        path="/dashboard" 
-        element={
-          <Layout userData={user}>
+    <> {/* Use a Fragment or just return the content directly */}
+      {isLogin && <Header />} {/* Show header only when logged in */}
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+
+        {/* Rutas Protegidas */}
+        <Route
+          path="/dashboard"
+          element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardPage />
             </ProtectedRoute>
-          </Layout>
-        }
-      />
-      
-      {/* Rutas de documentos (anidadas y protegidas) */}
-      <Route 
-        path="/documentos" 
-        element={
-          <Layout userData={user}>
+          }
+        />
+         <Route
+           path="/document-history" // Added route for history
+           element={
+             <ProtectedRoute>
+               <DocumentHistory />
+             </ProtectedRoute>
+           }
+         />
+        <Route
+          path="/upload-document" // Added route for uploader
+          element={
             <ProtectedRoute>
-              <Outlet />
+              <DocumentUploader />
             </ProtectedRoute>
-          </Layout>
-        }
-      >
-        <Route index element={<DocumentHistory />} />
-        <Route path="subir" element={<DocumentUploader />} />
-      </Route>
-      
-      {/* Ruta 404 */}
-      <Route 
-        path="*" 
-        element={<Layout userData={user}><NotFound /></Layout>} 
-      />
-    </Routes>
+          }
+        />
+        <Route
+          path="/complete-profile"
+          element={
+            <ProtectedRoute> {/* Still protected to ensure user context is loaded */}
+              <FirstLoginForm />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Ruta Not Found */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
+    </> // Close Fragment
   );
 };
 
