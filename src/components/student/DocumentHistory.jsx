@@ -387,10 +387,11 @@ const DocumentHistory = () => {
                 {filteredHistory.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} align="center"> {/* Adjusted colSpan */}
-                      <Typography variant="body1" sx={{ py: 2 }}>
-                        {userDocuments.filter(doc => doc.fecha_cargue).length === 0 ? "No ha cargado ningún documento." : "No se encontraron documentos con ese nombre."}
-                      </Typography>
-                    </TableCell>
+                  <Typography variant="body1" sx={{ py: 2 }}>
+                    {/* Add check for userDocuments before filtering */}
+                    {(userDocuments && userDocuments.filter(doc => doc.fecha_cargue).length === 0) ? "No ha cargado ningún documento." : "No se encontraron documentos con ese nombre."}
+                  </Typography>
+                </TableCell>
                   </TableRow>
                 ) : (
                   filteredHistory

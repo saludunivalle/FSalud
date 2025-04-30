@@ -125,8 +125,10 @@ const Dashboard = () => {
 
   // Combine documentTypes with userDocuments
   useEffect(() => {
-    if (documentTypes.length > 0) {
+    // Add checks for both arrays before proceeding
+    if (documentTypes && documentTypes.length > 0 && userDocuments) {
       const combined = documentTypes.map(docType => {
+        // userDocuments is already checked above, so .find is safe
         const userDoc = userDocuments.find(ud => ud.id_doc === docType.id_doc);
         // Determine status - map backend 'Sin revisar' to 'Pendiente' for consistency
         let status = 'Sin cargar';

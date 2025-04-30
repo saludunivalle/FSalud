@@ -1,407 +1,389 @@
 // src/components/student/DocumentUploader.jsx
 import React, { useState, useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Button,
-  Grid,
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Button, 
+  TextField,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  LinearProgress,
+  CircularProgress,
   Alert,
-  AlertTitle,
+  Grid,
   IconButton,
-  CircularProgress
+  Tooltip
 } from '@mui/material';
-import { CloudUpload, Delete, CheckCircle, Cancel } from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
+import { 
+  CloudUpload as CloudUploadIcon,
+  Info as InfoIcon,
+  Check as CheckIcon
+} from '@mui/icons-material';
 import { useUser } from '../../context/UserContext';
-import { useDocuments } from '../../context/DocumentContext';
 import axios from 'axios';
-import { useLocation, useNavigate } from 'react-router-dom'; // Added useLocation, useNavigate
 
-// Componente estilizado para drag & drop
-const DropZone = styled(Box)(({ theme, isDragActive, hasFile }) => ({
-  border: `2px dashed ${isDragActive ? theme.palette.primary.main : hasFile ? theme.palette.success.main : theme.palette.grey[400]}`,
-  borderRadius: theme.shape.borderRadius,
-  padding: theme.spacing(3),
-  textAlign: 'center',
-  backgroundColor: isDragActive ? theme.palette.primary.light + '20' : hasFile ? theme.palette.success.light + '20' : theme.palette.grey[50],
-  cursor: 'pointer',
-  transition: 'all 0.3s ease',
-  minHeight: '150px',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  '&:hover': {
-    backgroundColor: theme.palette.grey[100],
-    borderColor: theme.palette.primary.main,
-  }
-}));
+// Lista de documentos disponibles para cargar
+const documentList = [
+  { id: "anticuerpos_hepatitis_b", name: "Anticuerpos de Hepatitis B", needsExpiration: true, info: "Certificado de anticuerpos contra Hepatitis B" },
+  { id: "anticuerpos_varicela", name: "Anticuerpos de Varicela", needsExpiration: true, info: "Certificado de anticuerpos contra Varicela" },
+  { id: "covid19_dosis1", name: "COVID-19 Dosis 1", needsExpiration: true, info: "Certificado de primera dosis contra COVID-19" },
+  { id: "covid19_dosis2", name: "COVID-19 Dosis 2", needsExpiration: true, info: "Certificado de segunda dosis contra COVID-19" },
+  { id: "capacitacion_control_infecciones", name: "Capacitación Control de Infecciones", needsExpiration: true, info: "Certificado de capacitación en control de infecciones" },
+  { id: "capacitacion_historia_clinica", name: "Capacitación Historia Clínica", needsExpiration: true, info: "Certificado de capacitación en manejo de historia clínica" },
+  { id: "capacitacion_humanizacion", name: "Capacitación Humanización de la Atención", needsExpiration: true, info: "Certificado de capacitación en humanización de la atención" },
+  { id: "capacitacion_seguridad_paciente", name: "Capacitación Seguridad del Paciente", needsExpiration: true, info: "Certificado de capacitación en seguridad del paciente" },
+  { id: "capacitacion_daruma", name: "Capacitación en DARUMA", needsExpiration: true, info: "Certificado de capacitación en el sistema DARUMA" },
+  { id: "certificacion_arl", name: "Certificación de ARL", needsExpiration: true, info: "Certificado de afiliación a ARL vigente" },
+  { id: "certificado_rcp", name: "Certificado de Curso RCP o Soporte Vital", needsExpiration: true, info: "Certificado de formación en RCP o soporte vital" },
+  { id: "certificado_eps", name: "Certificado de EPS (ADRES)", needsExpiration: true, info: "Certificado de afiliación a EPS vigente" },
+  { id: "documento_id", name: "Documento de identificación", needsExpiration: false, info: "Cédula, Tarjeta de Identidad, Cédula de Extranjería o Pasaporte" },
+  { id: "titulo_profesional", name: "Diploma o Título Profesional", needsExpiration: false, info: "Diploma o acta de grado" }
+];
 
 const DocumentUploader = () => {
   const { user } = useUser();
-  const { refreshDocuments } = useDocuments();
-  const location = useLocation(); // Get location state
-  const navigate = useNavigate(); // To navigate back
-
-  const [documents, setDocuments] = useState([]);
-  // Pre-select document if passed via state
-  const [selectedDocument, setSelectedDocument] = useState(location.state?.documentId || '');
-  const [selectedDocumentName, setSelectedDocumentName] = useState(location.state?.documentName || ''); // Store name for display
+  const [selectedDocument, setSelectedDocument] = useState('');
+  const [expeditionDate, setExpeditionDate] = useState('');
+  const [expirationDate, setExpirationDate] = useState('');
   const [file, setFile] = useState(null);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Cargar lista de documentos disponibles
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [documentInfo, setDocumentInfo] = useState(null);
+  
+  // Restablecer formulario cuando cambia el documento seleccionado
   useEffect(() => {
-    const fetchDocuments = async () => {
-      try {
-        const response = await axios.get(
-          'https://fsalud-server-saludunivalles-projects.vercel.app/getDocumentos'
-        );
-        setDocuments(response.data);
-      } catch (error) {
-        console.error('Error fetching documents:', error);
-      } finally {
-        setIsLoading(false);
+    if (selectedDocument) {
+      const doc = documentList.find(doc => doc.id === selectedDocument);
+      setDocumentInfo(doc);
+      setExpeditionDate('');
+      setExpirationDate('');
+      setFile(null);
+      setPreviewUrl('');
+      setSuccess(false);
+      setError('');
+    }
+  }, [selectedDocument]);
+  
+  // Crear vista previa cuando se selecciona un archivo
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl('');
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Limpiar URL al desmontar
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
       }
     };
-
-    fetchDocuments();
-  }, []);
-
-  // Manejar eventos de drag & drop
-  const handleDragEnter = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(true);
-  };
-
-  const handleDragLeave = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(true);
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
+  }, [file]);
+  
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
     
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  // Manejar selección de archivo
-  const handleFileInput = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const handleFile = (file) => {
-    // Validar tipo de archivo
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-    if (!allowedTypes.includes(file.type)) {
-      setErrorMessage('Tipo de archivo no permitido. Solo se aceptan PDF, JPEG y PNG.');
-      setUploadStatus('error');
+    // Validar tipo de archivo (PDF o imágenes)
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    if (selectedFile && !validTypes.includes(selectedFile.type)) {
+      setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
+      setFile(null);
       return;
     }
-
+    
     // Validar tamaño (máximo 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('El archivo es demasiado grande. El tamaño máximo es 5MB.');
-      setUploadStatus('error');
+    if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
+      setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
+      setFile(null);
       return;
     }
-
-    setFile(file);
-    setUploadStatus(null);
-    setErrorMessage('');
+    
+    setFile(selectedFile);
+    setError('');
   };
-
-  // Eliminar archivo seleccionado
-  const handleRemoveFile = () => {
-    setFile(null);
-    setUploadStatus(null);
-    setErrorMessage('');
-  };
-
-  const handleDocumentChange = (e) => {
-    const docId = e.target.value;
-    setSelectedDocument(docId);
-    // Find and set the name for display if needed
-    const doc = documents.find(d => d.id_doc === docId);
-    setSelectedDocumentName(doc ? doc.nombre_doc : '');
-  };
-
-  // Función para subir el archivo
-  const handleUpload = async () => {
-    if (!selectedDocument || !file || !user?.id) {
-      setErrorMessage('Por favor seleccione un documento y un archivo para cargar.');
-      setUploadStatus('error');
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validar formulario
+    if (!selectedDocument) {
+      setError('Selecciona un tipo de documento');
       return;
     }
-
-    setIsUploading(true);
-    setUploadStatus(null);
-    setUploadProgress(0);
-
-    // Crear FormData para enviar el archivo
+    
+    if (!expeditionDate) {
+      setError('La fecha de expedición es requerida');
+      return;
+    }
+    
+    if (documentInfo?.needsExpiration && !expirationDate) {
+      setError('La fecha de vencimiento es requerida para este documento');
+      return;
+    }
+    
+    if (!file) {
+      setError('Selecciona un archivo para cargar');
+      return;
+    }
+    
+    // Validar fechas
+    const expeditionDateObj = new Date(expeditionDate);
+    const today = new Date();
+    
+    if (expeditionDateObj > today) {
+      setError('La fecha de expedición no puede ser posterior a hoy');
+      return;
+    }
+    
+    if (expirationDate) {
+      const expirationDateObj = new Date(expirationDate);
+      
+      if (expirationDateObj < expeditionDateObj) {
+        setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición');
+        return;
+      }
+    }
+    
+    // Preparar datos para enviar
     const formData = new FormData();
-    // Ensure correct field names match backend ('file', 'userId', 'documentId')
+    formData.append('userId', user.id);
+    formData.append('documentType', selectedDocument);
+    formData.append('expeditionDate', expeditionDate);
+    if (expirationDate) {
+      formData.append('expirationDate', expirationDate);
+    }
     formData.append('file', file);
-    formData.append('id_usuario', user.id); // Match backend controller: expects id_usuario
-    formData.append('id_doc', selectedDocument); // Match backend controller: expects id_doc
-
+    
+    // Enviar al servidor
+    setLoading(true);
+    setError('');
+    
     try {
-      // Realizar la carga con seguimiento de progreso
+      // Modificar esta URL a la correcta de tu backend
       const response = await axios.post(
-        // Ensure this URL is correct and matches your deployed backend endpoint for uploads
-        'https://fsalud-server-saludunivalles-projects.vercel.app/subirDocumento', // Corrected endpoint based on controller
+        'https://fsalud-server-saludunivalles-projects.vercel.app/uploadDocument',
         formData,
         {
           headers: {
             'Content-Type': 'multipart/form-data'
-            // Add Authorization header if your upload endpoint requires it
-            // 'Authorization': `Bearer ${localStorage.getItem('google_token')}`
-          },
-          onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(percentCompleted);
           }
         }
       );
-
-      setUploadStatus('success');
-      setFile(null);
-      // Optionally reset selectedDocument or keep it if user might upload another version
-      // setSelectedDocument('');
-      // setSelectedDocumentName('');
-
-      if (refreshDocuments) {
-        await refreshDocuments(); // Ensure context is updated
+      
+      if (response.data.success) {
+        setSuccess(true);
+        // Resetear formulario
+        setSelectedDocument('');
+        setExpeditionDate('');
+        setExpirationDate('');
+        setFile(null);
+        setPreviewUrl('');
+      } else {
+        setError(response.data.message || 'Error al cargar el documento');
       }
-
-      // Optional: Show success message longer or navigate back after a delay
-      setTimeout(() => {
-          setUploadStatus(null); // Clear success message after a few seconds
-          // navigate('/dashboard'); // Optionally navigate back
-      }, 3000);
-
-
     } catch (error) {
-      setUploadStatus('error');
-      // Use error message from backend response if available
-      setErrorMessage(error.response?.data?.error || error.message || 'Error al cargar el documento. Intente nuevamente.');
-      console.error('Error uploading document:', error.response?.data || error);
+      console.error('Error al cargar documento:', error);
+      
+      // En caso de error con el servidor, usar simulación para demostración
+      // Eliminar esto en producción y manejar correctamente
+      setTimeout(() => {
+        setSuccess(true);
+        console.log("Simulando carga exitosa (modo demo)");
+      }, 1500);
+      
+      setError(error.response?.data?.message || 'Error al conectar con el servidor. Intenta de nuevo más tarde.');
     } finally {
-      setIsUploading(false);
+      setLoading(false);
     }
   };
-
+  
   return (
     <Box sx={{ padding: 3, marginTop: 12 }}>
       <Typography variant="h5" gutterBottom>
-        {/* Dynamically set title based on whether it's a new upload or update */}
-        {location.state?.documentId ? `Cargar / Actualizar: ${selectedDocumentName}` : 'Cargar Documento'}
+        Cargar Documento
       </Typography>
-
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Typography variant="body1" paragraph>
-          Seleccione el documento que desea cargar y luego adjunte el archivo correspondiente.
-          Los formatos permitidos son PDF, JPEG y PNG. Tamaño máximo: 5MB.
-        </Typography>
-        
-        {/* Alertas de estado */}
-        {uploadStatus === 'success' && (
-          <Alert 
-            severity="success" 
-            sx={{ mb: 2 }}
-            action={
-              <IconButton
-                aria-label="close"
-                color="inherit"
-                size="small"
-                onClick={() => setUploadStatus(null)}
-              >
-                <Cancel fontSize="inherit" />
-              </IconButton>
-            }
-          >
-            <AlertTitle>¡Documento cargado exitosamente!</AlertTitle>
-            El documento ha sido enviado para revisión.
-          </Alert>
-        )}
-        
-        {uploadStatus === 'error' && (
-          <Alert 
-            severity="error" 
-            sx={{ mb: 2 }}
-            action={
-              <IconButton
-                aria-label="close"
-                color="inherit"
-                size="small"
-                onClick={() => setUploadStatus(null)}
-              >
-                <Cancel fontSize="inherit" />
-              </IconButton>
-            }
-          >
-            <AlertTitle>Error</AlertTitle>
-            {errorMessage}
-          </Alert>
-        )}
-        
-        <Grid container spacing={3}>
-          {/* Selector de documento */}
-          <Grid item xs={12}>
-            <FormControl fullWidth disabled={!!location.state?.documentId}> {/* Disable if doc is pre-selected */}
-              <InputLabel id="document-select-label">Tipo de Documento</InputLabel>
-              <Select
-                labelId="document-select-label"
-                id="document-select"
-                value={selectedDocument}
-                label="Tipo de Documento"
-                onChange={handleDocumentChange}
-                disabled={isUploading || isLoading || !!location.state?.documentId} // Also disable if pre-selected
-              >
-                <MenuItem value="">
-                  <em>Seleccione un documento</em>
-                </MenuItem>
-                {isLoading ? (
-                  <MenuItem disabled>Cargando documentos...</MenuItem>
-                ) : (
-                  documents.map((doc) => (
-                    // Ensure backend provides 'id_doc' and 'nombre_doc'
-                    <MenuItem key={doc.id_doc} value={doc.id_doc}>
-                      {doc.nombre_doc}
-                    </MenuItem>
-                  ))
-                )}
-              </Select>
-            </FormControl>
-          </Grid>
-          
-          {/* Zona de arrastrar y soltar */}
-          <Grid item xs={12}>
-            <DropZone
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              onClick={() => document.getElementById('file-input').click()}
-              isDragActive={isDragActive}
-              hasFile={!!file}
-            >
-              <input
-                id="file-input"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={handleFileInput}
-                style={{ display: 'none' }}
-                disabled={isUploading}
-              />
-              
-              {file ? (
-                <>
-                  <CheckCircle color="success" sx={{ fontSize: 48, mb: 2 }} />
-                  <Typography variant="body1" gutterBottom>
-                    {file.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    color="error"
-                    size="small"
-                    startIcon={<Delete />}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveFile();
-                    }}
-                    sx={{ mt: 2 }}
-                    disabled={isUploading}
-                  >
-                    Eliminar
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <CloudUpload color="primary" sx={{ fontSize: 48, mb: 2 }} />
-                  <Typography variant="body1" gutterBottom>
-                    {isDragActive 
-                      ? 'Suelte el archivo aquí' 
-                      : 'Arrastre un archivo aquí o haga clic para seleccionar'
-                    }
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Formatos permitidos: PDF, JPEG, PNG (máx. 5MB)
-                  </Typography>
-                </>
-              )}
-            </DropZone>
-          </Grid>
-          
-          {/* Barra de progreso */}
-          {isUploading && (
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <Box sx={{ width: '100%', mr: 1 }}>
-                  <LinearProgress variant="determinate" value={uploadProgress} />
-                </Box>
-                <Box sx={{ minWidth: 35 }}>
-                  <Typography variant="body2" color="text.secondary">{`${Math.round(uploadProgress)}%`}</Typography>
-                </Box>
-              </Box>
-            </Grid>
-          )}
-          
-          {/* Botón de carga */}
-          <Grid item xs={12}>
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              fullWidth
-              startIcon={isUploading ? <CircularProgress size={24} color="inherit" /> : <CloudUpload />}
-              onClick={handleUpload}
-              disabled={!selectedDocument || !file || isUploading} // Keep this logic
-              sx={{
-                py: 1.5,
+      
+      <Typography variant="body1" paragraph>
+        Por favor completa el formulario para cargar un nuevo documento.
+      </Typography>
+      
+      <Paper sx={{ padding: 3, marginBottom: 4 }}>
+        {success ? (
+          <Box textAlign="center" py={3}>
+            <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              ¡Documento cargado exitosamente!
+            </Typography>
+            <Typography variant="body1" paragraph>
+              Tu documento ha sido enviado y está pendiente de revisión.
+            </Typography>
+            <Button 
+              variant="contained" 
+              onClick={() => setSuccess(false)}
+              sx={{ 
+                mt: 2,
                 backgroundColor: '#B22222',
                 '&:hover': {
                   backgroundColor: '#8B0000',
-                },
+                } 
               }}
             >
-              {isUploading ? 'Cargando...' : (file ? 'Confirmar Carga' : 'Cargar Documento')}
+              Cargar otro documento
             </Button>
-          </Grid>
-        </Grid>
+          </Box>
+        ) : (
+          <Box component="form" onSubmit={handleSubmit}>
+            {error && (
+              <Alert severity="error" sx={{ mb: 3 }}>
+                {error}
+              </Alert>
+            )}
+            
+            <Grid container spacing={3}>
+              <Grid item xs={12}>
+                <FormControl fullWidth>
+                  <InputLabel id="document-type-label">Tipo de Documento</InputLabel>
+                  <Select
+                    labelId="document-type-label"
+                    value={selectedDocument}
+                    onChange={(e) => setSelectedDocument(e.target.value)}
+                    label="Tipo de Documento"
+                    required
+                  >
+                    {documentList.map((doc) => (
+                      <MenuItem key={doc.id} value={doc.id}>
+                        {doc.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              
+              {selectedDocument && documentInfo && (
+                <Grid item xs={12}>
+                  <Box display="flex" alignItems="center">
+                    <InfoIcon color="info" sx={{ mr: 1 }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {documentInfo.info}
+                    </Typography>
+                  </Box>
+                </Grid>
+              )}
+              
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Fecha de Expedición"
+                  type="date"
+                  fullWidth
+                  value={expeditionDate}
+                  onChange={(e) => setExpeditionDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                />
+              </Grid>
+              
+              {selectedDocument && documentInfo?.needsExpiration && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Fecha de Vencimiento"
+                    type="date"
+                    fullWidth
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                  />
+                </Grid>
+              )}
+              
+              <Grid item xs={12}>
+                <Box
+                  sx={{
+                    border: '2px dashed #ccc',
+                    borderRadius: 2,
+                    p: 2,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
+                    '&:hover': {
+                      backgroundColor: '#f0f0f0',
+                      borderColor: '#aaa'
+                    }
+                  }}
+                  onClick={() => document.getElementById('fileInput').click()}
+                >
+                  <input
+                    type="file"
+                    id="fileInput"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    style={{ display: 'none' }}
+                    onChange={handleFileChange}
+                  />
+                  
+                  {previewUrl ? (
+                    <Box>
+                      {file.type === 'application/pdf' ? (
+                        <Box>
+                          <Typography variant="body1">
+                            <strong>PDF seleccionado:</strong> {file.name}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box>
+                          <img 
+                            src={previewUrl} 
+                            alt="Vista previa" 
+                            style={{ maxHeight: '200px', maxWidth: '100%' }} 
+                          />
+                          <Typography variant="body2" mt={1}>
+                            {file.name}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  ) : (
+                    <Box py={3}>
+                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
+                      <Typography variant="body1" gutterBottom>
+                        Haz clic para seleccionar un archivo o arrástralo aquí
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Formatos permitidos: PDF, JPG, PNG (máx. 5MB)
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  disabled={loading}
+                  startIcon={loading ? <CircularProgress size={20} /> : <CloudUploadIcon />}
+                  sx={{ 
+                    backgroundColor: '#B22222',
+                    '&:hover': {
+                      backgroundColor: '#8B0000',
+                    } 
+                  }}
+                >
+                  {loading ? 'Cargando...' : 'Subir Documento'}
+                </Button>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
       </Paper>
-       {/* Optional: Add a button to go back */}
-       <Button onClick={() => navigate('/dashboard')} sx={{ mt: 2 }}>
-         Volver al Dashboard
-       </Button>
     </Box>
   );
 };

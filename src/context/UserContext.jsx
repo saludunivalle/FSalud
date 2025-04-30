@@ -1,6 +1,6 @@
 // src/context/UserContext.jsx (Updated)
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api'; // Importar la instancia de api
 
 // Crear el contexto
 const UserContext = createContext();
@@ -22,34 +22,36 @@ export const UserProvider = ({ children }) => {
         const email = localStorage.getItem('email');
         const userId = localStorage.getItem('user_id');
         const isFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
-        
+
         if (googleToken && email && userId) {
           // Si tenemos la información básica del usuario en localStorage
-          
-          // Obtener datos adicionales del usuario
+
+          // Obtener datos adicionales del usuario usando la instancia 'api' y la ruta correcta
           try {
-            const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
-              params: { userId }
-            });
-            
+            // const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
+            //   params: { userId }
+            // });
+            const response = await api.get(`/api/users/id/${userId}`); // <-- CAMBIO AQUÍ
+
             // Verificar si es primer inicio de sesión basado en los datos recibidos
-            const userData = response.data;
-            const isNewUser = !userData.documentNumber || !userData.documentType;
+            const userData = response.data.data; // Acceder a los datos dentro de la propiedad 'data'
+            const isNewUser = !userData.documento_usuario || !userData.tipoDoc; // Ajustar nombres de campo si es necesario
             const calculatedIsFirstLogin = isFirstLogin || isNewUser;
-            
+
             setUser({
               id: userId,
               email: email,
-              name: localStorage.getItem('name') || email.split('@')[0],
+              name: localStorage.getItem('name') || userData.nombre_usuario || email.split('@')[0], // Usar nombre de la respuesta si existe
               ...userData,
               isFirstLogin: calculatedIsFirstLogin
             });
-            
+
             // Actualizar localStorage con la bandera correcta
             if (calculatedIsFirstLogin !== isFirstLogin) {
               localStorage.setItem('isFirstLogin', String(calculatedIsFirstLogin));
             }
           } catch (error) {
+            console.error('Error obteniendo datos adicionales del usuario:', error); // Loguear error específico
             // Si falla obtener datos adicionales, usar datos básicos
             setUser({
               id: userId,
@@ -58,7 +60,7 @@ export const UserProvider = ({ children }) => {
               isFirstLogin: isFirstLogin
             });
           }
-          
+
           setIsLogin(true);
         }
       } catch (error) {
