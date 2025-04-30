@@ -38,17 +38,13 @@ const Home = () => {
   const { isLogin, user, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Esta función se llamará cuando la autenticación sea exitosa
   const handleLoginSuccess = (userData) => {
-    // Verificar si es el primer inicio de sesión
-    if (userData.isFirstLogin) {
-      navigate('/completar-registro');
-    } else {
-      navigate('/dashboard');
-    }
+    // Siempre redirigir al dashboard después del login
+    navigate('/dashboard');
   };
-  
+
   return (
     <Container 
       maxWidth="md" 
@@ -104,14 +100,11 @@ const Home = () => {
             variant="contained"
             size="large"
             onClick={() => {
-              if (user.isFirstLogin) {
-                navigate('/completar-registro');
-              } else {
-                navigate('/dashboard');
-              }
+              // Siempre ir al dashboard si ya está logueado
+              navigate('/dashboard');
             }}
           >
-            {user.isFirstLogin ? 'Completar Registro' : 'Ir al Dashboard'}
+            Ir al Dashboard
           </ActionButton>
         )}
       </HeroSection>

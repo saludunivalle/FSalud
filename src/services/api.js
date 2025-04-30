@@ -1,9 +1,9 @@
-// src/services/api.js
+// src/services/api.js (CORREGIDO)
 import axios from 'axios';
 
 // Crear instancia de axios con configuración base
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app',
+  baseURL: 'https://fsalud-server-saludunivalles-projects.vercel.app',
   headers: {
     'Content-Type': 'application/json',
   },

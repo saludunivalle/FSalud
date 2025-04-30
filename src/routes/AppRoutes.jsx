@@ -23,27 +23,25 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" replace />;
   }
 
-  // Check for first login after ensuring user data is loaded
-  if (user && user.isFirstLogin) {
-     // Allow access only to the first login form if it's the first login
-     if (window.location.pathname !== '/complete-profile') {
-       return <Navigate to="/complete-profile" replace />;
-     }
-  } else if (window.location.pathname === '/complete-profile') {
-     // If not first login, redirect away from complete-profile
-     return <Navigate to="/dashboard" replace />;
-  }
-
+  // --- Lógica de redirección de primer login deshabilitada temporalmente ---
+  // if (user && user.isFirstLogin) {
+  //    if (window.location.pathname !== '/complete-profile') {
+  //      return <Navigate to="/complete-profile" replace />;
+  //    }
+  // } else if (window.location.pathname === '/complete-profile') {
+  //    return <Navigate to="/dashboard" replace />;
+  // }
+  // --- Fin de lógica deshabilitada ---
 
   return children;
 };
 
 const AppRoutes = () => {
-  const { isLogin } = useUser(); // Get login status for header
+  const { isLogin, user } = useUser(); // Obtener también el objeto user
 
   return (
     <> {/* Use a Fragment or just return the content directly */}
-      {isLogin && <Header />} {/* Show header only when logged in */}
+      {isLogin && <Header userData={user} />} {/* Pasar user como userData */}
       <Routes>
         <Route path="/" element={<HomePage />} />
 

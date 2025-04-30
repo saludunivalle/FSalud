@@ -1,4 +1,4 @@
-// src/context/DocumentContext.jsx (Actualizado)
+// src/context/DocumentContext.jsx (CORREGIDO)
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useUser } from './UserContext';
@@ -9,10 +9,13 @@ const DocumentContext = createContext();
 // Hook personalizado para usar el contexto
 export const useDocuments = () => useContext(DocumentContext);
 
+// API Base URL
+const BASE_URL = 'https://fsalud-server-saludunivalles-projects.vercel.app';
+
 // Proveedor del contexto
 export const DocumentProvider = ({ children }) => {
   const { user, isLogin } = useUser();
-  const [documents, setDocuments] = useState([]);
+  const [documentTypes, setDocumentTypes] = useState([]);
   const [activeRequests, setActiveRequests] = useState([]);
   const [completedRequests, setCompletedRequests] = useState([]);
   const [userDocuments, setUserDocuments] = useState([]);
@@ -26,10 +29,19 @@ export const DocumentProvider = ({ children }) => {
       
       setLoading(true);
       try {
+        // Obtener tipos de documentos
+        try {
+          const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`);
+          setDocumentTypes(typesResponse.data || []);
+        } catch (err) {
+          console.error('Error al obtener tipos de documentos:', err);
+          setDocumentTypes([]);
+        }
+        
         // Obtener solicitudes activas
         try {
           const activeResponse = await axios.get(
-            '/getActiveRequests',
+            `${BASE_URL}/getActiveRequests`,
             { params: { userId: user.id } }
           );
           
@@ -52,7 +64,7 @@ export const DocumentProvider = ({ children }) => {
         // Obtener documentos del usuario
         try {
           const docsResponse = await axios.get(
-            '/getUserDocuments',
+            `${BASE_URL}/getUserDocuments`,
             { params: { userId: user.id } }
           );
           
@@ -80,10 +92,18 @@ export const DocumentProvider = ({ children }) => {
     
     setLoading(true);
     try {
+      // Actualizar tipos de documentos
+      try {
+        const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`);
+        setDocumentTypes(typesResponse.data || []);
+      } catch (err) {
+        console.error('Error al actualizar tipos de documentos:', err);
+      }
+      
       // Actualizar solicitudes activas
       try {
         const activeResponse = await axios.get(
-          '/getActiveRequests',
+          `${BASE_URL}/getActiveRequests`,
           { params: { userId: user.id } }
         );
         
@@ -103,7 +123,7 @@ export const DocumentProvider = ({ children }) => {
       // Actualizar documentos del usuario
       try {
         const docsResponse = await axios.get(
-          '/getUserDocuments',
+          `${BASE_URL}/getUserDocuments`,
           { params: { userId: user.id } }
         );
         
@@ -118,15 +138,57 @@ export const DocumentProvider = ({ children }) => {
     }
   };
 
+  // Función para verificar si un documento está vencido
+  const isDocumentExpired = (document, documentType) => {
+    if (!document || !documentType || documentType.vence !== 'si') {
+      return false;
+    }
+    
+    if (!document.fecha_vencimiento) {
+      return false;
+    }
+    
+    const expirationDate = new Date(document.fecha_vencimiento);
+    const today = new Date();
+    
+    return expirationDate < today;
+  };
+
+  // Función para obtener el estado de un documento
+  const getDocumentStatus = (document, documentType) => {
+    if (!document) {
+      return 'Sin cargar';
+    }
+    
+    let status = document.estado || 'Pendiente';
+    
+    // Si está aprobado pero vencido, cambiar estado
+    if ((status.toLowerCase() === 'cumplido' || status.toLowerCase() === 'aprobado') && 
+        isDocumentExpired(document, documentType)) {
+      return 'Vencido';
+    }
+    
+    // Mapear estados del backend a frontend
+    if (status.toLowerCase() === 'cumplido') {
+      return 'Aprobado';
+    } else if (status.toLowerCase() === 'sin revisar') {
+      return 'Pendiente';
+    }
+    
+    return status;
+  };
+
   // Valores disponibles en el contexto
   const value = {
-    documents,
+    documentTypes,
     activeRequests,
     completedRequests,
     userDocuments,
     loading,
     error,
-    refreshDocuments
+    refreshDocuments,
+    isDocumentExpired,
+    getDocumentStatus
   };
 
   return (
