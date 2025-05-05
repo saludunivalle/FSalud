@@ -7,14 +7,6 @@ const BASE_URL = 'https://fsalud-server-saludunivalles-projects.vercel.app';
 /**
  * Obtiene la lista de tipos de documentos disponibles
  */
-export const getDocumentTypes = async () => {
-  try {
-    const response = await axios.get(`${BASE_URL}/getDocumentos`);
-    return response.data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || 'Error al obtener tipos de documentos');
-  }
-};
 
 /**
  * Obtiene los documentos cargados por un usuario
@@ -143,7 +135,6 @@ export const calculateExpirationDate = (expeditionDate, expirationTime) => {
 };
 
 export default {
-  getDocumentTypes,
   getUserDocuments,
   uploadDocument,
   updateDocument,

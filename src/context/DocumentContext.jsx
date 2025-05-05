@@ -29,24 +29,29 @@ export const DocumentProvider = ({ children }) => {
       
       setLoading(true);
       try {
-        // Obtener tipos de documentos
+        // Obtener tipos de documentos DESDE EL BACKEND
         try {
-          const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`);
-          setDocumentTypes(typesResponse.data || []);
+          // Llama directamente a la ruta del backend que ya lee de Sheets
+          const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`); 
+          // Verifica que la respuesta del backend tenga la propiedad 'data' y sea un array
+          setDocumentTypes(Array.isArray(typesResponse.data?.data) ? typesResponse.data.data : []); 
         } catch (err) {
-          console.error('Error al obtener tipos de documentos:', err);
-          setDocumentTypes([]);
+          console.error('Error al obtener tipos de documentos desde el backend:', err);
+          setDocumentTypes([]); // Asegura array vacío en caso de error
         }
         
         // Obtener solicitudes activas
         try {
           const activeResponse = await axios.get(
-            `${BASE_URL}/getActiveRequests`,
+            `${BASE_URL}/getActiveRequests`, // Usa BASE_URL
             { params: { userId: user.id } }
           );
           
-          // Procesar y guardar las solicitudes activas
-          const requests = activeResponse.data;
+          // Accede al objeto de respuesta { success: true, data: [...] }
+          const responseData = activeResponse.data; 
+          // Verifica si la propiedad 'data' DENTRO del objeto es un array
+          const requests = Array.isArray(responseData?.data) ? responseData.data : []; 
+          
           const requestsWithStages = requests.map((request) => ({
             ...request,
             etapa_actual: Number(request.formulario) || 0,
@@ -58,20 +63,24 @@ export const DocumentProvider = ({ children }) => {
             setActiveRequests([]);
           } else {
             console.error('Error al obtener solicitudes activas:', err);
+            setActiveRequests([]); // Asegura que sea un array en caso de otros errores
           }
         }
         
         // Obtener documentos del usuario
         try {
           const docsResponse = await axios.get(
-            `${BASE_URL}/getUserDocuments`,
+            `${BASE_URL}/getUserDocuments`, // Usa BASE_URL
             { params: { userId: user.id } }
           );
           
-          setUserDocuments(docsResponse.data || []);
+          // Aplica la misma lógica aquí para userDocuments
+          const userDocsData = docsResponse.data;
+          // El backend devuelve { success: true, data: [...] }
+          setUserDocuments(Array.isArray(userDocsData?.data) ? userDocsData.data : []); 
         } catch (err) {
           console.error('Error al obtener documentos del usuario:', err);
-          setUserDocuments([]);
+          setUserDocuments([]); // Asegura que sea un array en caso de error
         }
         
         setError(null);
