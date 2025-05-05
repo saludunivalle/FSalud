@@ -114,7 +114,7 @@ const StatusChip = ({ status }) => {
 const Dashboard = () => {
   const { user } = useUser(); // Get user data
   // Destructure isDocumentExpired if needed later for vencimiento column
-  const { userDocuments, documentTypes, loading: documentsLoading, getDocumentStatus, isDocumentExpired } = useDocuments(); // Use context
+  const { userDocuments, documentTypes, loading: documentsLoading } = useDocuments(); // Use context
   const navigate = useNavigate(); // For navigation
 
   const [page, setPage] = useState(0);
