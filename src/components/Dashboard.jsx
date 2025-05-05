@@ -131,7 +131,7 @@ const Dashboard = () => {
 
         return {
           id_doc: docType.id_doc,
-          name: docType.nombre_doc,
+          name: docType.nombre_tipoDoc, 
           vence: docType.vence === 'si',
           tiempo_vencimiento: docType.tiempo_vencimiento,
           userDocData: userDoc || null,
