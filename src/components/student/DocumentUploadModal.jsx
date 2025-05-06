@@ -8,10 +8,6 @@ import {
   Typography,
   Button,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress,
   Alert,
   Grid,
@@ -35,9 +31,7 @@ const calculateExpirationDate = (expeditionDateStr, months) => {
   if (!expeditionDateStr || !months) return null;
   try {
     const expeditionDate = new Date(expeditionDateStr);
-    // Add months correctly
     expeditionDate.setMonth(expeditionDate.getMonth() + parseInt(months, 10));
-    // Format as YYYY-MM-DD for the input field
     return expeditionDate.toISOString().split('T')[0];
   } catch (e) {
     console.error("Error calculating expiration date:", e);
@@ -50,7 +44,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   const { user } = useUser();
   const { documentTypes, refreshDocuments } = useDocuments();
 
-  // State for form data
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
   const [file, setFile] = useState(null);
@@ -60,7 +53,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
 
-  // Reset and set state when modal opens with a preselected document
   useEffect(() => {
     if (open) {
       setExpeditionDate('');
@@ -69,18 +61,24 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setPreviewUrl('');
       setSuccess(false);
       setError('');
-      setLoading(false); // Ensure loading is reset
-      // Find and set document info based on the incoming ID
+      setLoading(false);
+
       if (selectedDocumentId && Array.isArray(documentTypes)) {
-        const doc = documentTypes.find(doc => doc.id_doc === selectedDocumentId);
-        setDocumentInfo(doc || null);
+        const doc = documentTypes.find(doc => doc.id_tipoDoc === selectedDocumentId);
+        if (doc) {
+          console.log("Document Type Info Found:", doc);
+          setDocumentInfo(doc);
+        } else {
+          console.warn(`Document type info not found for ID: ${selectedDocumentId}`);
+          setDocumentInfo(null);
+        }
       } else {
+        console.log("Modal opened without selectedDocumentId or documentTypes not ready.");
         setDocumentInfo(null);
       }
     }
-  }, [open, selectedDocumentId, documentTypes]); // Depend on open and selectedDocumentId
+  }, [open, selectedDocumentId, documentTypes]);
 
-  // Create file preview
   useEffect(() => {
     if (!file) {
       setPreviewUrl('');
@@ -88,33 +86,25 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
     }
 
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result);
-    };
+    reader.onloadend = () => setPreviewUrl(reader.result);
     reader.readAsDataURL(file);
 
-    // Cleanup object URL
-    return () => {
-      if (previewUrl && previewUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [file]); // Only depends on file
+    return () => {};
+  }, [file]);
 
-  // Auto-calculate expiration date
   useEffect(() => {
     if (expeditionDate && documentInfo && documentInfo.vence === 'si' && documentInfo.tiempo_vencimiento) {
       const calculatedDate = calculateExpirationDate(expeditionDate, documentInfo.tiempo_vencimiento);
       setExpirationDate(calculatedDate || '');
     } else if (documentInfo && documentInfo.vence !== 'si') {
       setExpirationDate('');
+    } else if (!expeditionDate) {
+      setExpirationDate('');
     }
   }, [expeditionDate, documentInfo]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
-
-    // Validate type
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
     if (selectedFile && !validTypes.includes(selectedFile.type)) {
       setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
@@ -122,131 +112,104 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setPreviewUrl('');
       return;
     }
-
-    // Validate size (max 5MB)
     if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
       setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
       setFile(null);
       setPreviewUrl('');
       return;
     }
-
     setFile(selectedFile);
-    setError(''); // Clear error on valid file selection
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
 
-    // Form Validations
-
-
+    if (!selectedDocumentId) {
+      setError('Error interno: Falta el ID del tipo de documento.');
+      return;
+    }
     if (!expeditionDate) {
-      setError('La fecha de expedición es requerida');
+      setError('La fecha de expedición es requerida.');
       return;
     }
-
     if (documentInfo?.vence === 'si' && !expirationDate) {
-      setError('La fecha de vencimiento es requerida y no pudo ser calculada. Verifica la fecha de expedición.');
+      setError('La fecha de vencimiento es requerida para este documento.');
       return;
     }
-
     if (!file) {
-      setError('Selecciona un archivo para cargar');
+      setError('Selecciona un archivo para cargar.');
       return;
     }
-
-    // Date Validations
     const expeditionDateObj = new Date(expeditionDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
-    if (expeditionDateObj > new Date()) { // Compare against current moment
-      setError('La fecha de expedición no puede ser posterior a hoy');
+    if (expeditionDateObj > today) {
+      setError('La fecha de expedición no puede ser posterior a hoy.');
       return;
     }
-
     if (expirationDate) {
       const expirationDateObj = new Date(expirationDate);
       if (expirationDateObj < expeditionDateObj) {
-        setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición');
+        setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición.');
         return;
       }
     }
 
-    // Prepare data for sending
     const formData = new FormData();
     formData.append('userId', user.id);
-    formData.append('documentType', selectedDocumentId); // Use selectedDocumentId from props
+    formData.append('documentType', selectedDocumentId);
     formData.append('expeditionDate', expeditionDate);
-    formData.append('userName', user.name || user.email?.split('@')[0] || 'UnknownUser');
-    formData.append('userEmail', user.email || 'unknown@example.com');
-
     if (expirationDate && documentInfo?.vence === 'si') {
       formData.append('expirationDate', expirationDate);
     }
     formData.append('file', file);
-    formData.append('parentFolderId', '1Q13hKV3vXlsu-Yy0Ix9G9v_IHVFi-rfj'); // Ensure this is correct
+    formData.append('userName', user.name || user.email?.split('@')[0] || 'UnknownUser');
+    formData.append('userEmail', user.email || 'unknown@example.com');
 
-    // Send to server
+    console.log("Submitting FormData to /api/documentos/subir:");
+    for (let [key, value] of formData.entries()) {
+      console.log(`  ${key}: ${value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value}`);
+    }
+
     setLoading(true);
-
     try {
-      // Use environment variable or default URL - CORRECT THE ENDPOINT
-      const uploadUrl = `${process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app'}/api/documentos/subir`; 
+      const uploadUrl = `${process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app'}/api/documentos/subir`;
 
       const response = await axios.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          // Add Authorization if needed by your backend
-          // 'Authorization': `Bearer ${localStorage.getItem('google_token')}`
+          'Authorization': `Bearer ${localStorage.getItem('google_token')}`
         }
       });
 
-      if (response.data.success) {
+      console.log("Server Response:", response.data);
+
+      if (response.data?.success) {
         setSuccess(true);
-        await refreshDocuments(); // Refresh context data after successful upload
+        await refreshDocuments();
       } else {
-        setError(response.data.message || 'Ocurrió un error en el servidor.');
+        setError(response.data?.details || response.data?.error || 'Ocurrió un error inesperado en el servidor.');
       }
     } catch (error) {
-      console.error('Error al cargar documento:', error);
-      // Try to get more specific error message from backend response
-      const backendError = error.response?.data?.details || error.response?.data?.error || error.response?.data?.message;
-      setError(backendError || error.message || 'Error de conexión. Intenta de nuevo.');
+      console.error('Error during document upload request:', error);
+      const backendError = error.response?.data?.details || error.response?.data?.error || error.message;
+      setError(backendError || 'Error de conexión o del servidor. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
   };
 
-  // Use the onClose prop passed from Dashboard to close the modal
   const handleClose = () => {
-    if (!loading) { // Prevent closing while loading
+    if (!loading) {
       onClose();
     }
   };
 
-  const handleUploadAnother = () => {
-    // Reset form for another upload, allowing selection
-    setExpeditionDate('');
-    setExpirationDate('');
-    setFile(null);
-    setPreviewUrl('');
-    setSuccess(false);
-    setError('');
-    setDocumentInfo(null); // Clear doc info as well
-  };
-
   return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="md"
-      fullWidth
-      aria-labelledby="document-upload-title"
-    >
-      <DialogTitle id="document-upload-title" sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {documentName ? `Cargar / Actualizar: ${documentName}` : 'Cargar Documento'}
         <IconButton onClick={handleClose} aria-label="cerrar" disabled={loading}>
           <CloseIcon />
@@ -255,7 +218,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
       <DialogContent dividers>
         {success ? (
-          // Success Message
           <Box textAlign="center" py={3}>
             <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
             <Typography variant="h6" gutterBottom>
@@ -264,11 +226,10 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
             <Typography variant="body1" paragraph>
               Tu documento ha sido enviado y está pendiente de revisión.
             </Typography>
-
-            <Box mt={3} display="flex" justifyContent="center" gap={2}>
+            <Box mt={3}>
               <Button
                 variant="contained"
-                onClick={handleClose} // Close modal on "Volver"
+                onClick={handleClose}
                 sx={{ backgroundColor: '#B22222', '&:hover': { backgroundColor: '#8B0000' } }}
               >
                 Cerrar
@@ -276,7 +237,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
             </Box>
           </Box>
         ) : (
-          // Upload Form
           <Box component="form" onSubmit={handleSubmit} noValidate>
             {error && (
               <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -285,21 +245,20 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
             )}
 
             <Grid container spacing={3}>
-              {/* Document Info/Hint */}
-              {selectedDocumentId && documentInfo && (
+              {documentInfo && (
                 <Grid item xs={12}>
                   <Box display="flex" alignItems="center" sx={{ bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
                     <InfoIcon color="info" sx={{ mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
                       {documentInfo.vence === 'si' && documentInfo.tiempo_vencimiento
-                        ? `Este documento requiere fecha de vencimiento (vigencia: ${documentInfo.tiempo_vencimiento} meses).`
+                        ? `Este documento vence. Vigencia aprox.: ${documentInfo.tiempo_vencimiento} meses.`
                         : 'Este documento no requiere fecha de vencimiento.'}
+                      <span style={{ marginLeft: '10px', fontStyle: 'italic' }}>(ID: {selectedDocumentId})</span>
                     </Typography>
                   </Box>
                 </Grid>
               )}
 
-              {/* Expedition Date */}
               <Grid item xs={12} md={6}>
                 <TextField
                   label="Fecha de Expedición"
@@ -309,12 +268,11 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                   onChange={(e) => setExpeditionDate(e.target.value)}
                   InputLabelProps={{ shrink: true }}
                   required
-                  inputProps={{ max: new Date().toISOString().split("T")[0] }} // Prevent future dates
+                  inputProps={{ max: new Date().toISOString().split("T")[0] }}
                 />
               </Grid>
 
-              {/* Expiration Date (Conditional & Disabled) */}
-              {selectedDocumentId && documentInfo?.vence === 'si' && (
+              {documentInfo?.vence === 'si' && (
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Fecha de Vencimiento"
@@ -323,14 +281,13 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                     value={expirationDate}
                     InputLabelProps={{ shrink: true }}
                     required
-                    disabled={true} // Always disabled as it's calculated
+                    disabled={true}
                     helperText="Se calcula automáticamente"
-                    inputProps={{ min: expeditionDate || '' }} // Prevent expiration before expedition
+                    inputProps={{ min: expeditionDate || '' }}
                   />
                 </Grid>
               )}
 
-              {/* File Input Area */}
               <Grid item xs={12}>
                 <Box
                   sx={{
@@ -345,11 +302,10 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                       borderColor: '#aaa'
                     }
                   }}
-                  // Use label's htmlFor to trigger input click for accessibility
                   onClick={() => document.getElementById('fileInputModal').click()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                    if (e.dataTransfer.files?.[0]) {
                       handleFileChange({ target: { files: e.dataTransfer.files } });
                     }
                   }}
@@ -357,14 +313,12 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                 >
                   <input
                     type="file"
-                    id="fileInputModal" // Unique ID for the modal input
+                    id="fileInputModal"
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
                     onChange={handleFileChange}
                   />
-
                   {previewUrl ? (
-                    // File Preview
                     <Box>
                       {file?.type === 'application/pdf' ? (
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
@@ -387,7 +341,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                       )}
                     </Box>
                   ) : (
-                    // Placeholder
                     <Box py={3}>
                       <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
                       <Typography variant="body1" gutterBottom>
@@ -401,23 +354,20 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                 </Box>
               </Grid>
             </Grid>
-            {/* Submit button moved to DialogActions */}
           </Box>
         )}
       </DialogContent>
 
-      {/* Actions only shown when not in success state */}
       {!success && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
           <Button
-            // Use type="button" to prevent accidental form submission if nested
             type="button"
-            onClick={handleSubmit} // Trigger submit logic
+            onClick={handleSubmit}
             variant="contained"
-            disabled={loading || !file} // Disable if loading or no file
+            disabled={loading || !file}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
             sx={{
               backgroundColor: '#B22222',
