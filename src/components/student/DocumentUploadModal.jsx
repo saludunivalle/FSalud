@@ -42,7 +42,7 @@ const calculateExpirationDate = (expeditionDateStr, months) => {
 const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }) => {
   const theme = useTheme();
   const { user } = useUser();
-  const { documentTypes, refreshDocuments } = useDocuments();
+  const { documentTypes, refreshDocuments, userDocuments, setUserDocuments } = useDocuments();
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
@@ -52,6 +52,10 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Base URL para API
+  const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
 
   useEffect(() => {
     if (open) {
@@ -62,6 +66,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setSuccess(false);
       setError('');
       setLoading(false);
+      setRefreshing(false);
 
       if (selectedDocumentId && Array.isArray(documentTypes)) {
         const doc = documentTypes.find(doc => doc.id_tipoDoc === selectedDocumentId);
@@ -122,6 +127,39 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
     setError('');
   };
 
+  // Función para obtener los documentos del usuario
+  const getUserDocsDirectly = async () => {
+    try {
+      if (!user || !user.id) {
+        console.error("No hay información de usuario disponible para obtener documentos");
+        return null;
+      }
+
+      const response = await axios.get(
+        `${BASE_URL}/getUserDocuments`, 
+        { 
+          params: { userId: user.id },
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('google_token')}`
+          }
+        }
+      );
+      
+      // Verificar estructura de respuesta
+      if (response.data && response.data.success && Array.isArray(response.data.data)) {
+        return response.data.data;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      } else {
+        console.warn("Formato inesperado en la respuesta de getUserDocuments:", response.data);
+        return [];
+      }
+    } catch (error) {
+      console.error("Error obteniendo documentos de usuario:", error);
+      return null;
+    }
+  };
+
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
@@ -175,7 +213,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
     setLoading(true);
     try {
-      const uploadUrl = `${process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app'}/api/documentos/subir`;
+      const uploadUrl = `${BASE_URL}/api/documentos/subir`;
 
       const response = await axios.post(uploadUrl, formData, {
         headers: {
@@ -188,7 +226,26 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
       if (response.data?.success) {
         setSuccess(true);
-        await refreshDocuments();
+        
+        // Actualizar los documentos localmente antes de cerrar el modal
+        setRefreshing(true);
+        
+        // Obtener los documentos actualizados directamente
+        const updatedDocs = await getUserDocsDirectly();
+        
+        if (updatedDocs) {
+          // Actualizar el estado directamente en vez de llamar a refreshDocuments
+          setUserDocuments(updatedDocs);
+        } else {
+          // Si falla, intentar con refreshDocuments como respaldo
+          try {
+            await refreshDocuments();
+          } catch (refreshError) {
+            console.error("Error al actualizar documentos:", refreshError);
+          }
+        }
+        
+        setRefreshing(false);
       } else {
         setError(response.data?.details || response.data?.error || 'Ocurrió un error inesperado en el servidor.');
       }
@@ -202,7 +259,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   };
 
   const handleClose = () => {
-    if (!loading) {
+    if (!loading && !refreshing) {
       onClose();
     }
   };
@@ -211,7 +268,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {documentName ? `Cargar / Actualizar: ${documentName}` : 'Cargar Documento'}
-        <IconButton onClick={handleClose} aria-label="cerrar" disabled={loading}>
+        <IconButton onClick={handleClose} aria-label="cerrar" disabled={loading || refreshing}>
           <CloseIcon />
         </IconButton>
       </DialogTitle>
@@ -219,22 +276,33 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       <DialogContent dividers>
         {success ? (
           <Box textAlign="center" py={3}>
-            <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
-            <Typography variant="h6" gutterBottom>
-              ¡Documento cargado exitosamente!
-            </Typography>
-            <Typography variant="body1" paragraph>
-              Tu documento ha sido enviado y está pendiente de revisión.
-            </Typography>
-            <Box mt={3}>
-              <Button
-                variant="contained"
-                onClick={handleClose}
-                sx={{ backgroundColor: '#B22222', '&:hover': { backgroundColor: '#8B0000' } }}
-              >
-                Cerrar
-              </Button>
-            </Box>
+            {refreshing ? (
+              <>
+                <CircularProgress size={60} sx={{ mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  Actualizando información...
+                </Typography>
+              </>
+            ) : (
+              <>
+                <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
+                <Typography variant="h6" gutterBottom>
+                  ¡Documento cargado exitosamente!
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  Tu documento ha sido enviado y está pendiente de revisión.
+                </Typography>
+                <Box mt={3}>
+                  <Button
+                    variant="contained"
+                    onClick={handleClose}
+                    sx={{ backgroundColor: '#B22222', '&:hover': { backgroundColor: '#8B0000' } }}
+                  >
+                    Cerrar
+                  </Button>
+                </Box>
+              </>
+            )}
           </Box>
         ) : (
           <Box component="form" onSubmit={handleSubmit} noValidate>

@@ -1,4 +1,4 @@
-// src/context/DocumentContext.jsx (CORREGIDO)
+// src/context/DocumentContext.jsx (Corregido)
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import { useUser } from './UserContext';
@@ -49,13 +49,25 @@ export const DocumentProvider = ({ children }) => {
           
           // Accede al objeto de respuesta { success: true, data: [...] }
           const responseData = activeResponse.data; 
-          // Verifica si la propiedad 'data' DENTRO del objeto es un array
-          const requests = Array.isArray(responseData?.data) ? responseData.data : []; 
           
-          const requestsWithStages = requests.map((request) => ({
-            ...request,
-            etapa_actual: Number(request.formulario) || 0,
-          }));
+          // IMPORTANTE: Verificar formato de respuesta y garantizar que sea un array
+          let requests = [];
+          if (Array.isArray(responseData)) {
+            requests = responseData;
+          } else if (responseData && Array.isArray(responseData.data)) {
+            requests = responseData.data;
+          } else {
+            console.warn("Formato inesperado en la respuesta de getActiveRequests:", responseData);
+            requests = [];
+          }
+          
+          // Solo intentar mapear si realmente tenemos un array
+          const requestsWithStages = Array.isArray(requests) 
+            ? requests.map((request) => ({
+                ...request,
+                etapa_actual: Number(request.formulario) || 0,
+              }))
+            : [];
           
           setActiveRequests(requestsWithStages);
         } catch (err) {
@@ -75,9 +87,17 @@ export const DocumentProvider = ({ children }) => {
           );
           
           // Aplica la misma lógica aquí para userDocuments
-          const userDocsData = docsResponse.data;
-          // El backend devuelve { success: true, data: [...] }
-          setUserDocuments(Array.isArray(userDocsData?.data) ? userDocsData.data : []); 
+          let userDocsData = [];
+          if (Array.isArray(docsResponse.data)) {
+            userDocsData = docsResponse.data;
+          } else if (docsResponse.data && Array.isArray(docsResponse.data.data)) {
+            userDocsData = docsResponse.data.data;
+          } else {
+            console.warn("Formato inesperado en la respuesta de getUserDocuments:", docsResponse.data);
+            userDocsData = [];
+          }
+          
+          setUserDocuments(userDocsData);
         } catch (err) {
           console.error('Error al obtener documentos del usuario:', err);
           setUserDocuments([]); // Asegura que sea un array en caso de error
@@ -104,7 +124,14 @@ export const DocumentProvider = ({ children }) => {
       // Actualizar tipos de documentos
       try {
         const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`);
-        setDocumentTypes(typesResponse.data || []);
+        // Verificar formato de respuesta
+        if (typesResponse.data && Array.isArray(typesResponse.data.data)) {
+          setDocumentTypes(typesResponse.data.data);
+        } else if (Array.isArray(typesResponse.data)) {
+          setDocumentTypes(typesResponse.data);
+        } else {
+          console.warn("Formato inesperado en la respuesta de getDocumentos:", typesResponse.data);
+        }
       } catch (err) {
         console.error('Error al actualizar tipos de documentos:', err);
       }
@@ -116,13 +143,26 @@ export const DocumentProvider = ({ children }) => {
           { params: { userId: user.id } }
         );
         
-        const requests = activeResponse.data;
-        const requestsWithStages = requests.map((request) => ({
-          ...request,
-          etapa_actual: Number(request.formulario) || 0,
-        }));
+        // Verificar formato de respuesta
+        let requests = [];
+        if (Array.isArray(activeResponse.data)) {
+          requests = activeResponse.data;
+        } else if (activeResponse.data && Array.isArray(activeResponse.data.data)) {
+          requests = activeResponse.data.data;
+        } else {
+          console.warn("Formato inesperado en la respuesta de getActiveRequests:", activeResponse.data);
+          requests = [];
+        }
         
-        setActiveRequests(requestsWithStages);
+        // Solo intentar mapear si realmente tenemos un array
+        if (Array.isArray(requests)) {
+          const requestsWithStages = requests.map((request) => ({
+            ...request,
+            etapa_actual: Number(request.formulario) || 0,
+          }));
+          
+          setActiveRequests(requestsWithStages);
+        }
       } catch (err) {
         if (err.response?.status !== 404) {
           console.error('Error al actualizar solicitudes activas:', err);
@@ -136,12 +176,27 @@ export const DocumentProvider = ({ children }) => {
           { params: { userId: user.id } }
         );
         
-        setUserDocuments(docsResponse.data || []);
+        // Verificar formato de respuesta
+        let userDocsData = [];
+        if (Array.isArray(docsResponse.data)) {
+          userDocsData = docsResponse.data;
+        } else if (docsResponse.data && Array.isArray(docsResponse.data.data)) {
+          userDocsData = docsResponse.data.data;
+        } else {
+          console.warn("Formato inesperado en la respuesta de getUserDocuments:", docsResponse.data);
+          userDocsData = [];
+        }
+        
+        setUserDocuments(userDocsData);
+        
+        return userDocsData; // Retornar los datos para usar en otros componentes
       } catch (err) {
         console.error('Error al actualizar documentos del usuario:', err);
+        return null;
       }
     } catch (error) {
       console.error('Error refreshing documents:', error);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -193,6 +248,7 @@ export const DocumentProvider = ({ children }) => {
     activeRequests,
     completedRequests,
     userDocuments,
+    setUserDocuments, // Exposing setter for direct updates
     loading,
     error,
     refreshDocuments,
