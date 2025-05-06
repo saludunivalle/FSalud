@@ -13,7 +13,6 @@ import {
   Button,
   Chip,
   Container,
-  TablePagination,
   CircularProgress,
   IconButton,
   Tooltip,
@@ -113,8 +112,6 @@ const Dashboard = () => {
   const { user } = useUser();
   const { documentTypes, userDocuments, loading: documentsLoading, getDocumentStatus, isDocumentExpired } = useDocuments();
 
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [combinedDocuments, setCombinedDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
@@ -196,17 +193,7 @@ const Dashboard = () => {
       );
       setFilteredDocuments(filtered);
     }
-    setPage(0);
   }, [searchTerm, combinedDocuments]);
-
-  const handleChangePage = (event, newPage) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
 
   // Function to open the upload modal with a selected document
   const handleUpload = (documentTypeId, documentName) => { // Parameter name is documentTypeId
@@ -309,7 +296,6 @@ const Dashboard = () => {
                     </TableRow>
                   ) : (
                     filteredDocuments
-                      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                       .map((doc) => (
                         <TableRow
                           hover
@@ -363,17 +349,6 @@ const Dashboard = () => {
                 </TableBody>
               </Table>
             </TableContainer>
-            <TablePagination
-              rowsPerPageOptions={[10, 25, 50]}
-              component="div"
-              count={filteredDocuments.length}
-              rowsPerPage={rowsPerPage}
-              page={page}
-              onPageChange={handleChangePage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              labelRowsPerPage="Filas por página:"
-              labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
-            />
           </Paper>
 
           {/* Render the Document Upload Modal */}
