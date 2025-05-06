@@ -128,14 +128,14 @@ const Dashboard = () => {
     if (Array.isArray(documentTypes) && documentTypes.length > 0) {
       const combined = documentTypes.map(docType => {
         const userDoc = Array.isArray(userDocuments)
-          ? userDocuments.find(ud => ud.id_doc === docType.id_doc)
+          ? userDocuments.find(ud => ud.id_doc === docType.id_tipoDoc) // Match userDoc using id_tipoDoc
           : null;
 
         const status = getDocumentStatus(userDoc, docType);
 
         return {
-          id_doc: docType.id_doc,
-          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_doc}`,
+          id_doc: docType.id_tipoDoc, // Use id_tipoDoc from the document type definition
+          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_tipoDoc}`, // Also use id_tipoDoc here for consistency if name is missing
           vence: docType.vence === 'si',
           tiempo_vencimiento: docType.tiempo_vencimiento,
           userDocData: userDoc || null,
@@ -183,8 +183,8 @@ const Dashboard = () => {
   };
 
   // Function to open the upload modal with a selected document
-  const handleUpload = (documentTypeId, documentName) => {
-    setSelectedDocumentId(documentTypeId);
+  const handleUpload = (documentTypeId, documentName) => { // Parameter name is documentTypeId
+    setSelectedDocumentId(documentTypeId); // Set the correct ID
     setSelectedDocumentName(documentName);
     setUploadModalOpen(true);
   };
@@ -287,7 +287,7 @@ const Dashboard = () => {
                       .map((doc) => (
                         <TableRow
                           hover
-                          key={doc.id_doc}
+                          key={doc.id_doc} // Use the unique ID from the mapping (which is now id_tipoDoc)
                           sx={{ backgroundColor: getRowBackground(doc.status) }}
                         >
                           <TableCell>{doc.name}</TableCell>
@@ -297,7 +297,7 @@ const Dashboard = () => {
                               color="primary"
                               startIcon={<Upload />}
                               size="small"
-                              onClick={() => handleUpload(doc.id_doc, doc.name)}
+                              onClick={() => handleUpload(doc.id_doc, doc.name)} // Pass the correct ID (which is id_tipoDoc)
                               sx={{
                                 minWidth: '120px',
                                 px: 1.5,
