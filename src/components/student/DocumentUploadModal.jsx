@@ -60,7 +60,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   useEffect(() => {
     if (open) {
       setExpeditionDate('');
-      setExpirationDate('');
+      setExpirationDate(''); // Clear expiration date on open
       setFile(null);
       setPreviewUrl('');
       setSuccess(false);
@@ -96,17 +96,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
     return () => {};
   }, [file]);
-
-  useEffect(() => {
-    if (expeditionDate && documentInfo && documentInfo.vence === 'si' && documentInfo.tiempo_vencimiento) {
-      const calculatedDate = calculateExpirationDate(expeditionDate, documentInfo.tiempo_vencimiento);
-      setExpirationDate(calculatedDate || '');
-    } else if (documentInfo && documentInfo.vence !== 'si') {
-      setExpirationDate('');
-    } else if (!expeditionDate) {
-      setExpirationDate('');
-    }
-  }, [expeditionDate, documentInfo]);
 
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
@@ -347,11 +336,10 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                     type="date"
                     fullWidth
                     value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)} // Add this
                     InputLabelProps={{ shrink: true }}
                     required
-                    disabled={true}
-                    helperText="Se calcula automáticamente"
-                    inputProps={{ min: expeditionDate || '' }}
+                    inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
                   />
                 </Grid>
               )}

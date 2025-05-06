@@ -124,6 +124,43 @@ const Dashboard = () => {
   const [selectedDocumentId, setSelectedDocumentId] = useState('');
   const [selectedDocumentName, setSelectedDocumentName] = useState('');
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '—';
+
+    let dateObj;
+    // Check if the dateString is likely in "DD/MM/YYYY" format
+    const parts = typeof dateString === 'string' ? dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/) : null;
+
+    if (parts) {
+      // parts[1] is day, parts[2] is month, parts[3] is year
+      // JavaScript's Date month is 0-indexed, so subtract 1 from month
+      // This creates a date at LOCAL midnight, which is what we want.
+      dateObj = new Date(parseInt(parts[3], 10), parseInt(parts[2], 10) - 1, parseInt(parts[1], 10));
+    } else {
+      // Fallback for other formats (e.g., if some old data is still YYYY-MM-DD)
+      // This might still cause the one-day-off issue if dateString is "YYYY-MM-DD"
+      // because it's parsed as UTC.
+      const isoParts = typeof dateString === 'string' ? dateString.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
+      if (isoParts) {
+        // If it's "YYYY-MM-DD", explicitly treat it as local to avoid UTC conversion issues for display.
+        dateObj = new Date(parseInt(isoParts[1], 10), parseInt(isoParts[2], 10) - 1, parseInt(isoParts[3], 10));
+      } else {
+        dateObj = new Date(dateString); // General fallback
+      }
+    }
+
+    if (isNaN(dateObj.getTime())) {
+      // console.warn(`Could not parse date: ${dateString}`);
+      return dateString || '—'; 
+    }
+
+    return dateObj.toLocaleDateString('es-CO', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  };
+
   useEffect(() => {
     if (Array.isArray(documentTypes) && documentTypes.length > 0) {
       const combined = documentTypes.map(docType => {
@@ -161,17 +198,6 @@ const Dashboard = () => {
     }
     setPage(0);
   }, [searchTerm, combinedDocuments]);
-
-  const formatDate = (date) => {
-    if (!date) return '—';
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) return '—';
-    return dateObj.toLocaleDateString('es-CO', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
