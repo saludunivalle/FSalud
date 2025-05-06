@@ -7,8 +7,9 @@ import DashboardPage from '../pages/Dashboard';
 import FirstLoginForm from '../components/auth/FirstLoginForm';
 import NotFoundPage from '../pages/NotFound';
 import Header from '../components/common/Header';
-import DocumentUploader from '../components/student/DocumentUploader';
 import DocumentHistory from '../components/student/DocumentHistory';
+// Remove DocumentUploader import as it's no longer a separate page
+// import DocumentUploader from '../components/student/DocumentUploader';
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
@@ -62,14 +63,6 @@ const AppRoutes = () => {
              </ProtectedRoute>
            }
          />
-        <Route
-          path="/upload-document" // Added route for uploader
-          element={
-            <ProtectedRoute>
-              <DocumentUploader />
-            </ProtectedRoute>
-          }
-        />
         <Route
           path="/complete-profile"
           element={

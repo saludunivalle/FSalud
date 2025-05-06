@@ -24,7 +24,7 @@ import { Upload, CheckCircle, Cancel, Visibility, Search, Warning, HourglassEmpt
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useUser } from '../context/UserContext';
 import { useDocuments } from '../context/DocumentContext';
-import { useNavigate } from 'react-router-dom';
+import DocumentUploadModal from './student/DocumentUploadModal'; // Import the modal component
 
 const theme = createTheme({
   palette: {
@@ -112,13 +112,17 @@ const StatusChip = ({ status }) => {
 const Dashboard = () => {
   const { user } = useUser();
   const { documentTypes, userDocuments, loading: documentsLoading, getDocumentStatus, isDocumentExpired } = useDocuments();
-  const navigate = useNavigate();
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [combinedDocuments, setCombinedDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
+
+  // State for controlling the upload modal
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState('');
+  const [selectedDocumentName, setSelectedDocumentName] = useState('');
 
   useEffect(() => {
     if (Array.isArray(documentTypes) && documentTypes.length > 0) {
@@ -131,7 +135,7 @@ const Dashboard = () => {
 
         return {
           id_doc: docType.id_doc,
-          name: docType.nombre_tipoDoc, 
+          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_doc}`,
           vence: docType.vence === 'si',
           tiempo_vencimiento: docType.tiempo_vencimiento,
           userDocData: userDoc || null,
@@ -178,14 +182,16 @@ const Dashboard = () => {
     setPage(0);
   };
 
+  // Function to open the upload modal with a selected document
   const handleUpload = (documentTypeId, documentName) => {
-    navigate('/upload-document', {
-      state: {
-        documentId: documentTypeId,
-        documentName: documentName,
-        preselected: true
-      }
-    });
+    setSelectedDocumentId(documentTypeId);
+    setSelectedDocumentName(documentName);
+    setUploadModalOpen(true);
+  };
+
+  // Function to close the upload modal
+  const handleCloseUploadModal = () => {
+    setUploadModalOpen(false);
   };
 
   const getRowBackground = (status) => {
@@ -343,6 +349,14 @@ const Dashboard = () => {
               labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
             />
           </Paper>
+
+          {/* Render the Document Upload Modal */}
+          <DocumentUploadModal
+            open={uploadModalOpen}
+            onClose={handleCloseUploadModal}
+            selectedDocumentId={selectedDocumentId}
+            documentName={selectedDocumentName}
+          />
         </Box>
       </Container>
     </ThemeProvider>
