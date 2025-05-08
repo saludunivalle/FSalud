@@ -4,19 +4,18 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import HomePage from '../pages/Home';
 import DashboardPage from '../pages/Dashboard';
+import AdminDashboard from '../components/admin/AdminDashboard';
 import FirstLoginForm from '../components/auth/FirstLoginForm';
 import NotFoundPage from '../pages/NotFound';
 import Header from '../components/common/Header';
 import DocumentHistory from '../components/student/DocumentHistory';
-// Remove DocumentUploader import as it's no longer a separate page
-// import DocumentUploader from '../components/student/DocumentUploader';
+import StudentDocumentManager from '../components/admin/StudentDocumentManager'; // Importar el componente
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
   const { isLogin, loading, user } = useUser();
 
   if (loading) {
-    // Optional: Show a global loading spinner here
     return <div>Cargando...</div>;
   }
 
@@ -24,25 +23,15 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/" replace />;
   }
 
-  // --- Lógica de redirección de primer login deshabilitada temporalmente ---
-  // if (user && user.isFirstLogin) {
-  //    if (window.location.pathname !== '/complete-profile') {
-  //      return <Navigate to="/complete-profile" replace />;
-  //    }
-  // } else if (window.location.pathname === '/complete-profile') {
-  //    return <Navigate to="/dashboard" replace />;
-  // }
-  // --- Fin de lógica deshabilitada ---
-
   return children;
 };
 
 const AppRoutes = () => {
-  const { isLogin, user } = useUser(); // Obtener también el objeto user
+  const { isLogin, user } = useUser();
 
   return (
-    <> {/* Use a Fragment or just return the content directly */}
-      {isLogin && <Header userData={user} />} {/* Pasar user como userData */}
+    <>
+      {isLogin && <Header userData={user} />}
       <Routes>
         <Route path="/" element={<HomePage />} />
 
@@ -51,23 +40,32 @@ const AppRoutes = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              {user?.role === 'profesor' ? <AdminDashboard /> : <DashboardPage />}
             </ProtectedRoute>
           }
         />
-         <Route
-           path="/document-history" // Added route for history
-           element={
-             <ProtectedRoute>
-               <DocumentHistory />
-             </ProtectedRoute>
-           }
-         />
+        <Route
+          path="/document-history"
+          element={
+            <ProtectedRoute>
+              <DocumentHistory />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/complete-profile"
           element={
-            <ProtectedRoute> {/* Still protected to ensure user context is loaded */}
+            <ProtectedRoute>
               <FirstLoginForm />
+            </ProtectedRoute>
+          }
+        />
+        {/* Nueva ruta para documentos de estudiantes */}
+        <Route
+          path="/admin/student/:studentId"
+          element={
+            <ProtectedRoute>
+              <StudentDocumentManager />
             </ProtectedRoute>
           }
         />
@@ -75,7 +73,7 @@ const AppRoutes = () => {
         {/* Ruta Not Found */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </> // Close Fragment
+    </>
   );
 };
 
