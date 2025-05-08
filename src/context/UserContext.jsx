@@ -1,6 +1,6 @@
-// src/context/UserContext.jsx (CORREGIDO)
+// src/context/UserContext.jsx
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios'; // Cambiamos a axios directamente
+import axios from 'axios';
 
 // Crear el contexto
 const UserContext = createContext();
@@ -22,13 +22,11 @@ export const UserProvider = ({ children }) => {
         const email = localStorage.getItem('email');
         const userId = localStorage.getItem('user_id');
         const isFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
+        const storedRole = localStorage.getItem('user_role');
 
         if (googleToken && email && userId) {
-          // Si tenemos la información básica del usuario en localStorage
-
-          // Obtener datos adicionales del usuario
           try {
-            // Cambiamos para usar la URL directa del servidor en Vercel, evitando problemas de conexión local
+            // Obtener datos adicionales del usuario
             const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
               params: { userId },
               headers: {
@@ -36,30 +34,40 @@ export const UserProvider = ({ children }) => {
               }
             });
 
-            // Verificar si es primer inicio de sesión basado en los datos recibidos
             const userData = response.data;
             const isNewUser = !userData.documento_usuario || !userData.tipoDoc;
             const calculatedIsFirstLogin = isFirstLogin || isNewUser;
+
+            // Determinar el rol del usuario
+            let role = storedRole || 'estudiante';
+            if (userData.es_admin) {
+              role = 'administrador';
+            } else if (userData.es_profesor) {
+              role = 'profesor';
+            }
+
+            // Guardar el rol en localStorage
+            localStorage.setItem('user_role', role);
 
             setUser({
               id: userId,
               email: email,
               name: localStorage.getItem('name') || userData.nombre_usuario || email.split('@')[0],
+              role: role,
               ...userData,
               isFirstLogin: calculatedIsFirstLogin
             });
 
-            // Actualizar localStorage con la bandera correcta
             if (calculatedIsFirstLogin !== isFirstLogin) {
               localStorage.setItem('isFirstLogin', String(calculatedIsFirstLogin));
             }
           } catch (error) {
             console.error('Error obteniendo datos adicionales del usuario:', error);
-            // Si falla obtener datos adicionales, usar datos básicos
             setUser({
               id: userId,
               email: email,
               name: localStorage.getItem('name') || email.split('@')[0],
+              role: storedRole || 'estudiante',
               isFirstLogin: isFirstLogin
             });
           }
@@ -78,7 +86,13 @@ export const UserProvider = ({ children }) => {
 
   // Función para iniciar sesión
   const login = (userData) => {
-    setUser(userData);
+    const role = userData.role || (userData.es_admin ? 'administrador' : userData.es_profesor ? 'profesor' : 'estudiante');
+    localStorage.setItem('user_role', role);
+
+    setUser({
+      ...userData,
+      role: role
+    });
     setIsLogin(true);
   };
 
@@ -89,8 +103,17 @@ export const UserProvider = ({ children }) => {
     localStorage.removeItem('user_id');
     localStorage.removeItem('name');
     localStorage.removeItem('isFirstLogin');
+    localStorage.removeItem('user_role');
     setUser(null);
     setIsLogin(false);
+  };
+
+  // Función para actualizar el rol del usuario
+  const updateUserRole = (newRole) => {
+    if (['estudiante', 'administrador', 'profesor'].includes(newRole)) {
+      localStorage.setItem('user_role', newRole);
+      setUser((prev) => ({ ...prev, role: newRole }));
+    }
   };
 
   // Valores disponibles en el contexto
@@ -101,7 +124,8 @@ export const UserProvider = ({ children }) => {
     setIsLogin,
     login,
     logout,
-    loading
+    loading,
+    updateUserRole
   };
 
   return (
