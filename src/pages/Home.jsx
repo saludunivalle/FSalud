@@ -1,5 +1,5 @@
 // src/pages/Home.jsx (Updated)
-import React from 'react';
+import React, { useEffect } from 'react'; // Added useEffect
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import GoogleLogin from '../components/auth/GoogleLogin';
@@ -35,14 +35,26 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }));
 
 const Home = () => {
-  const { isLogin, user, setUser, setIsLogin } = useUser();
+  const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser(); // Ensure userLoading is available
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Esta función se llamará cuando la autenticación sea exitosa
-  const handleLoginSuccess = (userData) => {
-    // Siempre redirigir al dashboard después del login
-    navigate('/dashboard');
+  // useEffect to handle navigation after login state is confirmed and user data is loaded.
+  useEffect(() => {
+    if (isLogin && user && !userLoading) {
+      if (user.isFirstLogin === true) {
+        navigate('/complete-profile', { replace: true });
+      } else if (user.isFirstLogin === false) {
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from, { replace: true });
+      }
+    }
+  }, [isLogin, user, userLoading, navigate, location.state]);
+
+  // This function is called by GoogleLogin upon successful authentication.
+  const handleLoginSuccess = (googleAuthData) => {
+    // The GoogleLogin component should have already invoked context updates.
+    // Navigation is now handled by the useEffect above.
   };
 
   return (

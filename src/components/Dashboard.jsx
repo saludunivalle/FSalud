@@ -24,6 +24,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useUser } from '../context/UserContext';
 import { useDocuments } from '../context/DocumentContext';
 import DocumentUploadModal from './student/DocumentUploadModal'; // Import the modal component
+import { Navigate } from 'react-router-dom'; // Added Navigate
 
 const theme = createTheme({
   palette: {
@@ -112,6 +113,7 @@ const Dashboard = () => {
   const { user } = useUser();
   const { documentTypes, userDocuments, loading: documentsLoading, getDocumentStatus, isDocumentExpired } = useDocuments();
 
+  const [userData, setUserData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [combinedDocuments, setCombinedDocuments] = useState([]);
   const [filteredDocuments, setFilteredDocuments] = useState([]);
@@ -120,6 +122,66 @@ const Dashboard = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState('');
   const [selectedDocumentName, setSelectedDocumentName] = useState('');
+
+  useEffect(() => {
+    if (userData) {
+      console.log("User data updated:", userData);
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (Array.isArray(documentTypes) && documentTypes.length > 0) {
+      const combined = documentTypes.map(docType => {
+        const userDoc = Array.isArray(userDocuments)
+          ? userDocuments.find(ud => ud.id_doc === docType.id_tipoDoc)
+          : null;
+        const status = getDocumentStatus(userDoc, docType);
+        return {
+          id_doc: docType.id_tipoDoc,
+          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_tipoDoc}`,
+          vence: docType.vence === 'si',
+          tiempo_vencimiento: docType.tiempo_vencimiento,
+          userDocData: userDoc || null,
+          status: status,
+          fecha_expedicion: userDoc?.fecha_expedicion || null,
+          fecha_vencimiento: userDoc?.fecha_vencimiento || null,
+        };
+      });
+      setCombinedDocuments(combined);
+    } else {
+      setCombinedDocuments([]);
+    }
+  }, [documentTypes, userDocuments, getDocumentStatus]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredDocuments(combinedDocuments);
+    } else {
+      const filtered = combinedDocuments.filter(doc =>
+        doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredDocuments(filtered);
+    }
+  }, [searchTerm, combinedDocuments]);
+
+  // Safeguard check for user, though ProtectedRoute and Page component should handle this.
+  if (!user) {
+    return (
+      <Box sx={{ padding: 3, textAlign: 'center', marginTop: 12 }}>
+        <Typography variant="h5" color="error" gutterBottom>
+          No autorizado
+        </Typography>
+        <Typography>
+          Debes iniciar sesión para acceder a esta página.
+        </Typography>
+      </Box>
+    );
+  }
+
+  // If it's the user's first login, redirect to complete their profile.
+  if (user.isFirstLogin === true) {
+    return <Navigate to="/complete-profile" replace />;
+  }
 
   const formatDate = (dateString) => {
     if (!dateString) return '—';
@@ -157,43 +219,6 @@ const Dashboard = () => {
       day: '2-digit'
     });
   };
-
-  useEffect(() => {
-    if (Array.isArray(documentTypes) && documentTypes.length > 0) {
-      const combined = documentTypes.map(docType => {
-        const userDoc = Array.isArray(userDocuments)
-          ? userDocuments.find(ud => ud.id_doc === docType.id_tipoDoc) // Match userDoc using id_tipoDoc
-          : null;
-
-        const status = getDocumentStatus(userDoc, docType);
-
-        return {
-          id_doc: docType.id_tipoDoc, // Use id_tipoDoc from the document type definition
-          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_tipoDoc}`, // Also use id_tipoDoc here for consistency if name is missing
-          vence: docType.vence === 'si',
-          tiempo_vencimiento: docType.tiempo_vencimiento,
-          userDocData: userDoc || null,
-          status: status,
-          fecha_expedicion: userDoc?.fecha_expedicion || null,
-          fecha_vencimiento: userDoc?.fecha_vencimiento || null,
-        };
-      });
-      setCombinedDocuments(combined);
-    } else {
-      setCombinedDocuments([]);
-    }
-  }, [documentTypes, userDocuments, getDocumentStatus]);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredDocuments(combinedDocuments);
-    } else {
-      const filtered = combinedDocuments.filter(doc =>
-        doc.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredDocuments(filtered);
-    }
-  }, [searchTerm, combinedDocuments]);
 
   // Function to open the upload modal with a selected document
   const handleUpload = (documentTypeId, documentName) => { // Parameter name is documentTypeId
@@ -239,7 +264,7 @@ const Dashboard = () => {
       <Container maxWidth="xl">
         <Box sx={{ padding: 3, marginTop: 12 }}>
           <Typography variant="h5" gutterBottom>
-            Bienvenido, {user?.name || 'Usuario'}
+            Bienvenido, {user.name || 'Usuario'} {/* user is guaranteed to be non-null here */}
           </Typography>
 
           <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>

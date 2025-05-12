@@ -1,4 +1,3 @@
-// src/components/auth/FirstLoginForm.jsx
 import React, { useState } from 'react';
 import { 
   Box, 
@@ -103,11 +102,18 @@ const FirstLoginForm = () => {
     try {
       // Enviar datos al servidor
       const userData = {
-        ...formData,
-        isFirstLogin: false
+        // Mapear los campos del formulario a las columnas de la hoja "USUARIOS"
+        tipoDoc: formData.documentType,
+        documento_usuario: formData.documentNumber,
+        telefono: formData.phone,
+        dirección: formData.address,
+        fecha_nac: formData.birthDate,
+        email: formData.personalEmail,
+        programa_academico: formData.program,
+        primer_login: "sí" // Marcar como primer inicio completado
       };
       
-      const response = await updateUserData(user.id, userData);
+      await updateUserData(user.id, userData);
       
       // Actualizar el estado del usuario con la nueva información
       setUser(prev => ({
