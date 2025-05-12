@@ -71,6 +71,7 @@ const mockStudents = [
     apellido: 'Pérez Mendoza',
     codigo: '2012345',
     email: 'juan.perez@correounivalle.edu.co',
+    celular: '3001234567', // Nueva propiedad
     documentosFaltantes: 'Sí',
     documentosPendientes: 2,
     documentosAprobados: 3,
@@ -89,6 +90,7 @@ const mockStudents = [
     apellido: 'García López',
     codigo: '2045678',
     email: 'maria.garcia@correounivalle.edu.co',
+    celular: '3012345678', // Nueva propiedad
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
@@ -107,6 +109,7 @@ const mockStudents = [
     apellido: 'Ramírez Roa',
     codigo: '2078901',
     email: 'carlos.ramirez@correounivalle.edu.co',
+    celular: '3023456789', // Nueva propiedad
     documentosFaltantes: 'Sí',
     documentosPendientes: 1,
     documentosAprobados: 4,
@@ -125,6 +128,7 @@ const mockStudents = [
     apellido: 'Martínez Solano',
     codigo: '2023456',
     email: 'ana.martinez@correounivalle.edu.co',
+    celular: '3109876543', // Nueva propiedad
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
@@ -143,6 +147,7 @@ const mockStudents = [
     apellido: 'Hernández Torres',
     codigo: '2034567',
     email: 'luis.hernandez@correounivalle.edu.co',
+    celular: '3118765432', // Nueva propiedad
     documentosFaltantes: 'Sí',
     documentosPendientes: 3,
     documentosAprobados: 2,
@@ -161,6 +166,7 @@ const mockStudents = [
     apellido: 'Sánchez Mejía',
     codigo: '2056789',
     email: 'daniela.sanchez@correounivalle.edu.co',
+    celular: '3127654321', // Nueva propiedad
     documentosFaltantes: 'Sí',
     documentosPendientes: 1,
     documentosAprobados: 3,
@@ -179,6 +185,7 @@ const mockStudents = [
     apellido: 'López Vidal',
     codigo: '2067890',
     email: 'santiago.lopez@correounivalle.edu.co',
+    celular: '3136543210', // Nueva propiedad
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
@@ -249,6 +256,7 @@ const AdminDashboard = () => {
       student.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (student.celular && student.celular.toLowerCase().includes(searchTerm.toLowerCase())) || // Añadir filtro por celular
       student.programa.toLowerCase().includes(searchTerm.toLowerCase())
     );
     
@@ -449,7 +457,8 @@ const AdminDashboard = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Estudiante</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Código</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Celular</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Cédula</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Programa</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Estado</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Documentos</TableCell>
@@ -458,7 +467,7 @@ const AdminDashboard = () => {
               <TableBody>
                 {filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} align="center">
+                    <TableCell colSpan={6} align="center"> {/* colSpan remains 6 */}
                       <Typography variant="body1" sx={{ py: 2 }}>
                         No se encontraron estudiantes que coincidan con la búsqueda.
                       </Typography>
@@ -500,15 +509,13 @@ const AdminDashboard = () => {
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell>{student.codigo}</TableCell>
+                        <TableCell>{student.celular || 'N/A'}</TableCell>
+                        <TableCell>{student.codigo || 'N/A'}</TableCell> {/* Cédula column */}
                         <TableCell>
                           <Tooltip title={`Sede: ${student.sede} | Nivel: ${student.nivel}`}>
                             <Box>
                               <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
                                 {student.programa}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" noWrap>
-                                {student.escenarios}
                               </Typography>
                             </Box>
                           </Tooltip>
