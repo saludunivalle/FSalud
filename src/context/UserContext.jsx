@@ -21,12 +21,10 @@ export const UserProvider = ({ children }) => {
         const googleToken = localStorage.getItem('google_token');
         const email = localStorage.getItem('email');
         const userId = localStorage.getItem('user_id');
-        const isFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
-        const storedRole = localStorage.getItem('user_role');
+        const storedRole = localStorage.getItem('user_role'); // Role from previous session/login
 
         if (googleToken && email && userId) {
           try {
-            // Obtener datos adicionales del usuario
             const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
               params: { userId },
               headers: {
@@ -34,45 +32,82 @@ export const UserProvider = ({ children }) => {
               }
             });
 
-            const userData = response.data;
-            const isNewUser = !userData.documento_usuario || !userData.tipoDoc;
-            const calculatedIsFirstLogin = isFirstLogin || isNewUser;
+            const backendUserResponse = response.data; // Expected: { success: true, data: userObject }
+            
+            if (backendUserResponse.success && backendUserResponse.data) {
+              const userFromServer = backendUserResponse.data; // This is the actual user object
+              
+              // Determine role: Prioritize role from server, fallback to localStorage if needed.
+              let roleFromSource = userFromServer.rol || storedRole || 'estudiante';
+              const normalizedRole = roleFromSource.toLowerCase();
+              localStorage.setItem('user_role', normalizedRole); // Persist normalized role
 
-            // Determinar el rol del usuario
-            let role = storedRole || 'estudiante';
-            if (userData.es_admin) {
-              role = 'administrador';
-            } else if (userData.es_profesor) {
-              role = 'profesor';
+              // Determine isFirstLogin:
+              // For professors/admins, it's always false.
+              // For students, rely on what was stored during login (which comes from backend's isFirstLogin)
+              // or what FirstLoginForm set after completion.
+              let finalIsFirstLoginValue;
+              if (normalizedRole === 'profesor' || normalizedRole === 'administrador') {
+                finalIsFirstLoginValue = false;
+              } else {
+                // This value in localStorage is set by login() or FirstLoginForm.jsx
+                finalIsFirstLoginValue = localStorage.getItem('isFirstLogin') === 'true';
+              }
+
+              setUser({
+                id: userId, // from localStorage, should match userFromServer.id_usuario
+                email: email, // from localStorage, should match userFromServer.correo_usuario
+                name: localStorage.getItem('name') || `${userFromServer.nombre_usuario || ''} ${userFromServer.apellido_usuario || ''}`.trim() || email.split('@')[0],
+                role: normalizedRole,
+                ...userFromServer, // Spread all properties from userFromServer
+                isFirstLogin: finalIsFirstLoginValue 
+              });
+              
+              // Ensure localStorage reflects the determined isFirstLogin state
+              localStorage.setItem('isFirstLogin', String(finalIsFirstLoginValue));
+              // Update name in localStorage if a more complete one was fetched from server
+              const serverName = `${userFromServer.nombre_usuario || ''} ${userFromServer.apellido_usuario || ''}`.trim();
+              if (serverName) {
+                localStorage.setItem('name', serverName);
+              }
+
+            } else {
+              // Fallback if /getUser failed or returned unexpected structure
+              console.warn('Failed to get full user data from server or data missing, using localStorage role.');
+              const lsRole = storedRole || 'estudiante';
+              const normalizedLsRole = lsRole.toLowerCase();
+              let fallbackIsFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
+              if (normalizedLsRole === 'profesor' || normalizedLsRole === 'administrador') {
+                  fallbackIsFirstLogin = false;
+              }
+              setUser({
+                id: userId,
+                email: email,
+                name: localStorage.getItem('name') || email.split('@')[0],
+                role: normalizedLsRole,
+                isFirstLogin: fallbackIsFirstLogin
+              });
             }
-
-            // Guardar el rol en localStorage
-            localStorage.setItem('user_role', role);
-
-            setUser({
-              id: userId,
-              email: email,
-              name: localStorage.getItem('name') || userData.nombre_usuario || email.split('@')[0],
-              role: role,
-              ...userData,
-              isFirstLogin: calculatedIsFirstLogin
-            });
-
-            if (calculatedIsFirstLogin !== isFirstLogin) {
-              localStorage.setItem('isFirstLogin', String(calculatedIsFirstLogin));
-            }
+            setIsLogin(true);
           } catch (error) {
-            console.error('Error obteniendo datos adicionales del usuario:', error);
+            console.error('Error obteniendo datos adicionales del usuario durante checkUserSession:', error);
+            // Fallback: use localStorage data if API call fails
+            const lsRole = localStorage.getItem('user_role') || 'estudiante';
+            const normalizedLsRole = lsRole.toLowerCase();
+            let fallbackIsFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
+
+            if (normalizedLsRole === 'profesor' || normalizedLsRole === 'administrador') {
+                fallbackIsFirstLogin = false;
+            }
             setUser({
               id: userId,
               email: email,
               name: localStorage.getItem('name') || email.split('@')[0],
-              role: storedRole || 'estudiante',
-              isFirstLogin: isFirstLogin
+              role: normalizedLsRole,
+              isFirstLogin: fallbackIsFirstLogin
             });
+            setIsLogin(true); // Still consider logged in if basic tokens exist
           }
-
-          setIsLogin(true);
         }
       } catch (error) {
         console.error('Error verificando sesión:', error);
@@ -82,16 +117,30 @@ export const UserProvider = ({ children }) => {
     };
 
     checkUserSession();
-  }, []);
+  }, []); // Ensure dependencies are correct if any are added inside
 
   // Función para iniciar sesión
-  const login = (userData) => {
-    const role = userData.role || (userData.es_admin ? 'administrador' : userData.es_profesor ? 'profesor' : 'estudiante');
-    localStorage.setItem('user_role', role);
+  const login = (backendResponse) => { // backendResponse is the full object from authController {success, user, token}
+    if (!backendResponse || !backendResponse.user || !backendResponse.token) {
+      console.error("Invalid backendResponse in login function", backendResponse);
+      return;
+    }
+    const userObject = backendResponse.user;
+    const token = backendResponse.token;
+
+    const rawRole = userObject.role || 'estudiante'; // Role from backend user object
+    const normalizedRole = rawRole.toLowerCase();
+    
+    localStorage.setItem('user_role', normalizedRole);
+    localStorage.setItem('google_token', token); 
+    localStorage.setItem('email', userObject.email);
+    localStorage.setItem('user_id', userObject.id);
+    localStorage.setItem('name', userObject.name);
+    localStorage.setItem('isFirstLogin', String(userObject.isFirstLogin)); // isFirstLogin from backend
 
     setUser({
-      ...userData,
-      role: role
+      ...userObject, // Contains id, email, name, isFirstLogin from backend
+      role: normalizedRole, // Override with normalized role
     });
     setIsLogin(true);
   };

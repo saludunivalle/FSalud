@@ -178,8 +178,9 @@ const Dashboard = () => {
     );
   }
 
-  // If it's the user's first login, redirect to complete their profile.
-  if (user.isFirstLogin === true) {
+  // If it's the user's first login AND they are a student, redirect to complete their profile.
+  // Only students need to complete their profile via this form.
+  if (user.isFirstLogin === true && user.role === 'estudiante') {
     return <Navigate to="/complete-profile" replace />;
   }
 

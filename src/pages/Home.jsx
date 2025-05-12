@@ -42,11 +42,19 @@ const Home = () => {
   // useEffect to handle navigation after login state is confirmed and user data is loaded.
   useEffect(() => {
     if (isLogin && user && !userLoading) {
-      if (user.isFirstLogin === true) {
-        navigate('/complete-profile', { replace: true });
-      } else if (user.isFirstLogin === false) {
+      // Determinar la ruta de destino según el rol y el estado de primer inicio de sesión
+      if (user.role === 'profesor' || user.role === 'administrador') {
+        // Profesores y administradores siempre van al dashboard sin completar perfil
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
+      } else {
+        // Estudiantes, verificar si es primer inicio de sesión
+        if (user.isFirstLogin === true) {
+          navigate('/complete-profile', { replace: true });
+        } else {
+          const from = location.state?.from?.pathname || '/dashboard';
+          navigate(from, { replace: true });
+        }
       }
     }
   }, [isLogin, user, userLoading, navigate, location.state]);
