@@ -10,8 +10,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  CircularProgress
+  CircularProgress,
+  InputAdornment
 } from '@mui/material';
+import { Person, Home, CalendarToday, Email, School, Phone } from '@mui/icons-material';
 import { updateUserData } from '../../services/userService';
 import { useUser } from '../../context/UserContext';
 import { useNavigate } from 'react-router-dom';
@@ -106,11 +108,11 @@ const FirstLoginForm = () => {
         tipoDoc: formData.documentType,
         documento_usuario: formData.documentNumber,
         telefono: formData.phone,
-        dirección: formData.address,
+        direccion: formData.address,
         fecha_nac: formData.birthDate,
         email: formData.personalEmail,
         programa_academico: formData.program,
-        primer_login: "sí" // Marcar como primer inicio completado
+        primer_login: "si"
       };
       
       await updateUserData(user.id, userData);
@@ -148,22 +150,21 @@ const FirstLoginForm = () => {
       <Paper 
         elevation={3} 
         sx={{ 
-          padding: 4, 
+          padding: { xs: 2, sm: 4 }, 
           width: '100%', 
-          maxWidth: 600,
-          mt: 12
+          maxWidth: 700, // Más ancho
+          mt: 8,
+          borderRadius: 3
         }}
       >
         <Typography variant="h5" component="h1" align="center" gutterBottom>
           Completa tu información
         </Typography>
-        
         <Typography variant="body1" align="center" color="text.secondary" paragraph>
           Para continuar, necesitamos algunos datos adicionales para tu perfil.
         </Typography>
-        
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth error={!!errors.documentType} required>
                 <InputLabel id="document-type-label">Tipo de documento</InputLabel>
@@ -173,6 +174,16 @@ const FirstLoginForm = () => {
                   value={formData.documentType}
                   onChange={handleChange}
                   label="Tipo de documento"
+                  sx={{
+                    minWidth: 240, // Más ancho
+                    maxWidth: 400,
+                    '.MuiSelect-select': { display: 'flex', alignItems: 'center' }
+                  }}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <Person color="action" />
+                    </InputAdornment>
+                  }
                 >
                   {documentTypes.map(option => (
                     <MenuItem key={option.value} value={option.value}>
@@ -198,9 +209,16 @@ const FirstLoginForm = () => {
                 error={!!errors.documentNumber}
                 helperText={errors.documentNumber}
                 inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person color="action" />
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 name="phone"
                 label="Teléfono celular"
@@ -211,9 +229,16 @@ const FirstLoginForm = () => {
                 error={!!errors.phone}
                 helperText={errors.phone}
                 inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone color="action" />
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 name="address"
                 label="Dirección"
@@ -223,6 +248,13 @@ const FirstLoginForm = () => {
                 onChange={handleChange}
                 error={!!errors.address}
                 helperText={errors.address}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Home color="action" />
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -237,6 +269,13 @@ const FirstLoginForm = () => {
                 error={!!errors.birthDate}
                 helperText={errors.birthDate || ' '}
                 InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <CalendarToday color="action" />
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -250,6 +289,13 @@ const FirstLoginForm = () => {
                 onChange={handleChange}
                 error={!!errors.personalEmail}
                 helperText={errors.personalEmail}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email color="action" />
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -261,6 +307,16 @@ const FirstLoginForm = () => {
                   value={formData.program}
                   onChange={handleChange}
                   label="Programa académico"
+                  sx={{
+                    minWidth: 320, // Más ancho
+                    maxWidth: 500,
+                    '.MuiSelect-select': { display: 'flex', alignItems: 'center' }
+                  }}
+                  startAdornment={
+                    <InputAdornment position="start">
+                      <School color="action" />
+                    </InputAdornment>
+                  }
                 >
                   {programs.map(option => (
                     <MenuItem key={option.value} value={option.value}>
@@ -276,21 +332,29 @@ const FirstLoginForm = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12}>
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                sx={{ 
-                  mt: 2, 
-                  backgroundColor: '#B22222',
-                  '&:hover': {
-                    backgroundColor: '#8B0000',
-                  },
-                }}
-                disabled={loading}
-              >
-                {loading ? <CircularProgress size={24} /> : 'Guardar y continuar'}
-              </Button>
+              <Box display="flex" justifyContent="flex-end">
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="medium"
+                  sx={{ 
+                    mt: 1, 
+                    backgroundColor: '#B22222',
+                    '&:hover': {
+                      backgroundColor: '#8B0000',
+                    },
+                    fontWeight: 'bold',
+                    fontSize: '11 px',
+                    py: 1,
+                    px: 1,
+                    borderRadius: 2,
+                    minWidth: 0
+                  }}
+                  disabled={loading}
+                >
+                  {loading ? <CircularProgress size={22} /> : 'Guardar y continuar'}
+                </Button>
+              </Box>
             </Grid>
           </Grid>
         </Box>

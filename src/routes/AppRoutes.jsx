@@ -56,7 +56,7 @@ const AppRoutes = () => {
           path="/complete-profile"
           element={
             <ProtectedRoute>
-              <FirstLoginForm />
+              {user?.role === 'estudiante' ? <FirstLoginForm /> : <Navigate to="/dashboard" replace />}
             </ProtectedRoute>
           }
         />
