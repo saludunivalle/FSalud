@@ -31,7 +31,8 @@ import {
   AssignmentLate, 
   AssignmentTurnedIn, 
   People,
-  FilterList
+  FilterList,
+  WhatsApp // Import WhatsApp icon
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -509,7 +510,26 @@ const AdminDashboard = () => {
                             </Box>
                           </Box>
                         </TableCell>
-                        <TableCell>{student.celular || 'N/A'}</TableCell>
+                        <TableCell>
+                          {student.celular ? (
+                            <Box display="flex" alignItems="center" gap={1}>
+                              <Typography variant="body2">{student.celular}</Typography>
+                              <IconButton 
+                                size="small" 
+                                component="a" 
+                                href={`https://wa.me/${student.celular.replace(/\s+/g, '')}`} // Remove spaces for the link
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                aria-label={`Chat with ${student.nombre} on WhatsApp`}
+                                sx={{ color: 'success.main' }}
+                              >
+                                <WhatsApp fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            'N/A'
+                          )}
+                        </TableCell>
                         <TableCell>{student.codigo || 'N/A'}</TableCell> {/* Cédula column */}
                         <TableCell>
                           <Tooltip title={`Sede: ${student.sede} | Nivel: ${student.nivel}`}>
