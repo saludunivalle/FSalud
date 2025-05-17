@@ -1,28 +1,30 @@
-// src/components/common/ProtectedRoute.jsx
+// src/components/common/ProtectedRoute.jsx (modificado)
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children }) => {
   const { user, isLogin, loading } = useUser();
   const location = useLocation();
 
+  // Mientras verificamos la autenticación, mostramos un loader
   if (loading) {
-    return <div>Cargando...</div>; // Or a spinner component
+    return <div>Cargando...</div>;
   }
 
+  // Verificar si el usuario está autenticado
   if (!isLogin || !user) {
+    // Redirigir a home guardando la ubicación actual
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  // Verificar si el usuario tiene correo @correounivalle.edu.co
   if (!user.email?.endsWith('@correounivalle.edu.co')) {
+    // Si no tiene el dominio correcto, cerrar sesión y redirigir
     localStorage.removeItem('google_token');
     localStorage.removeItem('email');
     localStorage.removeItem('user_id');
     localStorage.removeItem('name');
-    localStorage.removeItem('isFirstLogin');
-    localStorage.removeItem('user_role');
-    // Consider calling the logout function from UserContext if it handles more state cleanup
     return (
       <Navigate
         to="/"
@@ -32,18 +34,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  // Role-based access check
-  if (allowedRoles && allowedRoles.length > 0) {
-    const userRole = user.role?.toLowerCase(); // Ensure role comparison is case-insensitive
-    if (!allowedRoles.map(role => role.toLowerCase()).includes(userRole)) {
-      // User does not have the required role
-      // Redirect to a general page (e.g., their default dashboard) or an unauthorized page
-      // For simplicity, redirecting to the main dashboard.
-      // You might want to show a specific "Access Denied" message or page.
-      return <Navigate to="/dashboard" state={{ error: 'Acceso no autorizado para este rol.' }} replace />;
-    }
-  }
-
+  // Si está autenticado y tiene el correo correcto, mostrar la ruta protegida
   return children;
 };
 
