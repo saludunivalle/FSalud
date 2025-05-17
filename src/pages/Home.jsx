@@ -1,9 +1,9 @@
-// src/pages/Home.jsx (Updated)
 import React, { useEffect, useState } from 'react'; // Added useState
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import GoogleLogin from '../components/auth/GoogleLogin';
 import AuthForm from '../components/auth/AuthForm'; // Importar el formulario de autenticación
+
 import { 
   Box, 
   Typography, 
@@ -16,32 +16,36 @@ import {
   Backdrop
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { PersonAdd, Login, Close } from '@mui/icons-material';
 
 const HeroSection = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(10),
   flexDirection: 'column',
   width: '100%',
   alignContent: 'center',
-  marginTop: theme.spacing(10), // Reducido el margen superior
+  marginTop: theme.spacing(10),
   marginLeft: 'auto',
-  marginRight: 'auto', // Asegura centrado horizontal
+  marginRight: 'auto',
   textAlign: 'center',
   color: theme.palette.text.primary,
   borderRadius: theme.spacing(2),
   backgroundImage: 'linear-gradient(120deg, #e3e4e5 0%, #f5f5f5 100%)',
   opacity: 0.85,
-  display: 'flex', // Usar flexbox para centrado de contenido
-  justifyContent: 'center', // Centrado horizontal del contenido
-  maxWidth: '550px', // Controlar el ancho máximo
+  display: 'flex',
+  justifyContent: 'center',
+  maxWidth: '550px',
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
   marginTop: theme.spacing(3),
-  padding: theme.spacing(1, 4),
-  borderRadius: theme.spacing(5),
-  backgroundColor: '#B22222', // Color rojo sangre toro
+  padding: theme.spacing(1.2, 3),
+  borderRadius: theme.spacing(2),
+  fontWeight: 'bold',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+  transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: '#8B0000', // Un tono más oscuro al hacer hover
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
   },
 }));
 
@@ -49,13 +53,12 @@ const Home = () => {
   const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
-  
   // Estado para controlar el modal de autenticación
   const [authModalOpen, setAuthModalOpen] = useState(false);
   // Estado para controlar la pestaña inicial del formulario (0: Login, 1: Register)
   const [initialTab, setInitialTab] = useState(0);
 
-  // useEffect to handle navigation after login state is confirmed and user data is loaded.
+  // Handle navigation after login
   useEffect(() => {
     if (isLogin && user && !userLoading) {
       // Cerrar modal si está abierto
@@ -63,11 +66,9 @@ const Home = () => {
       
       // Determinar la ruta de destino según el rol y el estado de primer inicio de sesión
       if (user.role === 'profesor' || user.role === 'administrador') {
-        // Profesores y administradores siempre van al dashboard sin completar perfil
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
-        // Estudiantes, verificar si es primer inicio de sesión
         if (user.isFirstLogin === true) {
           navigate('/complete-profile', { replace: true });
         } else {
@@ -84,7 +85,6 @@ const Home = () => {
     setAuthModalOpen(true);
   };
 
-  // Función para cerrar el modal
   const handleCloseAuthModal = () => {
     setAuthModalOpen(false);
   };
@@ -93,6 +93,7 @@ const Home = () => {
   const handleAuthSuccess = (userData) => {
     // La navegación se manejará en el useEffect
     setAuthModalOpen(false);
+
   };
 
   return (
@@ -104,11 +105,10 @@ const Home = () => {
         justifyContent: 'center',
         minHeight: '100vh',
         alignItems: 'center',
-        paddingTop: 0, // Quitar padding superior
+        paddingTop: 0,
         paddingBottom: 4
       }}
     >
-      {/* Mostrar mensaje de error si viene de redireccionamiento */}
       {location.state?.error && (
         <Alert 
           severity="error" 
@@ -136,6 +136,7 @@ const Home = () => {
         </Typography>
         
         {!isLogin ? (
+
           <Box sx={{ marginTop: 4 }}>
             <ActionButton
               variant="contained"
@@ -149,16 +150,19 @@ const Home = () => {
           <ActionButton
             variant="contained"
             size="large"
-            onClick={() => {
-              // Siempre ir al dashboard si ya está logueado
-              navigate('/dashboard');
+            onClick={() => navigate('/dashboard')}
+            sx={{
+              backgroundColor: '#B22222',
+              '&:hover': {
+                backgroundColor: '#8B0000',
+              },
+              color: 'white',
             }}
           >
             Ir al Dashboard
           </ActionButton>
         )}
       </HeroSection>
-      
       {/* Modal de autenticación */}
       <Modal
         open={authModalOpen}

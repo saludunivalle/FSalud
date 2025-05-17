@@ -61,8 +61,8 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Obtener funciones del contexto
   const { login, isLogin, user, setUser, setIsLogin } = useUser();
+
   
   // Cambiar entre tabs
   const handleTabChange = (event, newValue) => {
@@ -152,6 +152,7 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     } catch (error) {
       console.error('Error de login:', error);
       setLoginError('Error al iniciar sesión');
+
       setLoading(false);
     }
   };
@@ -163,6 +164,7 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     
     setLoading(true);
     try {
+
       // Simulando llamada a API de registro
       // En producción, reemplazar por la llamada real
       setTimeout(() => {
@@ -174,6 +176,7 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     } catch (error) {
       console.error('Error de registro:', error);
       setRegisterError('Error al registrarse');
+
       setLoading(false);
     }
   };
@@ -188,6 +191,7 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     } catch (error) {
       console.error('Error de Google login:', error);
       setLoginError('Error al iniciar sesión con Google');
+
       setLoading(false);
     }
   };
@@ -201,6 +205,7 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     
     setLoading(true);
     try {
+
       // Simulando envío de correo de recuperación
       // En producción, reemplazar por la llamada real
       setTimeout(() => {
