@@ -16,7 +16,6 @@ import {
 } from '@mui/material';
 import { Email, Lock, Visibility, VisibilityOff, Login, PersonAdd } from '@mui/icons-material';
 import { useUser } from '../../context/UserContext';
-import { sendPasswordReset } from '../../services/authService';
 
 // Panel personalizado para cada tab
 function TabPanel(props) {
@@ -62,8 +61,8 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
   const [resetEmail, setResetEmail] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // Obtener funciones del contexto
-  const { login, register, loginWithGoogle } = useUser();
+  const { login, isLogin, user, setUser, setIsLogin } = useUser();
+
   
   // Cambiar entre tabs
   const handleTabChange = (event, newValue) => {
@@ -142,19 +141,18 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     
     setLoading(true);
     try {
-      const result = await login(loginForm.email, loginForm.password);
-      
-      if (result.success) {
+      // Simulando llamada a API de login
+      // En producción, reemplazar por la llamada real
+      setTimeout(() => {
         if (onSuccess) {
-          onSuccess(result.user);
+          onSuccess({ id: '123', email: loginForm.email, name: 'Usuario Demo' });
         }
-      } else {
-        setLoginError(result.message || 'Error de autenticación');
-      }
+        setLoading(false);
+      }, 1500);
     } catch (error) {
       console.error('Error de login:', error);
       setLoginError('Error al iniciar sesión');
-    } finally {
+
       setLoading(false);
     }
   };
@@ -166,19 +164,19 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     
     setLoading(true);
     try {
-      const result = await register(registerForm.email, registerForm.password);
-      
-      if (result.success) {
+
+      // Simulando llamada a API de registro
+      // En producción, reemplazar por la llamada real
+      setTimeout(() => {
         if (onSuccess) {
-          onSuccess(result.user);
+          onSuccess({ id: '123', email: registerForm.email, name: 'Usuario Nuevo' });
         }
-      } else {
-        setRegisterError(result.message || 'Error de registro');
-      }
+        setLoading(false);
+      }, 1500);
     } catch (error) {
       console.error('Error de registro:', error);
       setRegisterError('Error al registrarse');
-    } finally {
+
       setLoading(false);
     }
   };
@@ -187,19 +185,13 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      const result = await loginWithGoogle();
-      
-      if (result.success) {
-        if (onSuccess) {
-          onSuccess(result.user);
-        }
-      } else if (!result.cancelled) { // Solo mostrar error si no fue cancelado por el usuario
-        setLoginError(result.message || 'Error al iniciar sesión con Google');
-      }
+      // Abrir el popup de Google
+      window.google.accounts.id.prompt();
+      setLoading(false);
     } catch (error) {
       console.error('Error de Google login:', error);
       setLoginError('Error al iniciar sesión con Google');
-    } finally {
+
       setLoading(false);
     }
   };
@@ -213,18 +205,16 @@ const AuthForm = ({ onSuccess, initialTab = 0 }) => {
     
     setLoading(true);
     try {
-      const result = await sendPasswordReset(resetEmail);
-      
-      if (result.success) {
+
+      // Simulando envío de correo de recuperación
+      // En producción, reemplazar por la llamada real
+      setTimeout(() => {
         setResetEmailSent(true);
-        setLoginError('');
-      } else {
-        setLoginError(result.message || 'Error al enviar el correo de recuperación');
-      }
+        setLoading(false);
+      }, 1500);
     } catch (error) {
       console.error('Error al solicitar recuperación:', error);
       setLoginError('Error al enviar el correo de recuperación');
-    } finally {
       setLoading(false);
     }
   };

@@ -1,8 +1,9 @@
-// src/pages/Home.jsx (Updated)
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react'; // Added useState
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import AuthForm from '../components/auth/AuthForm';
+import GoogleLogin from '../components/auth/GoogleLogin';
+import AuthForm from '../components/auth/AuthForm'; // Importar el formulario de autenticación
+
 import { 
   Box, 
   Typography, 
@@ -10,9 +11,9 @@ import {
   Paper, 
   Container, 
   Alert,
-  Dialog,
-  DialogContent,
-  IconButton
+  Modal,
+  Fade,
+  Backdrop
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { PersonAdd, Login, Close } from '@mui/icons-material';
@@ -52,12 +53,17 @@ const Home = () => {
   const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+  // Estado para controlar el modal de autenticación
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
+  // Estado para controlar la pestaña inicial del formulario (0: Login, 1: Register)
+  const [initialTab, setInitialTab] = useState(0);
 
   // Handle navigation after login
   useEffect(() => {
     if (isLogin && user && !userLoading) {
+      // Cerrar modal si está abierto
+      setAuthModalOpen(false);
+      
       // Determinar la ruta de destino según el rol y el estado de primer inicio de sesión
       if (user.role === 'profesor' || user.role === 'administrador') {
         const from = location.state?.from?.pathname || '/dashboard';
@@ -73,8 +79,9 @@ const Home = () => {
     }
   }, [isLogin, user, userLoading, navigate, location.state]);
 
-  const handleOpenAuth = () => {
-    setAuthMode('login'); // Siempre abrimos con la pestaña de login por defecto
+  // Función para abrir el modal
+  const handleOpenAuthModal = (tabIndex = 0) => {
+    setInitialTab(tabIndex);
     setAuthModalOpen(true);
   };
 
@@ -82,9 +89,11 @@ const Home = () => {
     setAuthModalOpen(false);
   };
 
-  const handleAuthSuccess = () => {
+  // Esta función se llama cuando la autenticación es exitosa
+  const handleAuthSuccess = (userData) => {
+    // La navegación se manejará en el useEffect
     setAuthModalOpen(false);
-    // Navigation will be handled by the useEffect
+
   };
 
   return (
@@ -127,20 +136,12 @@ const Home = () => {
         </Typography>
         
         {!isLogin ? (
-          <Box sx={{ marginTop: 4, display: 'flex', justifyContent: 'center' }}>
+
+          <Box sx={{ marginTop: 4 }}>
             <ActionButton
               variant="contained"
               size="large"
-              startIcon={<Login />}
-              onClick={handleOpenAuth}
-              sx={{
-                backgroundColor: '#B22222',
-                '&:hover': {
-                  backgroundColor: '#8B0000',
-                },
-                color: 'white',
-                minWidth: '270px'
-              }}
+              onClick={() => handleOpenAuthModal(0)}
             >
               Iniciar sesión o registrarse
             </ActionButton>
@@ -162,30 +163,31 @@ const Home = () => {
           </ActionButton>
         )}
       </HeroSection>
-
-      {/* Dialog modal for login/register */}
-      <Dialog 
-        open={authModalOpen} 
+      {/* Modal de autenticación */}
+      <Modal
+        open={authModalOpen}
         onClose={handleCloseAuthModal}
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxWidth: 450
-          }
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 2
         }}
       >
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-          <IconButton onClick={handleCloseAuthModal}>
-            <Close />
-          </IconButton>
-        </Box>
-        <DialogContent>
-          <AuthForm 
-            onSuccess={handleAuthSuccess} 
-            initialTab={authMode === 'login' ? 0 : 1}
-          />
-        </DialogContent>
-      </Dialog>
+        <Fade in={authModalOpen}>
+          <Box>
+            <AuthForm 
+              onSuccess={handleAuthSuccess} 
+              initialTab={initialTab}
+            />
+          </Box>
+        </Fade>
+      </Modal>
     </Container>
   );
 };
