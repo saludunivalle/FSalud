@@ -9,17 +9,17 @@ import FirstLoginForm from '../components/auth/FirstLoginForm';
 import NotFoundPage from '../pages/NotFound';
 import Header from '../components/common/Header';
 import DocumentHistory from '../components/student/DocumentHistory';
-import StudentDocumentManager from '../components/admin/StudentDocumentManager'; // Importar el componente
+import StudentDocumentManager from '../components/admin/StudentDocumentManager';
 
 // Componente para proteger rutas
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { isLogin, loading, user } = useUser();
 
   if (loading) {
     return <div>Cargando...</div>;
   }
 
-  if (!isLogin) {
+  if (!isLogin || (allowedRoles && !allowedRoles.includes(user?.role))) {
     return <Navigate to="/" replace />;
   }
 
@@ -40,7 +40,7 @@ const AppRoutes = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              {user?.role === 'profesor' ? <AdminDashboard /> : <DashboardPage />}
+              {(user?.role === 'profesor' || user?.role === 'administrador') ? <AdminDashboard /> : <DashboardPage />}
             </ProtectedRoute>
           }
         />
@@ -55,16 +55,16 @@ const AppRoutes = () => {
         <Route
           path="/complete-profile"
           element={
-            <ProtectedRoute>
-              {user?.role === 'estudiante' ? <FirstLoginForm /> : <Navigate to="/dashboard" replace />}
+            <ProtectedRoute allowedRoles={['estudiante']}>
+              <FirstLoginForm />
             </ProtectedRoute>
           }
         />
-        {/* Nueva ruta para documentos de estudiantes */}
+        {/* Nueva ruta para documentos de estudiantes protegida por rol */}
         <Route
           path="/admin/student/:studentId"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['administrador', 'profesor']}>
               <StudentDocumentManager />
             </ProtectedRoute>
           }
