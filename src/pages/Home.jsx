@@ -1,9 +1,20 @@
 // src/pages/Home.jsx (Updated)
-import React, { useEffect } from 'react'; // Added useEffect
+import React, { useEffect, useState } from 'react'; // Added useState
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import GoogleLogin from '../components/auth/GoogleLogin';
-import { Box, Typography, Button, Paper, Container, Alert } from '@mui/material';
+import AuthForm from '../components/auth/AuthForm'; // Importar el formulario de autenticación
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Paper, 
+  Container, 
+  Alert,
+  Modal,
+  Fade,
+  Backdrop
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
 
 const HeroSection = styled(Paper)(({ theme }) => ({
@@ -35,13 +46,21 @@ const ActionButton = styled(Button)(({ theme }) => ({
 }));
 
 const Home = () => {
-  const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser(); // Ensure userLoading is available
+  const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Estado para controlar el modal de autenticación
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  // Estado para controlar la pestaña inicial del formulario (0: Login, 1: Register)
+  const [initialTab, setInitialTab] = useState(0);
 
   // useEffect to handle navigation after login state is confirmed and user data is loaded.
   useEffect(() => {
     if (isLogin && user && !userLoading) {
+      // Cerrar modal si está abierto
+      setAuthModalOpen(false);
+      
       // Determinar la ruta de destino según el rol y el estado de primer inicio de sesión
       if (user.role === 'profesor' || user.role === 'administrador') {
         // Profesores y administradores siempre van al dashboard sin completar perfil
@@ -59,10 +78,21 @@ const Home = () => {
     }
   }, [isLogin, user, userLoading, navigate, location.state]);
 
-  // This function is called by GoogleLogin upon successful authentication.
-  const handleLoginSuccess = (googleAuthData) => {
-    // The GoogleLogin component should have already invoked context updates.
-    // Navigation is now handled by the useEffect above.
+  // Función para abrir el modal
+  const handleOpenAuthModal = (tabIndex = 0) => {
+    setInitialTab(tabIndex);
+    setAuthModalOpen(true);
+  };
+
+  // Función para cerrar el modal
+  const handleCloseAuthModal = () => {
+    setAuthModalOpen(false);
+  };
+
+  // Esta función se llama cuando la autenticación es exitosa
+  const handleAuthSuccess = (userData) => {
+    // La navegación se manejará en el useEffect
+    setAuthModalOpen(false);
   };
 
   return (
@@ -107,13 +137,13 @@ const Home = () => {
         
         {!isLogin ? (
           <Box sx={{ marginTop: 4 }}>
-            <GoogleLogin 
-              setIsLogin={setIsLogin} 
-              setUserInfo={setUser} 
-              onSuccess={handleLoginSuccess}
-              buttonColor="#B22222"
-              showSingleButton={true}
-            />
+            <ActionButton
+              variant="contained"
+              size="large"
+              onClick={() => handleOpenAuthModal(0)}
+            >
+              Iniciar sesión o registrarse
+            </ActionButton>
           </Box>
         ) : (
           <ActionButton
@@ -128,6 +158,32 @@ const Home = () => {
           </ActionButton>
         )}
       </HeroSection>
+      
+      {/* Modal de autenticación */}
+      <Modal
+        open={authModalOpen}
+        onClose={handleCloseAuthModal}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: 2
+        }}
+      >
+        <Fade in={authModalOpen}>
+          <Box>
+            <AuthForm 
+              onSuccess={handleAuthSuccess} 
+              initialTab={initialTab}
+            />
+          </Box>
+        </Fade>
+      </Modal>
     </Container>
   );
 };
