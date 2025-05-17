@@ -1,54 +1,68 @@
 // src/pages/Home.jsx (Updated)
-import React, { useEffect } from 'react'; // Added useEffect
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import GoogleLogin from '../components/auth/GoogleLogin';
-import { Box, Typography, Button, Paper, Container, Alert } from '@mui/material';
+import AuthForm from '../components/auth/AuthForm';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  Paper, 
+  Container, 
+  Alert,
+  Dialog,
+  DialogContent,
+  IconButton
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { PersonAdd, Login, Close } from '@mui/icons-material';
 
 const HeroSection = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(10),
   flexDirection: 'column',
   width: '100%',
   alignContent: 'center',
-  marginTop: theme.spacing(10), // Reducido el margen superior
+  marginTop: theme.spacing(10),
   marginLeft: 'auto',
-  marginRight: 'auto', // Asegura centrado horizontal
+  marginRight: 'auto',
   textAlign: 'center',
   color: theme.palette.text.primary,
   borderRadius: theme.spacing(2),
   backgroundImage: 'linear-gradient(120deg, #e3e4e5 0%, #f5f5f5 100%)',
   opacity: 0.85,
-  display: 'flex', // Usar flexbox para centrado de contenido
-  justifyContent: 'center', // Centrado horizontal del contenido
-  maxWidth: '550px', // Controlar el ancho máximo
+  display: 'flex',
+  justifyContent: 'center',
+  maxWidth: '550px',
 }));
 
 const ActionButton = styled(Button)(({ theme }) => ({
   marginTop: theme.spacing(3),
-  padding: theme.spacing(1, 4),
-  borderRadius: theme.spacing(5),
-  backgroundColor: '#B22222', // Color rojo sangre toro
+  padding: theme.spacing(1.2, 3),
+  borderRadius: theme.spacing(2),
+  fontWeight: 'bold',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+  transition: 'all 0.2s ease',
   '&:hover': {
-    backgroundColor: '#8B0000', // Un tono más oscuro al hacer hover
+    transform: 'translateY(-2px)',
+    boxShadow: '0 4px 12px rgba(0,0,0,0.18)',
   },
 }));
 
 const Home = () => {
-  const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser(); // Ensure userLoading is available
+  const { isLogin, user, loading: userLoading, setUser, setIsLogin } = useUser();
   const navigate = useNavigate();
   const location = useLocation();
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'register'
 
-  // useEffect to handle navigation after login state is confirmed and user data is loaded.
+  // Handle navigation after login
   useEffect(() => {
     if (isLogin && user && !userLoading) {
       // Determinar la ruta de destino según el rol y el estado de primer inicio de sesión
       if (user.role === 'profesor' || user.role === 'administrador') {
-        // Profesores y administradores siempre van al dashboard sin completar perfil
         const from = location.state?.from?.pathname || '/dashboard';
         navigate(from, { replace: true });
       } else {
-        // Estudiantes, verificar si es primer inicio de sesión
         if (user.isFirstLogin === true) {
           navigate('/complete-profile', { replace: true });
         } else {
@@ -59,10 +73,18 @@ const Home = () => {
     }
   }, [isLogin, user, userLoading, navigate, location.state]);
 
-  // This function is called by GoogleLogin upon successful authentication.
-  const handleLoginSuccess = (googleAuthData) => {
-    // The GoogleLogin component should have already invoked context updates.
-    // Navigation is now handled by the useEffect above.
+  const handleOpenAuth = () => {
+    setAuthMode('login'); // Siempre abrimos con la pestaña de login por defecto
+    setAuthModalOpen(true);
+  };
+
+  const handleCloseAuthModal = () => {
+    setAuthModalOpen(false);
+  };
+
+  const handleAuthSuccess = () => {
+    setAuthModalOpen(false);
+    // Navigation will be handled by the useEffect
   };
 
   return (
@@ -74,11 +96,10 @@ const Home = () => {
         justifyContent: 'center',
         minHeight: '100vh',
         alignItems: 'center',
-        paddingTop: 0, // Quitar padding superior
+        paddingTop: 0,
         paddingBottom: 4
       }}
     >
-      {/* Mostrar mensaje de error si viene de redireccionamiento */}
       {location.state?.error && (
         <Alert 
           severity="error" 
@@ -106,28 +127,65 @@ const Home = () => {
         </Typography>
         
         {!isLogin ? (
-          <Box sx={{ marginTop: 4 }}>
-            <GoogleLogin 
-              setIsLogin={setIsLogin} 
-              setUserInfo={setUser} 
-              onSuccess={handleLoginSuccess}
-              buttonColor="#B22222"
-              showSingleButton={true}
-            />
+          <Box sx={{ marginTop: 4, display: 'flex', justifyContent: 'center' }}>
+            <ActionButton
+              variant="contained"
+              size="large"
+              startIcon={<Login />}
+              onClick={handleOpenAuth}
+              sx={{
+                backgroundColor: '#B22222',
+                '&:hover': {
+                  backgroundColor: '#8B0000',
+                },
+                color: 'white',
+                minWidth: '270px'
+              }}
+            >
+              Iniciar sesión o registrarse
+            </ActionButton>
           </Box>
         ) : (
           <ActionButton
             variant="contained"
             size="large"
-            onClick={() => {
-              // Siempre ir al dashboard si ya está logueado
-              navigate('/dashboard');
+            onClick={() => navigate('/dashboard')}
+            sx={{
+              backgroundColor: '#B22222',
+              '&:hover': {
+                backgroundColor: '#8B0000',
+              },
+              color: 'white',
             }}
           >
             Ir al Dashboard
           </ActionButton>
         )}
       </HeroSection>
+
+      {/* Dialog modal for login/register */}
+      <Dialog 
+        open={authModalOpen} 
+        onClose={handleCloseAuthModal}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxWidth: 450
+          }
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
+          <IconButton onClick={handleCloseAuthModal}>
+            <Close />
+          </IconButton>
+        </Box>
+        <DialogContent>
+          <AuthForm 
+            onSuccess={handleAuthSuccess} 
+            initialTab={authMode === 'login' ? 0 : 1}
+          />
+        </DialogContent>
+      </Dialog>
     </Container>
   );
 };
