@@ -165,6 +165,24 @@ export const UserProvider = ({ children }) => {
     }
   };
 
+  // Add this function to the context if you need a specific Google login handler
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const result = await axios.post('https://fsalud-server-saludunivalles-projects.vercel.app/api/auth/google', { 
+        idToken: idToken 
+      });
+      
+      if (result.data.success) {
+        login(result.data);
+        return result.data.user;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error during Google authentication:', error);
+      throw error;
+    }
+  };
+
   // Valores disponibles en el contexto
   const value = {
     user,
@@ -172,6 +190,7 @@ export const UserProvider = ({ children }) => {
     isLogin,
     setIsLogin,
     login,
+    loginWithGoogle, // Add this function
     logout,
     loading,
     updateUserRole

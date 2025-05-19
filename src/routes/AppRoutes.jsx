@@ -1,4 +1,3 @@
-// src/routes/AppRoutes.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
@@ -6,6 +5,7 @@ import HomePage from '../pages/Home';
 import DashboardPage from '../pages/Dashboard';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import FirstLoginForm from '../components/auth/FirstLoginForm';
+import AuthComponent from '../components/auth/AuthComponent'; // Updated import
 import NotFoundPage from '../pages/NotFound';
 import Header from '../components/common/Header';
 import DocumentHistory from '../components/student/DocumentHistory';
@@ -34,6 +34,9 @@ const AppRoutes = () => {
       {isLogin && <Header userData={user} />}
       <Routes>
         <Route path="/" element={<HomePage />} />
+        
+        {/* Ruta para autenticación con correo/contraseña */}
+        <Route path="/auth" element={<AuthComponent />} />
 
         {/* Rutas Protegidas */}
         <Route
@@ -60,7 +63,7 @@ const AppRoutes = () => {
             </ProtectedRoute>
           }
         />
-        {/* Nueva ruta para documentos de estudiantes protegida por rol */}
+        {/* Ruta para documentos de estudiantes protegida por rol */}
         <Route
           path="/admin/student/:studentId"
           element={

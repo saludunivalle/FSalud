@@ -1,0 +1,140 @@
+.auth-form-container {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: white;
+}
+
+.auth-methods h2,
+.google-auth h2,
+.email-auth h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.auth-button:hover {
+  background-color: #f5f5f5;
+}
+
+.auth-button img {
+  width: 20px;
+  height: 20px;
+}
+
+.google-button {
+  color: #444;
+}
+
+.email-button {
+  color: #B22222;
+  border-color: #B22222;
+}
+
+.google-login-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #555;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+}
+
+.captcha-container {
+  margin: 20px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.submit-button {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  background-color: #B22222;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #8B0000;
+}
+
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.back-button, .resend-button {
+  display: block;
+  margin: 16px auto 0;
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background-color: transparent;
+  color: #B22222;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-button:hover, .resend-button:hover {
+  background-color: #f5f5f5;
+}
+
+.error-message {
+  padding: 12px;
+  margin-bottom: 16px;
+  border-radius: 6px;
+  background-color: #ffebee;
+  color: #d32f2f;
+  font-size: 14px;
+}
+
+.verification-info {
+  background-color: #e8f5e9;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+}

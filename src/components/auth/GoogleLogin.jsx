@@ -6,6 +6,12 @@ import PropTypes from 'prop-types';
 const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B22222', showSingleButton = true }) => {
   useEffect(() => {
     const loadGoogleScript = () => {
+      // Remove any existing Google Sign-In script to avoid duplicates
+      const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+      if (existingScript) {
+        return;
+      }
+
       const script = document.createElement('script');
       script.src = 'https://accounts.google.com/gsi/client';
       script.async = true;
@@ -23,7 +29,7 @@ const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B2222
           auto_select: false,
         });
         
-        // Solo renderiza el botón de Google si no estamos usando el botón personalizado único
+        // Only render Google button if not using custom single button
         if (!showSingleButton) {
           window.google.accounts.id.renderButton(
             document.getElementById('google-login-button'),
@@ -36,10 +42,7 @@ const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B2222
     loadGoogleScript();
     
     return () => {
-      const googleScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-      if (googleScript) {
-        googleScript.remove();
-      }
+      // Clean up is now handled more safely in loadGoogleScript
     };
   }, [showSingleButton]);
 
@@ -58,6 +61,8 @@ const handleCredentialResponse = async (response) => {
         localStorage.setItem('email', result.data.user.email);
         localStorage.setItem('user_id', result.data.user.id);
         localStorage.setItem('name', result.data.user.name);
+        localStorage.setItem('user_role', result.data.user.role);
+        localStorage.setItem('isFirstLogin', String(result.data.user.isFirstLogin));
         
         setUserInfo(result.data.user);
         setIsLogin(true);
