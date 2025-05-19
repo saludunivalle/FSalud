@@ -14,9 +14,7 @@ import {
   InputAdornment,
   IconButton,
   Paper,
-  CircularProgress,
-  Tabs,
-  Tab
+  CircularProgress
 } from '@mui/material';
 import { Email, Google, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
@@ -141,7 +139,7 @@ const Home = () => {
   
   // UI states
   const [loginStep, setLoginStep] = useState('initial'); // 'initial', 'password', 'code'
-  const [loginMethod, setLoginMethod] = useState(0); // 0: login, 1: register, 2: code
+  const [loginMethod, setLoginMethod] = useState(2); // 2: code (the only option now)
   const [showSSOOption, setShowSSOOption] = useState(false);
   const [loginError, setLoginError] = useState(location.state?.error || '');
   const [loading, setLoading] = useState(false);
@@ -321,12 +319,6 @@ const Home = () => {
     }
   };
 
-  const handleTabChange = (e, newValue) => {
-    setLoginMethod(newValue);
-    setLoginError('');
-    setSuccess('');
-  };
-
   const handleBackToEmail = () => {
     setLoginStep('initial');
     setLoginError('');
@@ -409,7 +401,7 @@ const Home = () => {
                       style={{ height: 18, width: 18 }} 
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI0VBNDMzNSIgZD0iTTI0IDkuNWMzLjU0IDAgNi43MSAxLjIyIDkuMjEgMy42bDYuODUtNi44NUMzNS45IDIuMzggMzAuNDcgMCAyNCAwIDExLjUxIDAgMS45MiAxMC40OC0uMDIgMjMuNGwxMS42MiAxLjQ3QzEyLjY5IDE1IDEwLjU2IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iI0ZCQkMwNSIgZD0iTTIzLjk5IDM4Yy03LjQzIDAtMTMuNDItNS4wMS0xNS40LTExLjd4aC0uMDFsLTEyLjAzIDEuNTFDLTAuNjkgMzcuNzYgMTAuNzcgNDggMjMuOTkgNDhjNS41MyAwIDEwLjktMi44NCAxNC44OS03LjQybC0uMDEtLjAyLTcuNTEtNS44M3YtLjAwMkMyOS40OSAzNi43OCAyNiAzOCAyMy45OSAzOHoiLz48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNMzguOTkgMjRjMC0xLjQyLS4zNS0zLjA5LS44NC00LjQzSDI0djkuMTJoOS4wNmMtLjM3IDEuNTYtMS41NSA0LjM3LTQuMzQgNi4xMWw3LjUxIDUuODNjNS0zLjkgNy43Ni05Ljg2IDcuNzYtMTYuNjN6Ii8+PHBhdGggZmlsbD0iIzM0QTg1MyIgZD0iTTI0IDQ4YzMuMiAwIDUuODctLjQ5IDguMzktMS4yNiAyLjc2LS44MSA1LjAxLTIuMTkgNi45Ny0zLjlsLTcuNTEtNS44M2MtMi4xIDEuNDUtNC4zIDIuMzQtNy44NCAyLjM0QzEwLjcgMzkuNTUgMi40NiAyOC45OCAyLjQxIDI3LjlsLTExLjE4IDMuMDFDLTEuMzEgMzcuOCAxMC43MSA0OCAyNCA0OHoiLz48L3N2Zz4="
+                        e.target.src = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI0VBNDMzNSIgZD0iTTI0IDkuNWMzLjU0IDAgNi43MSAxLjIyIDkuMjEgMy42bDYuODUtNi44NUMzNS45IDIuMzggMzAuNDcgMCAyNCAwIDExLjUxIDAgMS45MiAxMC40OC0uMDIgMjMuNGwxMS42MiAxLjQ3QzEyLjY5IDE1IDEwLjU2IDkuNSAyNCA9LjU6IC4wMiAyMy40MSAxLjQ1IDAgMS4zMiAxMC4yMi0uMDIgMjMuNGwxMS42MiAxLjQ3QzEyLjY5IDE1IDEwLjU2IDkuNSAyNCA5LjV6Ii8+PHBhdGggZmlsbD0iI0ZCQkMwNSIgZD0iTTIzLjk5IDM4Yy03LjQzIDAtMTMuNDItNS4wMS0xNS40LTExLjd4aC0uMDFsLTEyLjAzIDEuNTFDLTAuNjkgMzcuNzYgMTAuNzcgNDggMjMuOTkgNDhjNS41MyAwIDEwLjktMi44NCAxNC44OS03LjQybC0uMDEtLjAyLTcuNTEtNS44M3YtLjAwMkMyOS40OSAzNi43OCAyNiAzOCAyMy45OSAzOHoiLz48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNMzguOTkgMjRjMC0xLjQyLS4zNS0zLjA5LS44NC00LjQzSDI0djkuMTJoOS4wNmMtLjM3IDEuNTYtMS41NSA0LjM3LTQuMzQgNi4xMWw3LjUxIDUuODNjNS0zLjkgNy43Ni05Ljg2IDcuNzYtMTYuNjN6Ii8+PHBhdGggZmlsbD0iIzM0QTg1MyIgZD0iTTI0IDQ4YzMuMiAwIDUuODctLjQ5IDguMzktMS4yNiAyLjc2LS44MSA1LjAxLTIuMTkgNi45Ny0zLjlsLTcuNTEtNS44M3MtMi4xIDEuNDUtNC4zIDIuMzQtNy44NCAyLjM0QzEwLjcgMzkuNTUgMi40NiAyOC45OCAyLjQxIDI3LjlsLTExLjE4IDMuMDFDLTEuMzEgMzcuOCAxMC43MSA0OCAyNCA0OHoiLz48L3N2Zz4="
                       }}
                     />
                   }
@@ -471,7 +463,7 @@ const Home = () => {
 
         {loginStep === 'password' && (
           <>
-            <Typography variant="h5" align="center" gutterBottom>
+            <Typography variant="h5" align="center" gutterBottom sx={{ color: '#333', fontWeight: 500 }}>
               Accede a tu cuenta
             </Typography>
             
@@ -479,80 +471,61 @@ const Home = () => {
               variant="text"
               startIcon={<Email />}
               fullWidth
-              sx={{ mb: 1, justifyContent: 'flex-start' }}
+              sx={{ 
+                mb: 2,
+                justifyContent: 'flex-start',
+                color: 'rgba(0,0,0,0.6)',
+                backgroundColor: 'rgba(0,0,0,0.03)',
+                borderRadius: '0.6rem',
+                padding: '0.5rem 1rem',
+                '&:hover': {
+                  backgroundColor: 'rgba(0,0,0,0.06)'
+                }
+              }}
               onClick={handleBackToEmail}
             >
               {email}
             </Button>
             
-            <Tabs value={loginMethod} onChange={handleTabChange} centered sx={{ mb: 2 }}>
-              <Tab label="Iniciar sesión" />
-              <Tab label="Registrarse" />
-              <Tab label="Código de acceso" />
-            </Tabs>
+            {/* Remove the Tabs component since there's only one option now */}
+            <Typography variant="h6" align="center" gutterBottom sx={{ color: '#666', fontWeight: 400, mb: 3 }}>
+              Código de acceso
+            </Typography>
             
-            {loginMethod === 2 ? (
-              // Opción de código de verificación
-              <Box component="form" onSubmit={handleSendCode} sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  sx={{ mt: 1, bgcolor: '#B22222', '&:hover': { bgcolor: '#8B0000' } }}
-                  disabled={loading}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Enviar código de verificación'}
-                </Button>
-              </Box>
-            ) : (
-              // Opción de contraseña
-              <Box component="form" onSubmit={handlePasswordSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <TextField
-                  fullWidth
-                  label="Contraseña"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                  required
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <Lock />
-                      </InputAdornment>
-                    ),
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  sx={{ mt: 1, bgcolor: '#B22222', '&:hover': { bgcolor: '#8B0000' } }}
-                  disabled={loading}
-                >
-                  {loading ? <CircularProgress size={24} /> : 
-                    (loginMethod === 0 ? 'Iniciar sesión' : 'Registrarse')}
-                </Button>
-              </Box>
-            )}
+            {/* This is the code access option - now it's the only one */}
+            <Box component="form" onSubmit={handleSendCode} sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 1 }}>
+                Te enviaremos un código de verificación de un solo uso a tu correo electrónico.
+              </Typography>
+              
+              <PrimaryButton
+                type="submit"
+                fullWidth
+                disabled={loading}
+                sx={{ 
+                  boxShadow: '0 2px 4px rgba(178,34,34,0.2)',
+                  transition: 'all 150ms ease-in-out'
+                }}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Enviar código de verificación'}
+              </PrimaryButton>
+            </Box>
             
             <Button
               variant="text"
               onClick={handleBackToEmail}
               disabled={loading}
               size="small"
-              sx={{ mt: 2 }}
+              sx={{ 
+                mt: 3,
+                color: 'rgba(0,0,0,0.6)',
+                textTransform: 'none',
+                fontSize: '0.85rem',
+                '&:hover': {
+                  backgroundColor: 'transparent',
+                  textDecoration: 'underline'
+                }
+              }}
             >
               Volver atrás
             </Button>
@@ -561,15 +534,22 @@ const Home = () => {
 
         {loginStep === 'code' && (
           <>
-            <Typography variant="h5" align="center" gutterBottom>
+            <Typography variant="h5" align="center" gutterBottom sx={{ color: '#333', fontWeight: 500 }}>
               Verificar código
             </Typography>
             
-            <Typography variant="body2" sx={{ mb: 2 }}>
-              Hemos enviado un código de verificación a <strong>{email}</strong>
-            </Typography>
+            <Box sx={{ 
+              backgroundColor: 'rgba(33, 150, 243, 0.08)', 
+              p: 2, 
+              borderRadius: '0.6rem',
+              mb: 3  
+            }}>
+              <Typography variant="body2" color="primary.main">
+                Hemos enviado un código de verificación a <strong>{email}</strong>
+              </Typography>
+            </Box>
             
-            <Box component="form" onSubmit={handleVerifyCode} sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <Box component="form" onSubmit={handleVerifyCode} sx={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <TextField
                 fullWidth
                 label="Código de verificación"
@@ -577,37 +557,74 @@ const Home = () => {
                 onChange={(e) => setVerificationCode(e.target.value)}
                 disabled={loading}
                 required
-                inputProps={{ maxLength: 6 }}
+                inputProps={{ 
+                  maxLength: 6,
+                  style: { letterSpacing: '0.5em', textAlign: 'center', fontWeight: 500 }
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: '0.6rem',
+                    '& fieldset': {
+                      borderColor: 'rgba(0,0,0,0.1)',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(0,0,0,0.2)',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#B22222',
+                      borderWidth: '1px'
+                    },
+                  }
+                }}
               />
               
-              <Button
+              <PrimaryButton
                 type="submit"
                 fullWidth
-                variant="contained"
-                sx={{ mt: 1, bgcolor: '#B22222', '&:hover': { bgcolor: '#8B0000' } }}
                 disabled={loading || !verificationCode}
+                sx={{ 
+                  boxShadow: '0 2px 4px rgba(178,34,34,0.2)',
+                  transition: 'all 150ms ease-in-out'
+                }}
               >
-                {loading ? <CircularProgress size={24} /> : 'Verificar código'}
-              </Button>
+                {loading ? <CircularProgress size={24} color="inherit" /> : 'Verificar código'}
+              </PrimaryButton>
               
-              <Button
-                fullWidth
-                variant="text"
-                onClick={handleSendCode}
-                disabled={loading}
-                size="small"
-              >
-                Reenviar código
-              </Button>
-              
-              <Button
-                variant="text"
-                onClick={handleBackToEmail}
-                disabled={loading}
-                size="small"
-              >
-                Volver atrás
-              </Button>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 1 }}>
+                <Button
+                  variant="text"
+                  onClick={handleSendCode}
+                  disabled={loading}
+                  size="small"
+                  sx={{ 
+                    color: '#B22222', 
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      textDecoration: 'underline'
+                    }
+                  }}
+                >
+                  Reenviar código
+                </Button>
+                
+                <Button
+                  variant="text"
+                  onClick={handleBackToEmail}
+                  disabled={loading}
+                  size="small"
+                  sx={{ 
+                    color: 'rgba(0,0,0,0.6)',
+                    textTransform: 'none',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      textDecoration: 'underline'
+                    }
+                  }}
+                >
+                  Volver atrás
+                </Button>
+              </Box>
             </Box>
           </>
         )}
