@@ -264,6 +264,10 @@ const Home = () => {
     }
   };
 
+  // Asegúrate de tener el estado para el código de prueba
+  const [testCode, setTestCode] = useState('');
+
+  // Modificar la función handleSendCode para capturar el código
   const handleSendCode = async (e) => {
     e.preventDefault();
     if (!email) {
@@ -282,10 +286,17 @@ const Home = () => {
       if (response.data.success) {
         setLoginStep('code');
         setSuccess('Código enviado correctamente a tu correo electrónico');
+        
+        // Guardar el código de verificación si está disponible
+        if (response.data.testCode) {
+          setTestCode(response.data.testCode);
+        }
       }
     } catch (err) {
       console.error('Error enviando código:', err);
-      setLoginError(err.response?.data?.error || 'Error al enviar el código de verificación');
+      const errorMessage = err.response?.data?.error || 
+                           'Error al enviar el código de verificación. Por favor intenta más tarde.';
+      setLoginError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -626,6 +637,16 @@ const Home = () => {
                 </Button>
               </Box>
             </Box>
+
+            {/* Mostrar el código de prueba solo en desarrollo */}
+            {loginStep === 'code' && testCode && (
+              <Alert 
+                severity="info" 
+                sx={{ mb: 2 }}
+              >
+                Código de prueba: <strong>{testCode}</strong>
+              </Alert>
+            )}
           </>
         )}
       </AuthContainer>
