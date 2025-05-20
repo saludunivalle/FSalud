@@ -200,12 +200,12 @@ const FirstLoginForm = () => {
         documento_usuario: formData.documentNumber,
         tipoDoc: formData.documentType,
         telefono: formData.phone,
-        direccion: '', // Add empty direccion to pass validation until backend is updated
+        // No direccion field - it's been removed
         fecha_nac: formData.birthDate,
         email: formData.personalEmail, 
-        correo_usuario: user.email,
+        correo_usuario: user.email, // This should be preserved correctly
         
-        // Campos adicionales que se preservarán
+        // Additional fields to update
         nombre_usuario: formData.firstName,
         apellido_usuario: formData.lastName,
         rol: formData.role,
