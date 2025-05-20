@@ -7,31 +7,110 @@ import {
   Paper, 
   Grid,
   FormControl,
+  FormControlLabel,
+  RadioGroup,
+  Radio,
   InputLabel,
   Select,
   MenuItem,
   CircularProgress,
-  InputAdornment
+  InputAdornment,
+  Alert
 } from '@mui/material';
-import { Person, Home, CalendarToday, Email, School, Phone } from '@mui/icons-material';
+import { 
+  Person, 
+  CalendarToday, 
+  Email, 
+  School, 
+  Phone,
+  Badge
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 import { updateUserData } from '../../services/userService';
 import { useUser } from '../../context/UserContext';
 import { useNavigate } from 'react-router-dom';
+
+// Estilos personalizados para mejorar la apariencia
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  borderRadius: 12,
+  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+  maxWidth: 620, // Reducido de 800px
+  width: '100%',
+  margin: '0 auto',
+  marginTop: theme.spacing(2), // Reducido para dejar más espacio para el título
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(2),
+    marginTop: theme.spacing(1),
+  }
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  backgroundColor: '#B22222',
+  color: 'white',
+  padding: '8px 16px', // Reducido el padding
+  borderRadius: 8,
+  textTransform: 'none',
+  fontWeight: 600,
+  fontSize: '0.9rem',
+  '&:hover': {
+    backgroundColor: '#8B0000',
+  },
+}));
+
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  '& .MuiOutlinedInput-root': {
+    borderRadius: 8,
+    '&:hover fieldset': {
+      borderColor: 'rgba(0,0,0,0.3)',
+    },
+  },
+  // Hacer los inputs más compactos
+  '& .MuiInputBase-root': {
+    height: '45px', // Altura más reducida
+  },
+  '& .MuiInputLabel-root': {
+    transform: 'translate(14px, 12px) scale(1)',
+  },
+  '& .MuiInputLabel-shrink': {
+    transform: 'translate(14px, -6px) scale(0.75)',
+  }
+}));
+
+const StyledSelect = styled(Select)(({ theme }) => ({
+  height: '45px', // Ajustando altura igual que TextField
+}));
+
+const FormContainer = styled(Box)(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  minHeight: 'calc(100vh - 120px)', // Asegura espacio para el título
+  width: '100%',
+  padding: theme.spacing(2),
+  [theme.breakpoints.down('sm')]: {
+    padding: theme.spacing(1),
+    minHeight: 'calc(100vh - 100px)',
+  }
+}));
 
 const FirstLoginForm = () => {
   const { user, setUser } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     documentType: '',
     documentNumber: '',
     phone: '',
-    address: '',
-    birthDate: '',
     personalEmail: '',
+    role: 'estudiante', // Valor predeterminado
+    birthDate: '',
     program: ''
   });
   const [errors, setErrors] = useState({});
+  const [showEmailAlert, setShowEmailAlert] = useState(true);
 
   // Opciones para el tipo de documento
   const documentTypes = [
@@ -60,20 +139,37 @@ const FirstLoginForm = () => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
+
+    // Si cambia el correo, mostrar el aviso
+    if (name === 'personalEmail') {
+      setShowEmailAlert(true);
+    }
   };
 
   const validateForm = () => {
     const newErrors = {};
     
+    // Validar nombre y apellido
+    if (!formData.firstName.trim()) newErrors.firstName = 'El nombre es requerido';
+    if (!formData.lastName.trim()) newErrors.lastName = 'El apellido es requerido';
+    
+    // Validar documento
     if (!formData.documentType) newErrors.documentType = 'El tipo de documento es requerido';
     if (!formData.documentNumber) newErrors.documentNumber = 'El número de documento es requerido';
     else if (!/^\d+$/.test(formData.documentNumber)) newErrors.documentNumber = 'Solo se permiten números';
     
+    // Validar teléfono
     if (!formData.phone) newErrors.phone = 'El teléfono es requerido';
     else if (!/^\d{10}$/.test(formData.phone)) newErrors.phone = 'Debe ser un número de 10 dígitos';
     
-    if (!formData.address) newErrors.address = 'La dirección es requerida';
+    // Validar correo personal
+    if (!formData.personalEmail) newErrors.personalEmail = 'El correo personal es requerido';
+    else if (!/\S+@\S+\.\S+/.test(formData.personalEmail)) newErrors.personalEmail = 'Correo electrónico inválido';
+    else if (formData.personalEmail.endsWith('@correounivalle.edu.co')) {
+      newErrors.personalEmail = 'No puede ser el mismo correo institucional';
+    }
     
+    // Validar fecha de nacimiento
     if (!formData.birthDate) newErrors.birthDate = 'La fecha de nacimiento es requerida';
     else {
       const birthDate = new Date(formData.birthDate);
@@ -84,12 +180,7 @@ const FirstLoginForm = () => {
       }
     }
     
-    if (!formData.personalEmail) newErrors.personalEmail = 'El correo personal es requerido';
-    else if (!/\S+@\S+\.\S+/.test(formData.personalEmail)) newErrors.personalEmail = 'Correo electrónico inválido';
-    else if (formData.personalEmail.endsWith('@correounivalle.edu.co')) {
-      newErrors.personalEmail = 'No puede ser el mismo correo institucional';
-    }
-    
+    // Validar programa académico
     if (!formData.program) newErrors.program = 'El programa académico es requerido';
     
     setErrors(newErrors);
@@ -102,16 +193,22 @@ const FirstLoginForm = () => {
     
     setLoading(true);
     try {
-      // Enviar datos al servidor
+      // Enviar datos al servidor con los nombres de campo correctos
       const userData = {
-        // Mapear los campos del formulario a las columnas de la hoja "USUARIOS"
-        tipoDoc: formData.documentType,
-        documento_usuario: formData.documentNumber,
-        telefono: formData.phone,
-        direccion: formData.address,
-        fecha_nac: formData.birthDate,
-        email: formData.personalEmail,
+        // Campos esperados por el servidor exactamente con estos nombres
         programa_academico: formData.program,
+        documento_usuario: formData.documentNumber,
+        tipoDoc: formData.documentType,
+        telefono: formData.phone,
+        direccion: '', // Add empty direccion to pass validation until backend is updated
+        fecha_nac: formData.birthDate,
+        email: formData.personalEmail, 
+        correo_usuario: user.email,
+        
+        // Campos adicionales que se preservarán
+        nombre_usuario: formData.firstName,
+        apellido_usuario: formData.lastName,
+        rol: formData.role,
         primer_login: "si"
       };
       
@@ -121,11 +218,15 @@ const FirstLoginForm = () => {
       setUser(prev => ({
         ...prev,
         ...userData,
+        name: `${formData.firstName} ${formData.lastName}`,
+        role: formData.role,
         isFirstLogin: false
       }));
       
       // Guardar en localStorage la bandera de primer inicio de sesión
       localStorage.setItem('isFirstLogin', 'false');
+      localStorage.setItem('user_role', formData.role);
+      localStorage.setItem('name', `${formData.firstName} ${formData.lastName}`);
       
       // Redireccionar al dashboard
       navigate('/dashboard');
@@ -138,50 +239,82 @@ const FirstLoginForm = () => {
   };
 
   return (
-    <Box 
-      sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center',
-        minHeight: '80vh',
-        padding: 2
-      }}
-    >
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          padding: { xs: 2, sm: 4 }, 
-          width: '100%', 
-          maxWidth: 700, // Más ancho
-          mt: 8,
-          borderRadius: 3
-        }}
-      >
-        <Typography variant="h5" component="h1" align="center" gutterBottom>
-          Completa tu información
+    <FormContainer>
+      <Box sx={{ mb: 3, textAlign: 'center' }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 500, color: '#B22222' }}>
+          Completa tu perfil
         </Typography>
-        <Typography variant="body1" align="center" color="text.secondary" paragraph>
-          Para continuar, necesitamos algunos datos adicionales para tu perfil.
+        <Typography variant="body1" color="text.secondary">
+          Para continuar, necesitamos algunos datos adicionales.
         </Typography>
+      </Box>
+
+      <StyledPaper elevation={3}>
+        {showEmailAlert && (
+          <Alert 
+            severity="info" 
+            sx={{ mb: 2 }} 
+            onClose={() => setShowEmailAlert(false)}
+          >
+            Por favor ingresa el correo con el que deseas seguir iniciando sesión.
+          </Alert>
+        )}
+
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={3}>
+          <Grid container spacing={2}>
+            {/* Nombre y Apellido */}
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth error={!!errors.documentType} required>
+              <StyledTextField
+                name="firstName"
+                label="Nombre"
+                fullWidth
+                required
+                value={formData.firstName}
+                onChange={handleChange}
+                error={!!errors.firstName}
+                helperText={errors.firstName}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person fontSize="small" color="action" />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <StyledTextField
+                name="lastName"
+                label="Apellido"
+                fullWidth
+                required
+                value={formData.lastName}
+                onChange={handleChange}
+                error={!!errors.lastName}
+                helperText={errors.lastName}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person fontSize="small" color="action" />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            {/* Tipo y número de documento */}
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth error={!!errors.documentType} required size="small">
                 <InputLabel id="document-type-label">Tipo de documento</InputLabel>
-                <Select
+                <StyledSelect
                   labelId="document-type-label"
                   name="documentType"
                   value={formData.documentType}
                   onChange={handleChange}
                   label="Tipo de documento"
-                  sx={{
-                    minWidth: 240, // Más ancho
-                    maxWidth: 400,
-                    '.MuiSelect-select': { display: 'flex', alignItems: 'center' }
-                  }}
                   startAdornment={
                     <InputAdornment position="start">
-                      <Person color="action" />
+                      <Badge fontSize="small" color="action" />
                     </InputAdornment>
                   }
                 >
@@ -190,7 +323,7 @@ const FirstLoginForm = () => {
                       {option.label}
                     </MenuItem>
                   ))}
-                </Select>
+                </StyledSelect>
                 {errors.documentType && (
                   <Typography variant="caption" color="error">
                     {errors.documentType}
@@ -199,7 +332,7 @@ const FirstLoginForm = () => {
               </FormControl>
             </Grid>
             <Grid item xs={12} sm={6}>
-              <TextField
+              <StyledTextField
                 name="documentNumber"
                 label="Número de documento"
                 fullWidth
@@ -212,14 +345,38 @@ const FirstLoginForm = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Person color="action" />
+                      <Badge fontSize="small" color="action" />
                     </InputAdornment>
                   )
                 }}
               />
             </Grid>
+
+            {/* Email personal */}
             <Grid item xs={12} sm={6}>
-              <TextField
+              <StyledTextField
+                name="personalEmail"
+                label="Correo personal"
+                type="email"
+                fullWidth
+                required
+                value={formData.personalEmail}
+                onChange={handleChange}
+                error={!!errors.personalEmail}
+                helperText={errors.personalEmail}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Email fontSize="small" color="action" />
+                    </InputAdornment>
+                  )
+                }}
+              />
+            </Grid>
+
+            {/* Teléfono */}
+            <Grid item xs={12} sm={6}>
+              <StyledTextField
                 name="phone"
                 label="Teléfono celular"
                 fullWidth
@@ -232,33 +389,49 @@ const FirstLoginForm = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Phone color="action" />
+                      <Phone fontSize="small" color="action" />
                     </InputAdornment>
                   )
                 }}
               />
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                name="address"
-                label="Dirección"
-                fullWidth
-                required
-                value={formData.address}
+
+            {/* Radio Button para rol */}
+            <Grid item xs={12}>
+              <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
+                ¿Eres estudiante o profesor?
+              </Typography>
+              <RadioGroup
+                row
+                name="role"
+                value={formData.role}
                 onChange={handleChange}
-                error={!!errors.address}
-                helperText={errors.address}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Home color="action" />
-                    </InputAdornment>
-                  )
-                }}
-              />
+                sx={{ ml: 1 }}
+              >
+                <FormControlLabel 
+                  value="estudiante" 
+                  control={<Radio size="small" sx={{
+                    '&.Mui-checked': {
+                      color: '#B22222',
+                    }
+                  }}/>} 
+                  label="Estudiante" 
+                />
+                <FormControlLabel 
+                  value="profesor" 
+                  control={<Radio size="small" sx={{
+                    '&.Mui-checked': {
+                      color: '#B22222',
+                    }
+                  }}/>} 
+                  label="Profesor" 
+                />
+              </RadioGroup>
             </Grid>
+
+            {/* Fecha de nacimiento */}
             <Grid item xs={12} sm={6}>
-              <TextField
+              <StyledTextField
                 name="birthDate"
                 label="Fecha de nacimiento"
                 type="date"
@@ -272,49 +445,26 @@ const FirstLoginForm = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <CalendarToday color="action" />
+                      <CalendarToday fontSize="small" color="action" />
                     </InputAdornment>
                   )
                 }}
               />
             </Grid>
+
+            {/* Programa académico */}
             <Grid item xs={12} sm={6}>
-              <TextField
-                name="personalEmail"
-                label="Correo personal"
-                type="email"
-                fullWidth
-                required
-                value={formData.personalEmail}
-                onChange={handleChange}
-                error={!!errors.personalEmail}
-                helperText={errors.personalEmail}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email color="action" />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth error={!!errors.program} required>
+              <FormControl fullWidth error={!!errors.program} required size="small">
                 <InputLabel id="program-label">Programa académico</InputLabel>
-                <Select
+                <StyledSelect
                   labelId="program-label"
                   name="program"
                   value={formData.program}
                   onChange={handleChange}
                   label="Programa académico"
-                  sx={{
-                    minWidth: 320, // Más ancho
-                    maxWidth: 500,
-                    '.MuiSelect-select': { display: 'flex', alignItems: 'center' }
-                  }}
                   startAdornment={
                     <InputAdornment position="start">
-                      <School color="action" />
+                      <School fontSize="small" color="action" />
                     </InputAdornment>
                   }
                 >
@@ -323,7 +473,7 @@ const FirstLoginForm = () => {
                       {option.label}
                     </MenuItem>
                   ))}
-                </Select>
+                </StyledSelect>
                 {errors.program && (
                   <Typography variant="caption" color="error">
                     {errors.program}
@@ -331,35 +481,23 @@ const FirstLoginForm = () => {
                 )}
               </FormControl>
             </Grid>
+
             <Grid item xs={12}>
-              <Box display="flex" justifyContent="flex-end">
-                <Button
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <StyledButton
                   type="submit"
                   variant="contained"
-                  size="medium"
-                  sx={{ 
-                    mt: 1, 
-                    backgroundColor: '#B22222',
-                    '&:hover': {
-                      backgroundColor: '#8B0000',
-                    },
-                    fontWeight: 'bold',
-                    fontSize: '11 px',
-                    py: 1,
-                    px: 1,
-                    borderRadius: 2,
-                    minWidth: 0
-                  }}
                   disabled={loading}
+                  startIcon={loading && <CircularProgress size={18} color="inherit" />}
                 >
-                  {loading ? <CircularProgress size={22} /> : 'Guardar y continuar'}
-                </Button>
+                  {loading ? 'Guardando...' : 'Guardar y continuar'}
+                </StyledButton>
               </Box>
             </Grid>
           </Grid>
         </Box>
-      </Paper>
-    </Box>
+      </StyledPaper>
+    </FormContainer>
   );
 };
 
