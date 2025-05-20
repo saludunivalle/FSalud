@@ -193,28 +193,26 @@ const FirstLoginForm = () => {
     
     setLoading(true);
     try {
-      // Enviar datos al servidor con los nombres de campo correctos
+      // Create the user data object with all required fields
       const userData = {
-        // Campos esperados por el servidor exactamente con estos nombres
         programa_academico: formData.program,
         documento_usuario: formData.documentNumber,
         tipoDoc: formData.documentType,
         telefono: formData.phone,
-        // No direccion field - it's been removed
         fecha_nac: formData.birthDate,
         email: formData.personalEmail, 
-        correo_usuario: user.email, // This should be preserved correctly
-        
-        // Additional fields to update
+        correo_usuario: user.email,
         nombre_usuario: formData.firstName,
         apellido_usuario: formData.lastName,
         rol: formData.role,
         primer_login: "si"
       };
       
-      await updateUserData(user.id, userData);
+      console.log("Submitting user data:", userData);
+      const response = await updateUserData(user.id, userData);
+      console.log("Server response:", response);
       
-      // Actualizar el estado del usuario con la nueva información
+      // Update the local user state
       setUser(prev => ({
         ...prev,
         ...userData,
@@ -223,16 +221,16 @@ const FirstLoginForm = () => {
         isFirstLogin: false
       }));
       
-      // Guardar en localStorage la bandera de primer inicio de sesión
+      // Update local storage
       localStorage.setItem('isFirstLogin', 'false');
       localStorage.setItem('user_role', formData.role);
       localStorage.setItem('name', `${formData.firstName} ${formData.lastName}`);
       
-      // Redireccionar al dashboard
+      // Navigate to dashboard
       navigate('/dashboard');
     } catch (error) {
-      console.error('Error al actualizar datos:', error);
-      alert('Ha ocurrido un error al guardar tus datos. Por favor, intenta nuevamente.');
+      console.error('Error updating data:', error);
+      alert('There was an error saving your data. Please try again.');
     } finally {
       setLoading(false);
     }
