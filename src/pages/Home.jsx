@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import axios from 'axios';
+// Add ReCAPTCHA import
+import ReCAPTCHA from "react-google-recaptcha";
 
 import { 
   Box, 
@@ -131,20 +133,27 @@ const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Login states
+  // Existing login states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
+  // Add state for captcha
+  const [captchaValue, setCaptchaValue] = useState(null);
+  
   // UI states
-  const [loginStep, setLoginStep] = useState('initial'); // 'initial', 'password', 'code'
-  const [loginMethod, setLoginMethod] = useState(2); // 2: code (the only option now)
+  const [loginStep, setLoginStep] = useState('initial');
+  const [loginMethod, setLoginMethod] = useState(2);
   const [showSSOOption, setShowSSOOption] = useState(false);
   const [loginError, setLoginError] = useState(location.state?.error || '');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+  const [testCode, setTestCode] = useState('');
 
+  // Add reCAPTCHA site key
+  const RECAPTCHA_SITE_KEY = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
+  
   // Google client ID
   const GOOGLE_CLIENT_ID = '340874428494-ot9uprkvvq4ha529arl97e9mehfojm5b.apps.googleusercontent.com';
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
@@ -264,9 +273,6 @@ const Home = () => {
     }
   };
 
-  // Asegúrate de tener el estado para el código de prueba
-  const [testCode, setTestCode] = useState('');
-
   // Modificar la función handleSendCode para capturar el código
   const handleSendCode = async (e) => {
     e.preventDefault();
@@ -274,20 +280,28 @@ const Home = () => {
       setLoginError('Por favor ingresa tu correo electrónico');
       return;
     }
+    
+    // Verify if captcha has been completed
+    if (!captchaValue) {
+      setLoginError('Por favor completa el captcha');
+      return;
+    }
 
     setLoading(true);
     setLoginError('');
     
     try {
+      // Include captcha token in the request
       const response = await axios.post(`${BASE_URL}/api/auth/send-code`, {
-        email
+        email,
+        captchaToken: captchaValue  // Send captcha token to backend
       });
       
       if (response.data.success) {
         setLoginStep('code');
         setSuccess('Código enviado correctamente a tu correo electrónico');
         
-        // Guardar el código de verificación si está disponible
+        // Save verification code if available
         if (response.data.testCode) {
           setTestCode(response.data.testCode);
         }
@@ -295,7 +309,7 @@ const Home = () => {
     } catch (err) {
       console.error('Error enviando código:', err);
       const errorMessage = err.response?.data?.error || 
-                           'Error al enviar el código de verificación. Por favor intenta más tarde.';
+                          'Error al enviar el código de verificación. Por favor intenta más tarde.';
       setLoginError(errorMessage);
     } finally {
       setLoading(false);
@@ -368,6 +382,7 @@ const Home = () => {
         </Typography>
       </HeaderContainer>
       
+      {/* Error and success messages */}
       {loginError && (
         <Alert 
           severity="error" 
@@ -396,6 +411,7 @@ const Home = () => {
       )}
       
       <AuthContainer>
+        {/* Initial login step */}
         {loginStep === 'initial' && (
           <>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -472,6 +488,7 @@ const Home = () => {
           </>
         )}
 
+        {/* Password step - where we add the reCAPTCHA */}
         {loginStep === 'password' && (
           <>
             <Typography variant="h5" align="center" gutterBottom sx={{ color: '#333', fontWeight: 500 }}>
@@ -498,21 +515,27 @@ const Home = () => {
               {email}
             </Button>
             
-            {/* Remove the Tabs component since there's only one option now */}
             <Typography variant="h6" align="center" gutterBottom sx={{ color: '#666', fontWeight: 400, mb: 3 }}>
               Código de acceso
             </Typography>
             
-            {/* This is the code access option - now it's the only one */}
             <Box component="form" onSubmit={handleSendCode} sx={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 1 }}>
                 Te enviaremos un código de verificación de un solo uso a tu correo electrónico.
               </Typography>
               
+              {/* Add reCAPTCHA component */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+                <ReCAPTCHA
+                  sitekey={RECAPTCHA_SITE_KEY}
+                  onChange={setCaptchaValue}
+                />
+              </Box>
+              
               <PrimaryButton
                 type="submit"
                 fullWidth
-                disabled={loading}
+                disabled={loading || !captchaValue} // Disable button if captcha not completed
                 sx={{ 
                   boxShadow: '0 2px 4px rgba(178,34,34,0.2)',
                   transition: 'all 150ms ease-in-out'
