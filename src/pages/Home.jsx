@@ -660,16 +660,6 @@ const Home = () => {
                 </Button>
               </Box>
             </Box>
-
-            {/* Mostrar el código de prueba solo en desarrollo */}
-            {loginStep === 'code' && testCode && (
-              <Alert 
-                severity="info" 
-                sx={{ mb: 2 }}
-              >
-                Código de prueba: <strong>{testCode}</strong>
-              </Alert>
-            )}
           </>
         )}
       </AuthContainer>
