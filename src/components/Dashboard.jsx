@@ -180,13 +180,14 @@ const theme = createTheme({
         head: {
           backgroundColor: '#FAFBFC',
           fontWeight: 600,
-          fontSize: '0.875rem',
+          fontSize: '0.8rem',
           color: '#2C3E50',
           borderBottom: '2px solid #E0E0E0',
+          padding: '12px 8px',
         },
         body: {
-          fontSize: '0.875rem',
-          padding: '16px',
+          fontSize: '0.8rem',
+          padding: '12px 8px',
           borderBottom: '1px solid #F5F5F5',
         },
       },
@@ -486,29 +487,29 @@ const Dashboard = () => {
         backgroundColor: theme.palette.background.default,
         pt: 12 
       }}>
-        <Container maxWidth="xl">
-          <Box sx={{ py: 4 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ py: 3 }}>
             {/* Header Section */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <Avatar sx={{ 
                   bgcolor: theme.palette.primary.main, 
                   mr: 2, 
-                  width: 48, 
-                  height: 48,
+                  width: 40, 
+                  height: 40,
                   background: 'linear-gradient(135deg, #B22222 0%, #8B0000 100%)'
                 }}>
                   <DashboardIcon />
                 </Avatar>
                 <Box>
-                  <Typography variant="h4" sx={{ 
+                  <Typography variant="h5" sx={{ 
                     color: theme.palette.secondary.main,
                     fontWeight: 700,
                     mb: 0.5
                   }}>
                     Hola, {user.name?.split(' ')[0] || 'Usuario'}
                   </Typography>
-                  <Typography variant="body1" color="text.secondary">
+                  <Typography variant="body2" color="text.secondary">
                   Por favor cargue o actualice cada documento requerido en la tabla
                   </Typography>
                 </Box>
@@ -516,10 +517,10 @@ const Dashboard = () => {
             </Box>
 
             {/* Search and Filter Section */}
-            <Card sx={{ mb: 4, p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Assignment sx={{ mr: 2, color: theme.palette.primary.main }} />
-                <Typography variant="h6" sx={{ color: theme.palette.secondary.main }}>
+            <Card sx={{ mb: 3, p: 2.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                <Assignment sx={{ mr: 1.5, color: theme.palette.primary.main, fontSize: '1.25rem' }} />
+                <Typography variant="h6" sx={{ color: theme.palette.secondary.main, fontSize: '1.1rem' }}>
                   Mis Documentos de Salud
                 </Typography>
               </Box>
@@ -528,9 +529,11 @@ const Dashboard = () => {
                 fullWidth
                 placeholder="Buscar documento por nombre..."
                 variant="outlined"
+                size="small"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 sx={{
+                  maxWidth: '500px',
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
                     backgroundColor: theme.palette.background.default,
@@ -542,12 +545,12 @@ const Dashboard = () => {
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <Search sx={{ color: theme.palette.grey[500] }} />
+                      <Search sx={{ color: theme.palette.grey[500], fontSize: '1.1rem' }} />
                     </InputAdornment>
                   ),
                   endAdornment: searchTerm && (
                     <InputAdornment position="end">
-                      <IconButton onClick={() => setSearchTerm('')} edge="end">
+                      <IconButton onClick={() => setSearchTerm('')} edge="end" size="small">
                         <Cancel />
                       </IconButton>
                     </InputAdornment>
@@ -559,22 +562,22 @@ const Dashboard = () => {
             {/* Documents Table */}
             <Paper sx={{ 
               width: '100%', 
-              mb: 4,
+              mb: 3,
               borderRadius: 3,
               overflow: 'hidden'
             }}>
               <TableContainer>
-                <Table aria-label="tabla de documentos">
+                <Table aria-label="tabla de documentos" size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell sx={{ minWidth: 200 }}>Documento</TableCell>
-                      <TableCell sx={{ minWidth: 140 }}>Acción</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Estado</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Fecha Carga</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Fecha Expedición</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Fecha Vencimiento</TableCell>
-                      <TableCell sx={{ minWidth: 120 }}>Fecha Revisión</TableCell>
-                      <TableCell sx={{ minWidth: 80, textAlign: 'center' }}>Ver</TableCell>
+                      <TableCell sx={{ minWidth: 180, fontSize: '0.8rem' }}>Documento</TableCell>
+                      <TableCell sx={{ minWidth: 120, fontSize: '0.8rem' }}>Acción</TableCell>
+                      <TableCell sx={{ minWidth: 100, fontSize: '0.8rem' }}>Estado</TableCell>
+                      <TableCell sx={{ minWidth: 100, fontSize: '0.8rem' }}>Fecha Carga</TableCell>
+                      <TableCell sx={{ minWidth: 100, fontSize: '0.8rem' }}>Fecha Expedición</TableCell>
+                      <TableCell sx={{ minWidth: 100, fontSize: '0.8rem' }}>Fecha Vencimiento</TableCell>
+                      <TableCell sx={{ minWidth: 100, fontSize: '0.8rem' }}>Fecha Revisión</TableCell>
+                      <TableCell sx={{ minWidth: 60, textAlign: 'center', fontSize: '0.8rem' }}>Ver</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -602,25 +605,26 @@ const Dashboard = () => {
                             }}
                           >
                             <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                 <Avatar sx={{ 
-                                  width: 40, 
-                                  height: 40,
+                                  width: 32, 
+                                  height: 32,
                                   backgroundColor: doc.isDoseGroup ? theme.palette.primary.main : theme.palette.grey[200],
                                   color: doc.isDoseGroup ? 'white' : theme.palette.grey[600]
                                 }}>
-                                  {doc.isDoseGroup ? <VaccinesOutlined /> : <Assignment />}
+                                  {doc.isDoseGroup ? <VaccinesOutlined fontSize="small" /> : <Assignment fontSize="small" />}
                                 </Avatar>
                                 <Box sx={{ flex: 1 }}>
-                                  <Typography variant="body1" sx={{ 
+                                  <Typography variant="body2" sx={{ 
                                     fontWeight: 600,
                                     color: theme.palette.secondary.main,
-                                    mb: 0.5
+                                    mb: 0.25,
+                                    fontSize: '0.85rem'
                                   }}>
                                     {doc.name}
                                   </Typography>
                                   {doc.isDoseGroup && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                       <Chip
                                         label={doc.progress}
                                         size="small"
@@ -628,10 +632,11 @@ const Dashboard = () => {
                                           backgroundColor: theme.palette.primary.light,
                                           color: 'white',
                                           fontWeight: 500,
-                                          fontSize: '0.75rem'
+                                          fontSize: '0.65rem',
+                                          height: '20px'
                                         }}
                                       />
-                                      <Typography variant="caption" color="text.secondary">
+                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                                         {doc.doseStatuses?.filter(d => d.status === 'Aprobado' || d.status === 'aprobado' || d.status === 'cumplido').length || 0} aprobadas
                                       </Typography>
                                     </Box>
@@ -642,15 +647,17 @@ const Dashboard = () => {
                             <TableCell>
                               <Button
                                 variant="contained"
-                                startIcon={doc.isDoseGroup ? <VaccinesOutlined /> : <Upload />}
+                                size="small"
+                                startIcon={doc.isDoseGroup ? <VaccinesOutlined fontSize="small" /> : <Upload fontSize="small" />}
                                 onClick={() => handleUpload(doc)}
                                 sx={{
-                                  borderRadius: 2,
+                                  borderRadius: 0.8,
                                   textTransform: 'none',
                                   fontWeight: 600,
-                                  px: 3,
-                                  py: 1,
-                                  minWidth: '130px',
+                                  px: 2,
+                                  py: 0.5,
+                                  minWidth: '110px',
+                                  fontSize: '0.75rem',
                                   background: doc.userDocData ? 
                                     'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)' :
                                     'linear-gradient(135deg, #B22222 0%, #8B0000 100%)',
@@ -663,16 +670,16 @@ const Dashboard = () => {
                                   }
                                 }}
                               >
-                                {doc.isDoseGroup ? 'Gestionar Dosis' : (doc.userDocData ? 'Actualizar' : 'Cargar Documento')}
+                                {doc.isDoseGroup ? 'Dosis' : (doc.userDocData ? 'Actualizar' : 'Cargar')}
                               </Button>
                             </TableCell>
                             <TableCell>
                               <StatusChip status={doc.status} />
                             </TableCell>
-                            <TableCell>{formatDate(doc.userDocData?.fecha_cargue)}</TableCell>
-                            <TableCell>{formatDate(doc.fecha_expedicion)}</TableCell>
-                            <TableCell>{doc.vence ? formatDate(doc.fecha_vencimiento) : 'N/A'}</TableCell>
-                            <TableCell>{formatDate(doc.userDocData?.fecha_revision)}</TableCell>
+                            <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{formatDate(doc.userDocData?.fecha_cargue)}</Typography></TableCell>
+                            <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{formatDate(doc.fecha_expedicion)}</Typography></TableCell>
+                            <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{doc.vence ? formatDate(doc.fecha_vencimiento) : 'N/A'}</Typography></TableCell>
+                            <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{formatDate(doc.userDocData?.fecha_revision)}</Typography></TableCell>
                             <TableCell sx={{ textAlign: 'center' }}>
                               {doc.isDoseGroup ? (
                                 // Para grupos de dosis, mostrar menú desplegable
@@ -680,19 +687,20 @@ const Dashboard = () => {
                                   <>
                                     <Tooltip title="Ver dosis cargadas" arrow>
                                       <IconButton
+                                        size="small"
                                         onClick={(e) => handleViewMenuOpen(e, doc)}
                                         sx={{
                                           backgroundColor: theme.palette.primary.light,
                                           color: 'white',
-                                          width: 40,
-                                          height: 40,
+                                          width: 32,
+                                          height: 32,
                                           '&:hover': {
                                             backgroundColor: theme.palette.primary.main,
                                             transform: 'scale(1.1)',
                                           }
                                         }}
                                       >
-                                        <Visibility />
+                                        <Visibility fontSize="small" />
                                       </IconButton>
                                     </Tooltip>
                                     <Menu
@@ -739,6 +747,7 @@ const Dashboard = () => {
                                 doc.userDocData?.ruta_archivo ? (
                                   <Tooltip title="Ver documento cargado" arrow>
                                     <IconButton
+                                      size="small"
                                       component="a"
                                       href={doc.userDocData.ruta_archivo}
                                       target="_blank"
@@ -746,8 +755,8 @@ const Dashboard = () => {
                                       sx={{
                                         backgroundColor: theme.palette.info.light,
                                         color: theme.palette.info.main,
-                                        width: 40,
-                                        height: 40,
+                                        width: 32,
+                                        height: 32,
                                         '&:hover': {
                                           backgroundColor: theme.palette.info.main,
                                           color: 'white',
@@ -755,7 +764,7 @@ const Dashboard = () => {
                                         }
                                       }}
                                     >
-                                      <Visibility />
+                                      <Visibility fontSize="small" />
                                     </IconButton>
                                   </Tooltip>
                                 ) : (
