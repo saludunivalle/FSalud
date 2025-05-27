@@ -425,7 +425,7 @@ const FirstLoginForm = () => {
             {/* Radio Button para rol */}
             <Grid item xs={12}>
               <Typography variant="body2" sx={{ mb: 0.5, fontWeight: 500 }}>
-                ¿Eres estudiante o profesor?
+                ¿Eres estudiante o docente?
               </Typography>
               <RadioGroup
                 row
@@ -444,13 +444,13 @@ const FirstLoginForm = () => {
                   label="Estudiante" 
                 />
                 <FormControlLabel 
-                  value="profesor" 
+                  value="docente" 
                   control={<Radio size="small" sx={{
                     '&.Mui-checked': {
                       color: '#B22222',
                     }
                   }}/>} 
-                  label="Profesor" 
+                  label="Docente" 
                 />
               </RadioGroup>
             </Grid>

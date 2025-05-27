@@ -47,7 +47,7 @@ export const UserProvider = ({ children }) => {
               // For students, rely on what was stored during login (which comes from backend's isFirstLogin)
               // or what FirstLoginForm set after completion.
               let finalIsFirstLoginValue;
-              if (normalizedRole === 'profesor' || normalizedRole === 'administrador') {
+              if (normalizedRole === 'admin' || normalizedRole === 'administrador') {
                 finalIsFirstLoginValue = false;
               } else {
                 // This value in localStorage is set by login() or FirstLoginForm.jsx
@@ -77,7 +77,7 @@ export const UserProvider = ({ children }) => {
               const lsRole = storedRole || 'estudiante';
               const normalizedLsRole = lsRole.toLowerCase();
               let fallbackIsFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
-              if (normalizedLsRole === 'profesor' || normalizedLsRole === 'administrador') {
+              if (normalizedLsRole === 'admin' || normalizedLsRole === 'administrador') {
                   fallbackIsFirstLogin = false;
               }
               setUser({
@@ -96,7 +96,7 @@ export const UserProvider = ({ children }) => {
             const normalizedLsRole = lsRole.toLowerCase();
             let fallbackIsFirstLogin = localStorage.getItem('isFirstLogin') === 'true';
 
-            if (normalizedLsRole === 'profesor' || normalizedLsRole === 'administrador') {
+            if (normalizedLsRole === 'admin' || normalizedLsRole === 'administrador') {
                 fallbackIsFirstLogin = false;
             }
             setUser({
@@ -159,7 +159,7 @@ export const UserProvider = ({ children }) => {
 
   // Función para actualizar el rol del usuario
   const updateUserRole = (newRole) => {
-    if (['estudiante', 'administrador', 'profesor'].includes(newRole)) {
+    if (['estudiante', 'administrador', 'admin', 'docente'].includes(newRole)) {
       localStorage.setItem('user_role', newRole);
       setUser((prev) => ({ ...prev, role: newRole }));
     }

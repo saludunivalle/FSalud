@@ -31,7 +31,6 @@ import {
   Description, 
   AssignmentLate, 
   AssignmentTurnedIn, 
-  People,
   FilterList,
   WhatsApp // Import WhatsApp icon
 } from '@mui/icons-material';
@@ -73,12 +72,14 @@ const mockStudents = [
     apellido: 'Pérez Mendoza',
     codigo: '2012345',
     email: 'juan.perez@correounivalle.edu.co',
-    celular: '3001234567', // Nueva propiedad
+    celular: '3001234567',
+    rol: 'Estudiante',
     documentosFaltantes: 'Sí',
     documentosPendientes: 2,
     documentosAprobados: 3,
     documentosRechazados: 1,
     documentosVencidos: 0,
+    documentosSinCargar: 3, // Archivos que no ha cargado
     programa: 'Medicina',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -92,12 +93,14 @@ const mockStudents = [
     apellido: 'García López',
     codigo: '2045678',
     email: 'maria.garcia@correounivalle.edu.co',
-    celular: '3012345678', // Nueva propiedad
+    celular: '3012345678',
+    rol: 'Docente',
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
+    documentosSinCargar: 0, // Ha cargado todos
     programa: 'Enfermería',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -111,12 +114,14 @@ const mockStudents = [
     apellido: 'Ramírez Roa',
     codigo: '2078901',
     email: 'carlos.ramirez@correounivalle.edu.co',
-    celular: '3023456789', // Nueva propiedad
+    celular: '3023456789',
+    rol: 'Estudiante',
     documentosFaltantes: 'Sí',
     documentosPendientes: 1,
     documentosAprobados: 4,
     documentosRechazados: 1,
     documentosVencidos: 1,
+    documentosSinCargar: 2, // Archivos que no ha cargado
     programa: 'Odontología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -130,12 +135,14 @@ const mockStudents = [
     apellido: 'Martínez Solano',
     codigo: '2023456',
     email: 'ana.martinez@correounivalle.edu.co',
-    celular: '3109876543', // Nueva propiedad
+    celular: '3109876543',
+    rol: 'Docente',
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
+    documentosSinCargar: 0, // Ha cargado todos
     programa: 'Fisioterapia',
     sede: 'Palmira',
     nivel: 'Pregrado',
@@ -149,12 +156,14 @@ const mockStudents = [
     apellido: 'Hernández Torres',
     codigo: '2034567',
     email: 'luis.hernandez@correounivalle.edu.co',
-    celular: '3118765432', // Nueva propiedad
+    celular: '3118765432',
+    rol: 'Estudiante',
     documentosFaltantes: 'Sí',
     documentosPendientes: 3,
     documentosAprobados: 2,
     documentosRechazados: 1,
     documentosVencidos: 0,
+    documentosSinCargar: 4, // Archivos que no ha cargado
     programa: 'Bacteriología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -168,12 +177,14 @@ const mockStudents = [
     apellido: 'Sánchez Mejía',
     codigo: '2056789',
     email: 'daniela.sanchez@correounivalle.edu.co',
-    celular: '3127654321', // Nueva propiedad
+    celular: '3127654321',
+    rol: 'Estudiante',
     documentosFaltantes: 'Sí',
     documentosPendientes: 1,
     documentosAprobados: 3,
     documentosRechazados: 2,
     documentosVencidos: 0,
+    documentosSinCargar: 1, // Archivos que no ha cargado
     programa: 'Fonoaudiología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -187,12 +198,14 @@ const mockStudents = [
     apellido: 'López Vidal',
     codigo: '2067890',
     email: 'santiago.lopez@correounivalle.edu.co',
-    celular: '3136543210', // Nueva propiedad
+    celular: '3136543210',
+    rol: 'Docente',
     documentosFaltantes: 'No',
     documentosPendientes: 0,
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
+    documentosSinCargar: 0, // Ha cargado todos
     programa: 'Medicina',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -212,15 +225,14 @@ const AdminDashboard = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const [stats, setStats] = useState({
-    totalStudents: 0,
     pendingDocuments: 0,
     approvedStudents: 0,
-    incompleteStudents: 0
+    usersWithoutUploads: 0
   });
 
-  // Determinar si es profesor para cambiar los textos
-  const isProfesor = user?.role === 'profesor';
-  const userLabel = isProfesor ? 'usuarios' : 'estudiantes';
+  // Determinar si es admin para cambiar los textos
+  const isAdmin = user?.role === 'admin';
+  const userLabel = isAdmin ? 'usuarios' : 'usuarios'; // Siempre "usuarios" ahora
 
   useEffect(() => {
     // Simulando carga de datos
@@ -233,17 +245,15 @@ const AdminDashboard = () => {
       setFilteredStudents(mockStudents);
       
       // Calcular estadísticas
-      const totalStudents = mockStudents.length;
       const pendingDocuments = mockStudents.reduce((acc, student) => 
         acc + student.documentosPendientes + student.documentosRechazados, 0);
       const approvedStudents = mockStudents.filter(student => student.completado).length;
-      const incompleteStudents = totalStudents - approvedStudents;
+      const usersWithoutUploads = mockStudents.filter(student => student.documentosSinCargar > 0).length;
       
       setStats({
-        totalStudents,
         pendingDocuments,
         approvedStudents,
-        incompleteStudents
+        usersWithoutUploads
       });
       
       setLoading(false);
@@ -263,8 +273,9 @@ const AdminDashboard = () => {
       student.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (student.celular && student.celular.toLowerCase().includes(searchTerm.toLowerCase())) || // Añadir filtro por celular
-      student.programa.toLowerCase().includes(searchTerm.toLowerCase())
+      (student.celular && student.celular.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      student.programa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.rol.toLowerCase().includes(searchTerm.toLowerCase()) // Agregar búsqueda por rol
     );
     
     setFilteredStudents(filtered);
@@ -300,11 +311,11 @@ const AdminDashboard = () => {
     <ThemeProvider theme={theme}>
       <Box sx={{ padding: 3, marginTop: 12 }}>
         <Typography variant="h5" gutterBottom>
-          {isProfesor ? 'Dashboard de Profesor' : 'Dashboard de Administrador'}
+          Dashboard de Administrador
         </Typography>
         
         <Typography variant="body1" color="text.secondary" paragraph>
-          {isProfesor ? 'Gestión de documentos de usuarios para escenarios de práctica.' : 'Gestión de documentos de estudiantes para escenarios de práctica.'}
+          Gestión de documentos de usuarios para escenarios de práctica.
         </Typography>
         
         {/* Cards de estadísticas */}
@@ -318,7 +329,7 @@ const AdminDashboard = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: 1.5,
-                backgroundColor: 'success.light', // Fondo verde claro
+                backgroundColor: 'success.light',
                 boxShadow: 'none',
               }}
             >
@@ -329,7 +340,7 @@ const AdminDashboard = () => {
                     Completos
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {isProfesor ? 'Usuarios con documentación completa' : 'Estudiantes con documentación completa'}
+                    Usuarios con documentación completa
                   </Typography>
                 </Box>
               </Box>
@@ -348,7 +359,7 @@ const AdminDashboard = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: 1.5,
-                backgroundColor: 'warning.light', // Fondo naranja claro
+                backgroundColor: 'warning.light',
                 boxShadow: 'none',
               }}
             >
@@ -378,7 +389,7 @@ const AdminDashboard = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: 1.5,
-                backgroundColor: 'error.light', // Fondo rojo claro
+                backgroundColor: 'error.light',
                 boxShadow: 'none',
               }}
             >
@@ -386,48 +397,20 @@ const AdminDashboard = () => {
                 <Description sx={{ fontSize: 24, color: 'error.main' }} />
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'error.dark' }}>
-                    Incompletos
+                    Sin cargar
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    {isProfesor ? 'Usuarios con documentación incompleta' : 'Estudiantes con documentación incompleta'}
+                    Usuarios que no han cargado archivos
                   </Typography>
                 </Box>
               </Box>
               <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                {stats.incompleteStudents}
+                {stats.usersWithoutUploads}
               </Typography>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <Card
-              sx={{
-                height: '100%',
-                width: '250px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: 1.5,
-                backgroundColor: 'info.light', // Fondo azul claro
-                boxShadow: 'none',
-              }}
-            >
-              <Box display="flex" alignItems="center" gap={1}>
-                <People sx={{ fontSize: 24, color: 'info.main' }} />
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'info.dark' }}>
-                    {isProfesor ? 'Usuarios' : 'Estudiantes'}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Total registrados
-                  </Typography>
-                </Box>
-              </Box>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'info.main' }}>
-                {stats.totalStudents}
-              </Typography>
-            </Card>
-          </Grid>
+
         </Grid>
         
         <Divider sx={{ mb: 4 }} />
@@ -436,7 +419,7 @@ const AdminDashboard = () => {
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
-            placeholder={isProfesor ? "Buscar por nombre, apellido, código, correo o programa..." : "Buscar por nombre, apellido, código, correo o programa..."}
+            placeholder="Buscar por nombre, apellido, código, correo, programa o rol..."
             variant="outlined"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -457,15 +440,16 @@ const AdminDashboard = () => {
           />
         </Box>
         
-        {/* Tabla de estudiantes */}
+        {/* Tabla de usuarios */}
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
           <TableContainer>
-            <Table aria-label={isProfesor ? "tabla de usuarios" : "tabla de estudiantes"}>
+            <Table aria-label="tabla de usuarios">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>{isProfesor ? 'Usuario' : 'Estudiante'}</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Usuario</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Celular</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Cédula</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Rol</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Programa</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Estado</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Documentos</TableCell>
@@ -474,9 +458,9 @@ const AdminDashboard = () => {
               <TableBody>
                 {filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center"> {/* colSpan remains 6 */}
+                    <TableCell colSpan={7} align="center">
                       <Typography variant="body1" sx={{ py: 2 }}>
-                        {isProfesor ? 'No se encontraron usuarios que coincidan con la búsqueda.' : 'No se encontraron estudiantes que coincidan con la búsqueda.'}
+                        No se encontraron usuarios que coincidan con la búsqueda.
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -523,12 +507,12 @@ const AdminDashboard = () => {
                               <IconButton 
                                 size="small" 
                                 component="a" 
-                                href={`https://wa.me/${student.celular.replace(/\s+/g, '')}`} // Remove spaces for the link
+                                href={`https://wa.me/${student.celular.replace(/\s+/g, '')}`}
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 aria-label={`Chat with ${student.nombre} on WhatsApp`}
                                 sx={{ color: 'success.main' }}
-                                onClick={(e) => e.stopPropagation()} // Prevenir que se abra la ficha del estudiante
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 <WhatsApp fontSize="small" />
                               </IconButton>
@@ -537,7 +521,15 @@ const AdminDashboard = () => {
                             'N/A'
                           )}
                         </TableCell>
-                        <TableCell>{student.codigo || 'N/A'}</TableCell> {/* Cédula column */}
+                        <TableCell>{student.codigo || 'N/A'}</TableCell>
+                        <TableCell>
+                          <Chip 
+                            label={student.rol}
+                            color={student.rol === 'Docente' ? "primary" : "secondary"}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
                         <TableCell>
                           <Tooltip title={`Sede: ${student.sede} | Nivel: ${student.nivel}`}>
                             <Box>
@@ -556,7 +548,7 @@ const AdminDashboard = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Box display="flex" alignItems="center" gap={1}>
+                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
                             <Tooltip title="Aprobados">
                               <Chip 
                                 size="small" 
@@ -602,6 +594,20 @@ const AdminDashboard = () => {
                                   color: 'warning.dark',
                                   fontWeight: 'bold',
                                   minWidth: '30px' 
+                                }} 
+                              />
+                            </Tooltip>
+                            <Tooltip title="Sin cargar">
+                              <Chip 
+                                size="small" 
+                                label={student.documentosSinCargar} 
+                                sx={{ 
+                                  bgcolor: '#f5f5f5', 
+                                  color: '#666',
+                                  fontWeight: 'bold',
+                                  minWidth: '30px',
+                                  border: student.documentosSinCargar > 0 ? '1px solid #e0e0e0' : 'none',
+                                  opacity: student.documentosSinCargar > 0 ? 1 : 0.6
                                 }} 
                               />
                             </Tooltip>

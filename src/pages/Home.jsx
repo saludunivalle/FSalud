@@ -141,7 +141,7 @@ const Home = () => {
   // Manejar navegación después del login
   useEffect(() => {
     if (isLogin && user && !userLoading) {
-      const defaultRoute = user.role === 'profesor' || user.role === 'administrador' 
+      const defaultRoute = (user.role === 'admin' || user.role === 'administrador') 
         ? '/dashboard' 
         : user.isFirstLogin === true ? '/complete-profile' : '/dashboard';
       

@@ -31,7 +31,8 @@ import {
   CloudOff,
   Visibility,
   Edit,
-  Person
+  Person,
+  WhatsApp
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import DocumentReviewModal from './DocumentReviewModal';
@@ -155,6 +156,8 @@ const mockStudents = [
     apellido: 'Pérez Mendoza',
     codigo: '2012345',
     email: 'juan.perez@correounivalle.edu.co',
+    celular: '3001234567',
+    rol: 'Estudiante',
     documentosFaltantes: 'Sí',
     programa: 'Medicina',
     sede: 'Cali',
@@ -236,8 +239,92 @@ const mockStudents = [
         vence: false
       }
     ]
+  },
+  // Otros estudiantes para pruebas
+  {
+    id: 2,
+    nombre: 'María José',
+    apellido: 'García López',
+    codigo: '2045678',
+    email: 'maria.garcia@correounivalle.edu.co',
+    celular: '3012345678',
+    rol: 'Docente',
+    documentosFaltantes: 'No',
+    programa: 'Enfermería',
+    sede: 'Cali',
+    nivel: 'Pregrado',
+    escenarios: 'Clínica Valle del Lili',
+    rotacion: 'Cuidados Intensivos',
+    completado: true,
+    documentos: [
+      {
+        id: 1,
+        nombre: 'Documento de Identidad',
+        estado: 'aprobado',
+        fechaExpedicion: '2021-03-10',
+        fechaVencimiento: null,
+        fechaCargue: '2023-09-15',
+        fechaRevision: '2023-09-16',
+        comentarios: 'Documento verificado correctamente.',
+        rutaArchivo: 'https://example.com/doc_maria1.pdf',
+        vence: false
+      },
+      {
+        id: 2,
+        nombre: 'Carné de Vacunación',
+        estado: 'aprobado',
+        fechaExpedicion: '2023-01-15',
+        fechaVencimiento: null,
+        fechaCargue: '2023-09-15',
+        fechaRevision: '2023-09-16',
+        comentarios: 'Esquema de vacunación completo.',
+        rutaArchivo: 'https://example.com/doc_maria2.pdf',
+        vence: false
+      }
+    ]
+  },
+  {
+    id: 3,
+    nombre: 'Carlos Andrés',
+    apellido: 'Ramírez Roa',
+    codigo: '2078901',
+    email: 'carlos.ramirez@correounivalle.edu.co',
+    celular: '3023456789',
+    rol: 'Estudiante',
+    documentosFaltantes: 'Sí',
+    programa: 'Odontología',
+    sede: 'Cali',
+    nivel: 'Pregrado',
+    escenarios: 'Hospital Departamental',
+    rotacion: 'Cirugía Oral',
+    completado: false,
+    documentos: [
+      {
+        id: 1,
+        nombre: 'Documento de Identidad',
+        estado: 'aprobado',
+        fechaExpedicion: '2019-11-20',
+        fechaVencimiento: null,
+        fechaCargue: '2023-10-01',
+        fechaRevision: '2023-10-02',
+        comentarios: 'Documento en regla.',
+        rutaArchivo: 'https://example.com/doc_carlos1.pdf',
+        vence: false
+      },
+      {
+        id: 2,
+        nombre: 'Seguro Estudiantil',
+        estado: 'pendiente',
+        fechaExpedicion: '2023-08-01',
+        fechaVencimiento: '2024-08-01',
+        fechaCargue: '2023-10-01',
+        fechaRevision: null,
+        comentarios: null,
+        rutaArchivo: 'https://example.com/doc_carlos2.pdf',
+        vence: true
+      }
+    ]
   }
-  // Otros estudiantes...
 ];
 
 const StudentDocumentManager = () => {
@@ -454,9 +541,40 @@ const StudentDocumentManager = () => {
                 {student?.nombre.charAt(0)}{student?.apellido.charAt(0)}
               </Avatar>
               {student?.nombre} {student?.apellido}
+              {/* Chip del rol */}
+              <Chip 
+                label={student?.rol}
+                color={student?.rol === 'Docente' ? "primary" : "secondary"}
+                size="small"
+                variant="outlined"
+                sx={{ ml: 1 }}
+              />
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               {student?.codigo} · {student?.programa} · {student?.sede}
+              {/* Celular con enlace a WhatsApp */}
+              {student?.celular && (
+                <>
+                  · {student.celular}
+                  <IconButton 
+                    size="small" 
+                    component="a" 
+                    href={`https://wa.me/${student.celular.replace(/\s+/g, '')}`}
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    aria-label={`Chat with ${student.nombre} on WhatsApp`}
+                    sx={{ 
+                      color: 'success.main', 
+                      ml: 0.5,
+                      '&:hover': {
+                        bgcolor: 'success.light'
+                      }
+                    }}
+                  >
+                    <WhatsApp fontSize="small" />
+                  </IconButton>
+                </>
+              )}
             </Typography>
           </Box>
         </Stack>

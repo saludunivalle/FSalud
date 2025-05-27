@@ -43,7 +43,7 @@ const AppRoutes = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              {(user?.role === 'profesor' || user?.role === 'administrador') ? <AdminDashboard /> : <DashboardPage />}
+              {(user?.role === 'admin' || user?.role === 'administrador') ? <AdminDashboard /> : <DashboardPage />}
             </ProtectedRoute>
           }
         />
@@ -67,7 +67,7 @@ const AppRoutes = () => {
         <Route
           path="/admin/student/:studentId"
           element={
-            <ProtectedRoute allowedRoles={['administrador', 'profesor']}>
+            <ProtectedRoute allowedRoles={['administrador', 'admin']}>
               <StudentDocumentManager />
             </ProtectedRoute>
           }
