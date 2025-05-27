@@ -1,7 +1,7 @@
 // src/components/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../../context/UserContext'; // Importar useUser
+import { useUser } from '../../context/UserContext';
 import { 
   Box, 
   Typography, 
@@ -14,7 +14,6 @@ import {
   TableRow,
   TablePagination,
   Card,
-  CardContent,
   Grid,
   Chip,
   TextField,
@@ -23,7 +22,10 @@ import {
   Divider,
   Tooltip,
   Avatar,
-  CircularProgress
+  CircularProgress,
+  Button,
+  ButtonGroup,
+  Stack
 } from '@mui/material';
 import { 
   Search, 
@@ -31,8 +33,11 @@ import {
   Description, 
   AssignmentLate, 
   AssignmentTurnedIn, 
-  FilterList,
-  WhatsApp // Import WhatsApp icon
+  WhatsApp,
+  People,
+  School,
+  PersonOutline,
+  Warning
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -40,7 +45,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#B22222', // Color rojo sangre toro (Universidad del Valle)
+      main: '#B22222',
     },
     secondary: {
       main: '#1976d2',
@@ -59,12 +64,12 @@ const theme = createTheme({
     },
     info: {
       main: '#2196f3',
-      light: '#f0f8ff ',
+      light: '#f0f8ff',
     }
   },
 });
 
-// Datos de ejemplo (esto se reemplazará con datos reales)
+// Datos de ejemplo
 const mockStudents = [
   {
     id: 1,
@@ -78,8 +83,8 @@ const mockStudents = [
     documentosPendientes: 2,
     documentosAprobados: 3,
     documentosRechazados: 1,
-    documentosVencidos: 0,
-    documentosSinCargar: 3, // Archivos que no ha cargado
+    documentosVencidos: 1,
+    documentosSinCargar: 3,
     programa: 'Medicina',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -100,7 +105,7 @@ const mockStudents = [
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
-    documentosSinCargar: 0, // Ha cargado todos
+    documentosSinCargar: 0,
     programa: 'Enfermería',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -121,7 +126,7 @@ const mockStudents = [
     documentosAprobados: 4,
     documentosRechazados: 1,
     documentosVencidos: 1,
-    documentosSinCargar: 2, // Archivos que no ha cargado
+    documentosSinCargar: 2,
     programa: 'Odontología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -142,7 +147,7 @@ const mockStudents = [
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
-    documentosSinCargar: 0, // Ha cargado todos
+    documentosSinCargar: 0,
     programa: 'Fisioterapia',
     sede: 'Palmira',
     nivel: 'Pregrado',
@@ -163,7 +168,7 @@ const mockStudents = [
     documentosAprobados: 2,
     documentosRechazados: 1,
     documentosVencidos: 0,
-    documentosSinCargar: 4, // Archivos que no ha cargado
+    documentosSinCargar: 4,
     programa: 'Bacteriología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -184,7 +189,7 @@ const mockStudents = [
     documentosAprobados: 3,
     documentosRechazados: 2,
     documentosVencidos: 0,
-    documentosSinCargar: 1, // Archivos que no ha cargado
+    documentosSinCargar: 1,
     programa: 'Fonoaudiología',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -205,7 +210,7 @@ const mockStudents = [
     documentosAprobados: 6,
     documentosRechazados: 0,
     documentosVencidos: 0,
-    documentosSinCargar: 0, // Ha cargado todos
+    documentosSinCargar: 0,
     programa: 'Medicina',
     sede: 'Cali',
     nivel: 'Pregrado',
@@ -217,43 +222,49 @@ const mockStudents = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useUser(); // Obtener el usuario del contexto
+  const { user } = useUser();
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Estados para filtros
+  const [roleFilter, setRoleFilter] = useState('Ambos');
+  const [statusFilter, setStatusFilter] = useState('Todos');
+  
   const [stats, setStats] = useState({
     pendingDocuments: 0,
     approvedStudents: 0,
-    usersWithoutUploads: 0
+    usersWithoutUploads: 0,
+    rejectedDocuments: 0,
+    expiredDocuments: 0
   });
 
-  // Determinar si es admin para cambiar los textos
-  const isAdmin = user?.role === 'admin';
-  const userLabel = isAdmin ? 'usuarios' : 'usuarios'; // Siempre "usuarios" ahora
-
   useEffect(() => {
-    // Simulando carga de datos
     const loadData = async () => {
       setLoading(true);
-      // Simulando un retardo para mostrar el efecto de carga
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setStudents(mockStudents);
-      setFilteredStudents(mockStudents);
       
       // Calcular estadísticas
       const pendingDocuments = mockStudents.reduce((acc, student) => 
-        acc + student.documentosPendientes + student.documentosRechazados, 0);
+        acc + student.documentosPendientes, 0);
+      const rejectedDocuments = mockStudents.reduce((acc, student) => 
+        acc + student.documentosRechazados, 0);
+      const expiredDocuments = mockStudents.reduce((acc, student) => 
+        acc + student.documentosVencidos, 0);
       const approvedStudents = mockStudents.filter(student => student.completado).length;
       const usersWithoutUploads = mockStudents.filter(student => student.documentosSinCargar > 0).length;
       
       setStats({
         pendingDocuments,
         approvedStudents,
-        usersWithoutUploads
+        usersWithoutUploads,
+        rejectedDocuments,
+        expiredDocuments
       });
       
       setLoading(false);
@@ -262,25 +273,44 @@ const AdminDashboard = () => {
     loadData();
   }, []);
 
+  // Efecto para filtrar estudiantes
   useEffect(() => {
-    if (searchTerm === '') {
-      setFilteredStudents(students);
-      return;
+    let filtered = students;
+    
+    // Filtrar por rol
+    if (roleFilter !== 'Ambos') {
+      filtered = filtered.filter(student => student.rol === roleFilter);
     }
     
-    const filtered = students.filter(student => 
-      student.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (student.celular && student.celular.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      student.programa.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rol.toLowerCase().includes(searchTerm.toLowerCase()) // Agregar búsqueda por rol
-    );
+    // Filtrar por estado de documentación
+    if (statusFilter === 'Completos') {
+      filtered = filtered.filter(student => student.completado);
+    } else if (statusFilter === 'Pendientes') {
+      filtered = filtered.filter(student => student.documentosPendientes > 0);
+    } else if (statusFilter === 'Rechazados') {
+      filtered = filtered.filter(student => student.documentosRechazados > 0);
+    } else if (statusFilter === 'Vencidos') {
+      filtered = filtered.filter(student => student.documentosVencidos > 0);
+    } else if (statusFilter === 'Sin cargar') {
+      filtered = filtered.filter(student => student.documentosSinCargar > 0);
+    }
+    
+    // Filtrar por término de búsqueda
+    if (searchTerm !== '') {
+      filtered = filtered.filter(student => 
+        student.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (student.celular && student.celular.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        student.programa.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.rol.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
     
     setFilteredStudents(filtered);
     setPage(0);
-  }, [searchTerm, students]);
+  }, [searchTerm, students, roleFilter, statusFilter]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -297,6 +327,24 @@ const AdminDashboard = () => {
 
   const handleStudentClick = (studentId) => {
     navigate(`/admin/student/${studentId}`);
+  };
+
+  const handleRoleFilterChange = (newRole) => {
+    setRoleFilter(newRole);
+  };
+
+  const handleStatusFilterClick = (status) => {
+    if (statusFilter === status) {
+      setStatusFilter('Todos');
+    } else {
+      setStatusFilter(status);
+    }
+  };
+
+  const clearAllFilters = () => {
+    setRoleFilter('Ambos');
+    setStatusFilter('Todos');
+    setSearchTerm('');
   };
 
   if (loading) {
@@ -318,104 +366,367 @@ const AdminDashboard = () => {
           Gestión de documentos de usuarios para escenarios de práctica.
         </Typography>
         
-        {/* Cards de estadísticas */}
+        {/* Cards de estadísticas - 5 tarjetas */}
         <Grid container spacing={2} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
+          {/* Usuarios Aprobados */}
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card
+              onClick={() => handleStatusFilterClick('Completos')}
               sx={{
                 height: '100%',
-                width: '250px',
+                minWidth: '180px',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: 1.5,
-                backgroundColor: 'success.light',
-                boxShadow: 'none',
+                padding: 2,
+                backgroundColor: statusFilter === 'Completos' ? 'success.main' : 'success.light',
+                boxShadow: statusFilter === 'Completos' ? '0 4px 20px rgba(76, 175, 80, 0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: statusFilter === 'Completos' ? 'scale(1.02)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 20px rgba(76, 175, 80, 0.2)',
+                }
               }}
             >
-              <Box display="flex" alignItems="center" gap={1}>
-                <AssignmentTurnedIn sx={{ fontSize: 24, color: 'success.main' }} />
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'success.dark' }}>
-                    Completos
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Usuarios con documentación completa
-                  </Typography>
-                </Box>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <AssignmentTurnedIn sx={{ 
+                  fontSize: 24, 
+                  color: statusFilter === 'Completos' ? 'white' : 'success.main' 
+                }} />
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Completos' ? 'white' : 'success.main' 
+                }}>
+                  {stats.approvedStudents}
+                </Typography>
               </Box>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'success.main' }}>
-                {stats.approvedStudents}
-              </Typography>
+              <Box>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Completos' ? 'white' : 'success.dark',
+                  mb: 0.5
+                }}>
+                  Aprobados
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  color: statusFilter === 'Completos' ? 'rgba(255,255,255,0.9)' : 'text.secondary',
+                  lineHeight: 1.2,
+                  fontSize: '0.7rem'
+                }}>
+                  Documentación completa
+                </Typography>
+              </Box>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          {/* Documentos Pendientes */}
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card
+              onClick={() => handleStatusFilterClick('Pendientes')}
               sx={{
                 height: '100%',
-                width: '250px',
+                minWidth: '180px',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: 1.5,
-                backgroundColor: 'warning.light',
-                boxShadow: 'none',
+                padding: 2,
+                backgroundColor: statusFilter === 'Pendientes' ? 'info.main' : 'info.light',
+                boxShadow: statusFilter === 'Pendientes' ? '0 4px 20px rgba(33, 150, 243, 0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: statusFilter === 'Pendientes' ? 'scale(1.02)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 20px rgba(33, 150, 243, 0.2)',
+                }
               }}
             >
-              <Box display="flex" alignItems="center" gap={1}>
-                <AssignmentLate sx={{ fontSize: 24, color: 'warning.main' }} />
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'warning.dark' }}>
-                    Pendientes
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Documentos pendientes de revisión
-                  </Typography>
-                </Box>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <AssignmentLate sx={{ 
+                  fontSize: 24, 
+                  color: statusFilter === 'Pendientes' ? 'white' : 'info.main' 
+                }} />
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Pendientes' ? 'white' : 'info.main' 
+                }}>
+                  {stats.pendingDocuments}
+                </Typography>
               </Box>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
-                {stats.pendingDocuments}
-              </Typography>
+              <Box>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Pendientes' ? 'white' : 'info.dark',
+                  mb: 0.5
+                }}>
+                  Pendientes
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  color: statusFilter === 'Pendientes' ? 'rgba(255,255,255,0.9)' : 'text.secondary',
+                  lineHeight: 1.2,
+                  fontSize: '0.7rem'
+                }}>
+                  Esperando revisión
+                </Typography>
+              </Box>
             </Card>
           </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
+          {/* Documentos Vencidos */}
+          <Grid item xs={12} sm={6} md={2.4}>
             <Card
+              onClick={() => handleStatusFilterClick('Vencidos')}
               sx={{
                 height: '100%',
-                width: '250px',
+                minWidth: '180px',
                 display: 'flex',
-                alignItems: 'center',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
-                padding: 1.5,
-                backgroundColor: 'error.light',
-                boxShadow: 'none',
+                padding: 2,
+                backgroundColor: statusFilter === 'Vencidos' ? 'warning.main' : 'warning.light',
+                boxShadow: statusFilter === 'Vencidos' ? '0 4px 20px rgba(255, 152, 0, 0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: statusFilter === 'Vencidos' ? 'scale(1.02)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 20px rgba(255, 152, 0, 0.2)',
+                }
               }}
             >
-              <Box display="flex" alignItems="center" gap={1}>
-                <Description sx={{ fontSize: 24, color: 'error.main' }} />
-                <Box>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'error.dark' }}>
-                    Sin cargar
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Usuarios que no han cargado archivos
-                  </Typography>
-                </Box>
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Warning sx={{ 
+                  fontSize: 24, 
+                  color: statusFilter === 'Vencidos' ? 'white' : 'warning.main' 
+                }} />
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Vencidos' ? 'white' : 'warning.main' 
+                }}>
+                  {stats.expiredDocuments}
+                </Typography>
               </Box>
-              <Typography variant="h5" sx={{ fontWeight: 'bold', color: 'error.main' }}>
-                {stats.usersWithoutUploads}
-              </Typography>
+              <Box>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Vencidos' ? 'white' : 'warning.dark',
+                  mb: 0.5
+                }}>
+                  Vencidos
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  color: statusFilter === 'Vencidos' ? 'rgba(255,255,255,0.9)' : 'text.secondary',
+                  lineHeight: 1.2,
+                  fontSize: '0.7rem'
+                }}>
+                  Requieren renovación
+                </Typography>
+              </Box>
             </Card>
           </Grid>
 
+          {/* Documentos Rechazados */}
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card
+              onClick={() => handleStatusFilterClick('Rechazados')}
+              sx={{
+                height: '100%',
+                minWidth: '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: 2,
+                backgroundColor: statusFilter === 'Rechazados' ? 'error.main' : 'error.light',
+                boxShadow: statusFilter === 'Rechazados' ? '0 4px 20px rgba(244, 67, 54, 0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: statusFilter === 'Rechazados' ? 'scale(1.02)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 20px rgba(244, 67, 54, 0.2)',
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Cancel sx={{ 
+                  fontSize: 24, 
+                  color: statusFilter === 'Rechazados' ? 'white' : 'error.main' 
+                }} />
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Rechazados' ? 'white' : 'error.main' 
+                }}>
+                  {stats.rejectedDocuments}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Rechazados' ? 'white' : 'error.dark',
+                  mb: 0.5
+                }}>
+                  Rechazados
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  color: statusFilter === 'Rechazados' ? 'rgba(255,255,255,0.9)' : 'text.secondary',
+                  lineHeight: 1.2,
+                  fontSize: '0.7rem'
+                }}>
+                  Necesitan corrección
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
 
+          {/* Usuarios Sin Cargar */}
+          <Grid item xs={12} sm={6} md={2.4}>
+            <Card
+              onClick={() => handleStatusFilterClick('Sin cargar')}
+              sx={{
+                height: '100%',
+                minWidth: '180px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                padding: 2,
+                backgroundColor: statusFilter === 'Sin cargar' ? '#616161' : '#f5f5f5',
+                boxShadow: statusFilter === 'Sin cargar' ? '0 4px 20px rgba(97, 97, 97, 0.3)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                transform: statusFilter === 'Sin cargar' ? 'scale(1.02)' : 'scale(1)',
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 20px rgba(97, 97, 97, 0.2)',
+                }
+              }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                <Description sx={{ 
+                  fontSize: 24, 
+                  color: statusFilter === 'Sin cargar' ? 'white' : '#616161' 
+                }} />
+                <Typography variant="h5" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Sin cargar' ? 'white' : '#616161' 
+                }}>
+                  {stats.usersWithoutUploads}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" sx={{ 
+                  fontWeight: 'bold', 
+                  color: statusFilter === 'Sin cargar' ? 'white' : '#424242',
+                  mb: 0.5
+                }}>
+                  Sin Cargar
+                </Typography>
+                <Typography variant="caption" sx={{ 
+                  color: statusFilter === 'Sin cargar' ? 'rgba(255,255,255,0.9)' : '#666',
+                  lineHeight: 1.2,
+                  fontSize: '0.7rem'
+                }}>
+                  No han subido documentos
+                </Typography>
+              </Box>
+            </Card>
+          </Grid>
         </Grid>
         
         <Divider sx={{ mb: 4 }} />
         
-        {/* Barra de búsqueda y filtros */}
+        {/* Filtros por rol y estado */}
+        <Box sx={{ mb: 3 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ xs: 'stretch', sm: 'center' }} sx={{ mb: 2 }}>
+            {/* Filtro por rol */}
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold', color: 'text.secondary' }}>
+                Filtrar por rol:
+              </Typography>
+              <ButtonGroup size="small" sx={{ bgcolor: 'background.paper' }}>
+                <Button
+                  variant={roleFilter === 'Ambos' ? 'contained' : 'outlined'}
+                  startIcon={<People fontSize="small" />}
+                  onClick={() => handleRoleFilterChange('Ambos')}
+                  sx={{ 
+                    borderColor: 'divider',
+                    '&.Mui-focusVisible': { zIndex: 1 }
+                  }}
+                >
+                  Ambos
+                </Button>
+                <Button
+                  variant={roleFilter === 'Estudiante' ? 'contained' : 'outlined'}
+                  startIcon={<School fontSize="small" />}
+                  onClick={() => handleRoleFilterChange('Estudiante')}
+                  sx={{ 
+                    borderColor: 'divider',
+                    '&.Mui-focusVisible': { zIndex: 1 }
+                  }}
+                >
+                  Estudiantes
+                </Button>
+                <Button
+                  variant={roleFilter === 'Docente' ? 'contained' : 'outlined'}
+                  startIcon={<PersonOutline fontSize="small" />}
+                  onClick={() => handleRoleFilterChange('Docente')}
+                  sx={{ 
+                    borderColor: 'divider',
+                    '&.Mui-focusVisible': { zIndex: 1 }
+                  }}
+                >
+                  Docentes
+                </Button>
+              </ButtonGroup>
+            </Box>
+            
+            {/* Indicadores de filtros activos */}
+            {(roleFilter !== 'Ambos' || statusFilter !== 'Todos' || searchTerm !== '') && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <Typography variant="caption" color="text.secondary">
+                  Filtros activos:
+                </Typography>
+                {roleFilter !== 'Ambos' && (
+                  <Chip 
+                    label={`Rol: ${roleFilter}`} 
+                    size="small" 
+                    onDelete={() => setRoleFilter('Ambos')}
+                    color="primary"
+                    variant="outlined"
+                  />
+                )}
+                {statusFilter !== 'Todos' && (
+                  <Chip 
+                    label={`Estado: ${statusFilter}`} 
+                    size="small" 
+                    onDelete={() => setStatusFilter('Todos')}
+                    color="secondary"
+                    variant="outlined"
+                  />
+                )}
+                {searchTerm !== '' && (
+                  <Chip 
+                    label={`Búsqueda: "${searchTerm}"`} 
+                    size="small" 
+                    onDelete={() => setSearchTerm('')}
+                    color="default"
+                    variant="outlined"
+                  />
+                )}
+                <Button 
+                  size="small" 
+                  onClick={clearAllFilters}
+                  sx={{ ml: 1 }}
+                >
+                  Limpiar filtros
+                </Button>
+              </Box>
+            )}
+          </Stack>
+        </Box>
+        
+        {/* Barra de búsqueda */}
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
@@ -548,66 +859,88 @@ const AdminDashboard = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                            <Tooltip title="Aprobados">
-                              <Chip 
-                                size="small" 
-                                label={student.documentosAprobados} 
-                                sx={{ 
-                                  bgcolor: 'success.light', 
-                                  color: 'success.dark',
-                                  fontWeight: 'bold',
-                                  minWidth: '30px' 
-                                }} 
-                              />
-                            </Tooltip>
-                            <Tooltip title="Pendientes">
+                          <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
+                            {/* Total de documentos */}
+                            <Chip 
+                              size="small" 
+                              label={`${student.documentosAprobados}/${student.documentosAprobados + student.documentosPendientes + student.documentosRechazados + student.documentosVencidos + student.documentosSinCargar}`}
+                              sx={{ 
+                                bgcolor: student.completado ? 'success.light' : 'grey.200', 
+                                color: student.completado ? 'success.dark' : 'text.secondary',
+                                fontWeight: 'bold',
+                                fontSize: '0.75rem',
+                                minWidth: '45px'
+                              }} 
+                            />
+                            
+                            {/* Indicador de Pendientes - siempre visible */}
+                            <Tooltip title={`${student.documentosPendientes} pendientes de revisión`}>
                               <Chip 
                                 size="small" 
                                 label={student.documentosPendientes} 
                                 sx={{ 
-                                  bgcolor: 'info.light', 
-                                  color: 'info.dark',
+                                  bgcolor: student.documentosPendientes > 0 ? 'info.light' : 'rgba(33, 150, 243, 0.1)', 
+                                  color: student.documentosPendientes > 0 ? 'info.dark' : 'rgba(33, 150, 243, 0.5)',
                                   fontWeight: 'bold',
-                                  minWidth: '30px' 
+                                  fontSize: '0.7rem',
+                                  minWidth: '25px',
+                                  height: '24px',
+                                  opacity: student.documentosPendientes > 0 ? 1 : 0.6,
+                                  border: student.documentosPendientes === 0 ? '1px solid rgba(33, 150, 243, 0.2)' : 'none'
                                 }} 
                               />
                             </Tooltip>
-                            <Tooltip title="Rechazados">
-                              <Chip 
-                                size="small" 
-                                label={student.documentosRechazados} 
-                                sx={{ 
-                                  bgcolor: 'error.light', 
-                                  color: 'error.dark',
-                                  fontWeight: 'bold',
-                                  minWidth: '30px' 
-                                }} 
-                              />
-                            </Tooltip>
-                            <Tooltip title="Vencidos">
+                            
+                            {/* Indicador de Vencidos - siempre visible */}
+                            <Tooltip title={`${student.documentosVencidos} documentos vencidos`}>
                               <Chip 
                                 size="small" 
                                 label={student.documentosVencidos} 
                                 sx={{ 
-                                  bgcolor: 'warning.light', 
-                                  color: 'warning.dark',
+                                  bgcolor: student.documentosVencidos > 0 ? 'warning.light' : 'rgba(255, 152, 0, 0.1)', 
+                                  color: student.documentosVencidos > 0 ? 'warning.dark' : 'rgba(255, 152, 0, 0.5)',
                                   fontWeight: 'bold',
-                                  minWidth: '30px' 
+                                  fontSize: '0.7rem',
+                                  minWidth: '25px',
+                                  height: '24px',
+                                  opacity: student.documentosVencidos > 0 ? 1 : 0.6,
+                                  border: student.documentosVencidos === 0 ? '1px solid rgba(255, 152, 0, 0.2)' : 'none'
                                 }} 
                               />
                             </Tooltip>
-                            <Tooltip title="Sin cargar">
+                            
+                            {/* Indicador de Rechazados - siempre visible */}
+                            <Tooltip title={`${student.documentosRechazados} rechazados, requieren corrección`}>
+                              <Chip 
+                                size="small" 
+                                label={student.documentosRechazados} 
+                                sx={{ 
+                                  bgcolor: student.documentosRechazados > 0 ? 'error.light' : 'rgba(244, 67, 54, 0.1)', 
+                                  color: student.documentosRechazados > 0 ? 'error.dark' : 'rgba(244, 67, 54, 0.5)',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.7rem',
+                                  minWidth: '25px',
+                                  height: '24px',
+                                  opacity: student.documentosRechazados > 0 ? 1 : 0.6,
+                                  border: student.documentosRechazados === 0 ? '1px solid rgba(244, 67, 54, 0.2)' : 'none'
+                                }} 
+                              />
+                            </Tooltip>
+                            
+                            {/* Indicador de Sin Cargar - siempre visible */}
+                            <Tooltip title={`${student.documentosSinCargar} sin cargar`}>
                               <Chip 
                                 size="small" 
                                 label={student.documentosSinCargar} 
                                 sx={{ 
-                                  bgcolor: '#f5f5f5', 
-                                  color: '#666',
+                                  bgcolor: student.documentosSinCargar > 0 ? '#f5f5f5' : 'rgba(97, 97, 97, 0.1)', 
+                                  color: student.documentosSinCargar > 0 ? '#616161' : 'rgba(97, 97, 97, 0.5)',
                                   fontWeight: 'bold',
-                                  minWidth: '30px',
-                                  border: student.documentosSinCargar > 0 ? '1px solid #e0e0e0' : 'none',
-                                  opacity: student.documentosSinCargar > 0 ? 1 : 0.6
+                                  fontSize: '0.7rem',
+                                  minWidth: '25px',
+                                  height: '24px',
+                                  opacity: student.documentosSinCargar > 0 ? 1 : 0.6,
+                                  border: student.documentosSinCargar > 0 ? '1px solid #e0e0e0' : '1px solid rgba(97, 97, 97, 0.2)'
                                 }} 
                               />
                             </Tooltip>
