@@ -368,9 +368,9 @@ const Dashboard = () => {
             />
           </Box>
 
-          <Paper sx={{ width: '100%', overflow: 'hidden', mb: 4 }}>
-            <TableContainer sx={{ maxHeight: 540 }}>
-              <Table stickyHeader aria-label="tabla de documentos">
+          <Paper sx={{ width: '100%', mb: 4 }}>
+            <TableContainer>
+              <Table aria-label="tabla de documentos">
                 <TableHead>
                   <TableRow>
                     <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 180 }}>Documentos</TableCell>
