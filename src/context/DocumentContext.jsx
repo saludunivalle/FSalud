@@ -31,8 +31,8 @@ export const DocumentProvider = ({ children }) => {
       try {
         // Obtener tipos de documentos DESDE EL BACKEND
         try {
-          // Llama directamente a la ruta del backend que ya lee de Sheets
-          const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`); 
+          // Usar la nueva ruta de la API de documentos
+          const typesResponse = await axios.get(`${BASE_URL}/api/documentos/tipos`); 
           // Verifica que la respuesta del backend tenga la propiedad 'data' y sea un array
           setDocumentTypes(Array.isArray(typesResponse.data?.data) ? typesResponse.data.data : []); 
         } catch (err) {
@@ -40,50 +40,13 @@ export const DocumentProvider = ({ children }) => {
           setDocumentTypes([]); // Asegura array vacío en caso de error
         }
         
-        // Obtener solicitudes activas
-        try {
-          const activeResponse = await axios.get(
-            `${BASE_URL}/getActiveRequests`, // Usa BASE_URL
-            { params: { userId: user.id } }
-          );
-          
-          // Accede al objeto de respuesta { success: true, data: [...] }
-          const responseData = activeResponse.data; 
-          
-          // IMPORTANTE: Verificar formato de respuesta y garantizar que sea un array
-          let requests = [];
-          if (Array.isArray(responseData)) {
-            requests = responseData;
-          } else if (responseData && Array.isArray(responseData.data)) {
-            requests = responseData.data;
-          } else {
-            console.warn("Formato inesperado en la respuesta de getActiveRequests:", responseData);
-            requests = [];
-          }
-          
-          // Solo intentar mapear si realmente tenemos un array
-          const requestsWithStages = Array.isArray(requests) 
-            ? requests.map((request) => ({
-                ...request,
-                etapa_actual: Number(request.formulario) || 0,
-              }))
-            : [];
-          
-          setActiveRequests(requestsWithStages);
-        } catch (err) {
-          if (err.response?.status === 404) {
-            setActiveRequests([]);
-          } else {
-            console.error('Error al obtener solicitudes activas:', err);
-            setActiveRequests([]); // Asegura que sea un array en caso de otros errores
-          }
-        }
+        // Inicializar solicitudes activas como array vacío por ahora
+        setActiveRequests([]);
         
         // Obtener documentos del usuario
         try {
           const docsResponse = await axios.get(
-            `${BASE_URL}/getUserDocuments`, // Usa BASE_URL
-            { params: { userId: user.id } }
+            `${BASE_URL}/api/documentos/usuario/${user.id}` // Usar la nueva ruta de la API
           );
           
           // Aplica la misma lógica aquí para userDocuments
@@ -123,57 +86,26 @@ export const DocumentProvider = ({ children }) => {
     try {
       // Actualizar tipos de documentos
       try {
-        const typesResponse = await axios.get(`${BASE_URL}/getDocumentos`);
+        const typesResponse = await axios.get(`${BASE_URL}/api/documentos/tipos`);
         // Verificar formato de respuesta
         if (typesResponse.data && Array.isArray(typesResponse.data.data)) {
           setDocumentTypes(typesResponse.data.data);
         } else if (Array.isArray(typesResponse.data)) {
           setDocumentTypes(typesResponse.data);
         } else {
-          console.warn("Formato inesperado en la respuesta de getDocumentos:", typesResponse.data);
+          console.warn("Formato inesperado en la respuesta de tipos de documentos:", typesResponse.data);
         }
       } catch (err) {
         console.error('Error al actualizar tipos de documentos:', err);
       }
       
-      // Actualizar solicitudes activas
-      try {
-        const activeResponse = await axios.get(
-          `${BASE_URL}/getActiveRequests`,
-          { params: { userId: user.id } }
-        );
-        
-        // Verificar formato de respuesta
-        let requests = [];
-        if (Array.isArray(activeResponse.data)) {
-          requests = activeResponse.data;
-        } else if (activeResponse.data && Array.isArray(activeResponse.data.data)) {
-          requests = activeResponse.data.data;
-        } else {
-          console.warn("Formato inesperado en la respuesta de getActiveRequests:", activeResponse.data);
-          requests = [];
-        }
-        
-        // Solo intentar mapear si realmente tenemos un array
-        if (Array.isArray(requests)) {
-          const requestsWithStages = requests.map((request) => ({
-            ...request,
-            etapa_actual: Number(request.formulario) || 0,
-          }));
-          
-          setActiveRequests(requestsWithStages);
-        }
-      } catch (err) {
-        if (err.response?.status !== 404) {
-          console.error('Error al actualizar solicitudes activas:', err);
-        }
-      }
+      // Mantener solicitudes activas como array vacío por ahora
+      setActiveRequests([]);
       
       // Actualizar documentos del usuario
       try {
         const docsResponse = await axios.get(
-          `${BASE_URL}/getUserDocuments`,
-          { params: { userId: user.id } }
+          `${BASE_URL}/api/documentos/usuario/${user.id}`
         );
         
         // Verificar formato de respuesta

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   TextField, 
@@ -15,7 +15,8 @@ import {
   MenuItem,
   CircularProgress,
   InputAdornment,
-  Alert
+  Alert,
+  Autocomplete
 } from '@mui/material';
 import { 
   Person, 
@@ -27,19 +28,29 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { updateUserData } from '../../services/userService';
+import { getAllPrograms } from '../../services/programsService';
 import { useUser } from '../../context/UserContext';
 import { useNavigate } from 'react-router-dom';
 
 // Estilos personalizados para mejorar la apariencia
 const StyledPaper = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(4),
   borderRadius: 12,
   boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-  maxWidth: 620, // Reducido de 800px
+  maxWidth: 900, // Aumentado para pantallas más grandes
   width: '100%',
   margin: '0 auto',
-  marginTop: theme.spacing(2), // Reducido para dejar más espacio para el título
+  marginTop: theme.spacing(2),
+  [theme.breakpoints.down('lg')]: {
+    maxWidth: 750,
+    padding: theme.spacing(3),
+  },
+  [theme.breakpoints.down('md')]: {
+    maxWidth: 600,
+    padding: theme.spacing(3),
+  },
   [theme.breakpoints.down('sm')]: {
+    maxWidth: '95%',
     padding: theme.spacing(2),
     marginTop: theme.spacing(1),
   }
@@ -48,14 +59,18 @@ const StyledPaper = styled(Paper)(({ theme }) => ({
 const StyledButton = styled(Button)(({ theme }) => ({
   backgroundColor: '#B22222',
   color: 'white',
-  padding: '8px 16px', // Reducido el padding
+  padding: '12px 24px', // Aumentado el padding para mejor apariencia
   borderRadius: 8,
   textTransform: 'none',
   fontWeight: 600,
-  fontSize: '0.9rem',
+  fontSize: '1rem',
+  minHeight: '48px', // Altura mínima para mejor clickeabilidad
   '&:hover': {
     backgroundColor: '#8B0000',
   },
+  '&:disabled': {
+    backgroundColor: 'rgba(178, 34, 34, 0.5)',
+  }
 }));
 
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -65,20 +80,26 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
       borderColor: 'rgba(0,0,0,0.3)',
     },
   },
-  // Hacer los inputs más compactos
+  // Hacer los inputs más espaciosos
   '& .MuiInputBase-root': {
-    height: '45px', // Altura más reducida
+    height: '52px', // Altura aumentada para mejor visibilidad
+    fontSize: '0.95rem', // Tamaño de fuente ligeramente más grande
   },
   '& .MuiInputLabel-root': {
-    transform: 'translate(14px, 12px) scale(1)',
+    transform: 'translate(14px, 15px) scale(1)',
+    fontSize: '0.95rem',
   },
   '& .MuiInputLabel-shrink': {
     transform: 'translate(14px, -6px) scale(0.75)',
+  },
+  '& .MuiFormHelperText-root': {
+    fontSize: '0.8rem',
   }
 }));
 
 const StyledSelect = styled(Select)(({ theme }) => ({
-  height: '45px', // Ajustando altura igual que TextField
+  height: '52px', // Ajustando altura igual que TextField
+  fontSize: '0.95rem', // Consistencia en el tamaño de fuente
 }));
 
 const FormContainer = styled(Box)(({ theme }) => ({
@@ -98,6 +119,7 @@ const FirstLoginForm = () => {
   const { user, setUser } = useUser();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [programsLoading, setProgramsLoading] = useState(true);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -111,6 +133,7 @@ const FirstLoginForm = () => {
   });
   const [errors, setErrors] = useState({});
   const [showEmailAlert, setShowEmailAlert] = useState(true);
+  const [programs, setPrograms] = useState([]);
 
   // Opciones para el tipo de documento
   const documentTypes = [
@@ -120,16 +143,24 @@ const FirstLoginForm = () => {
     { value: 'PAS', label: 'Pasaporte' }
   ];
 
-  // Opciones para el programa académico
-  const programs = [
-    { value: 'MEDICINA', label: 'Medicina' },
-    { value: 'ENFERMERIA', label: 'Enfermería' },
-    { value: 'ODONTOLOGIA', label: 'Odontología' },
-    { value: 'FISIOTERAPIA', label: 'Fisioterapia' },
-    { value: 'FONOAUDIOLOGIA', label: 'Fonoaudiología' },
-    { value: 'TERAPIA_OCUPACIONAL', label: 'Terapia Ocupacional' },
-    { value: 'BACTERIOLOGIA', label: 'Bacteriología' }
-  ];
+  // Cargar programas académicos desde la base de datos
+  useEffect(() => {
+    const loadPrograms = async () => {
+      try {
+        setProgramsLoading(true);
+        const programsData = await getAllPrograms();
+        setPrograms(programsData);
+        console.log('Programas cargados:', programsData);
+      } catch (error) {
+        console.error('Error cargando programas:', error);
+        // Los programas fallback ya se manejan en el servicio
+      } finally {
+        setProgramsLoading(false);
+      }
+    };
+
+    loadPrograms();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -163,11 +194,8 @@ const FirstLoginForm = () => {
     else if (!/^\d{10}$/.test(formData.phone)) newErrors.phone = 'Debe ser un número de 10 dígitos';
     
     // Validar correo personal
-    if (!formData.personalEmail) newErrors.personalEmail = 'El correo personal es requerido';
+    if (!formData.personalEmail) newErrors.personalEmail = 'El correo es requerido';
     else if (!/\S+@\S+\.\S+/.test(formData.personalEmail)) newErrors.personalEmail = 'Correo electrónico inválido';
-    else if (formData.personalEmail.endsWith('@correounivalle.edu.co')) {
-      newErrors.personalEmail = 'No puede ser el mismo correo institucional';
-    }
     
     // Validar fecha de nacimiento
     if (!formData.birthDate) newErrors.birthDate = 'La fecha de nacimiento es requerida';
@@ -254,12 +282,12 @@ const FirstLoginForm = () => {
             sx={{ mb: 2 }} 
             onClose={() => setShowEmailAlert(false)}
           >
-            Por favor ingresa el correo con el que deseas seguir iniciando sesión.
+            Ingresa el correo que prefieras usar. Puede ser tu correo personal o institucional.
           </Alert>
         )}
 
         <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={2}>
+          <Grid container spacing={3}>
             {/* Nombre y Apellido */}
             <Grid item xs={12} sm={6}>
               <StyledTextField
@@ -351,17 +379,17 @@ const FirstLoginForm = () => {
             </Grid>
 
             {/* Email personal */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={8}>
               <StyledTextField
                 name="personalEmail"
-                label="Correo personal"
+                label="Correo electrónico"
                 type="email"
                 fullWidth
                 required
                 value={formData.personalEmail}
                 onChange={handleChange}
                 error={!!errors.personalEmail}
-                helperText={errors.personalEmail}
+                helperText={errors.personalEmail || 'Puedes usar cualquier correo (personal o institucional)'}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -373,7 +401,7 @@ const FirstLoginForm = () => {
             </Grid>
 
             {/* Teléfono */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={4}>
               <StyledTextField
                 name="phone"
                 label="Teléfono celular"
@@ -428,7 +456,7 @@ const FirstLoginForm = () => {
             </Grid>
 
             {/* Fecha de nacimiento */}
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} md={4}>
               <StyledTextField
                 name="birthDate"
                 label="Fecha de nacimiento"
@@ -451,42 +479,104 @@ const FirstLoginForm = () => {
             </Grid>
 
             {/* Programa académico */}
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth error={!!errors.program} required size="small">
-                <InputLabel id="program-label">Programa académico</InputLabel>
-                <StyledSelect
-                  labelId="program-label"
-                  name="program"
-                  value={formData.program}
-                  onChange={handleChange}
-                  label="Programa académico"
-                  startAdornment={
-                    <InputAdornment position="start">
-                      <School fontSize="small" color="action" />
-                    </InputAdornment>
-                  }
-                >
-                  {programs.map(option => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </StyledSelect>
-                {errors.program && (
-                  <Typography variant="caption" color="error">
-                    {errors.program}
-                  </Typography>
+            <Grid item xs={12} md={8}>
+              <Autocomplete
+                options={programs}
+                getOptionLabel={(option) => option.label || ''}
+                value={programs.find(p => p.value === formData.program) || null}
+                onChange={(event, newValue) => {
+                  const e = {
+                    target: {
+                      name: 'program',
+                      value: newValue ? newValue.value : ''
+                    }
+                  };
+                  handleChange(e);
+                }}
+                loading={programsLoading}
+                disabled={programsLoading}
+                isOptionEqualToValue={(option, value) => option.value === value.value}
+                filterOptions={(options, { inputValue }) => {
+                  return options.filter(option =>
+                    option.label.toLowerCase().includes(inputValue.toLowerCase())
+                  );
+                }}
+                selectOnFocus
+                clearOnBlur
+                handleHomeEndKeys
+                renderInput={(params) => (
+                  <StyledTextField
+                    {...params}
+                    label="Programa académico"
+                    placeholder={programsLoading ? "Cargando..." : "Buscar programa..."}
+                    required
+                    error={!!errors.program}
+                    helperText={errors.program || (programs.length > 0 ? `${programs.length} programas disponibles` : ' ')}
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <School fontSize="small" color="action" />
+                        </InputAdornment>
+                      ),
+                      endAdornment: (
+                        <>
+                          {programsLoading ? <CircularProgress size={20} /> : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
                 )}
-              </FormControl>
+                renderOption={(props, option) => (
+                  <li {...props} key={option.value}>
+                    <School fontSize="small" sx={{ mr: 1, color: 'action.active' }} />
+                    {option.label}
+                  </li>
+                )}
+                noOptionsText={
+                  programsLoading 
+                    ? "Cargando programas..." 
+                    : "No se encontraron programas"
+                }
+                loadingText="Cargando programas..."
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    height: '52px', // Mantener consistencia con otros campos
+                    fontSize: '0.95rem',
+                    '&:hover fieldset': {
+                      borderColor: 'rgba(0,0,0,0.3)',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    transform: 'translate(14px, 15px) scale(1)',
+                    fontSize: '0.95rem',
+                  },
+                  '& .MuiInputLabel-shrink': {
+                    transform: 'translate(14px, -6px) scale(0.75)',
+                  },
+                  '& .MuiFormHelperText-root': {
+                    fontSize: '0.8rem',
+                  }
+                }}
+              />
             </Grid>
 
             <Grid item xs={12}>
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: { xs: 'center', sm: 'flex-end' }, 
+                mt: 3,
+                pt: 2,
+                borderTop: '1px solid rgba(0,0,0,0.08)'
+              }}>
                 <StyledButton
                   type="submit"
                   variant="contained"
-                  disabled={loading}
-                  startIcon={loading && <CircularProgress size={18} color="inherit" />}
+                  disabled={loading || programsLoading}
+                  startIcon={loading && <CircularProgress size={20} color="inherit" />}
+                  sx={{ minWidth: { xs: '200px', sm: 'auto' } }}
                 >
                   {loading ? 'Guardando...' : 'Guardar y continuar'}
                 </StyledButton>

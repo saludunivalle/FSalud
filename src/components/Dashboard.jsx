@@ -17,13 +17,19 @@ import {
   IconButton,
   Tooltip,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
-import { Upload, CheckCircle, Cancel, Visibility, Search, Warning, HourglassEmpty, Block, CloudOff } from '@mui/icons-material';
+import { Upload, CheckCircle, Cancel, Visibility, Search, Warning, HourglassEmpty, Block, CloudOff, VaccinesOutlined, ExpandMore } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useUser } from '../context/UserContext';
 import { useDocuments } from '../context/DocumentContext';
 import DocumentUploadModal from './student/DocumentUploadModal'; // Import the modal component
+import DoseUploadModal from './student/DoseUploadModal'; // Import the dose modal component
+import { groupDocumentsByDose, getDoseGroupStatus } from '../utils/documentUtils';
 import { Navigate } from 'react-router-dom'; // Added Navigate
 
 const theme = createTheme({
@@ -122,6 +128,14 @@ const Dashboard = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState('');
   const [selectedDocumentName, setSelectedDocumentName] = useState('');
+  
+  // State for controlling the dose upload modal
+  const [doseModalOpen, setDoseModalOpen] = useState(false);
+  const [selectedDoseGroup, setSelectedDoseGroup] = useState(null);
+
+  // State for controlling the view menu
+  const [viewMenuAnchor, setViewMenuAnchor] = useState(null);
+  const [selectedDocForView, setSelectedDocForView] = useState(null);
 
   useEffect(() => {
     if (userData) {
@@ -131,21 +145,50 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (Array.isArray(documentTypes) && documentTypes.length > 0) {
-      const combined = documentTypes.map(docType => {
-        const userDoc = Array.isArray(userDocuments)
-          ? userDocuments.find(ud => ud.id_doc === docType.id_tipoDoc)
-          : null;
-        const status = getDocumentStatus(userDoc, docType);
-        return {
-          id_doc: docType.id_tipoDoc,
-          name: docType.nombre_doc || docType.nombre_tipoDoc || `Documento ID: ${docType.id_tipoDoc}`,
-          vence: docType.vence === 'si',
-          tiempo_vencimiento: docType.tiempo_vencimiento,
-          userDocData: userDoc || null,
-          status: status,
-          fecha_expedicion: userDoc?.fecha_expedicion || null,
-          fecha_vencimiento: userDoc?.fecha_vencimiento || null,
-        };
+      // Primero agrupar documentos por dosis
+      const groupedDocuments = groupDocumentsByDose(documentTypes);
+      
+      const combined = groupedDocuments.map(docGroup => {
+        if (docGroup.isDoseGroup) {
+          // Es un grupo de dosis
+          const doseStatus = getDoseGroupStatus(docGroup, userDocuments, getDocumentStatus);
+          return {
+            id_doc: docGroup.id_doc,
+            name: docGroup.name,
+            isDoseGroup: true,
+            doseGroup: docGroup,
+            status: doseStatus.consolidatedStatus,
+            progress: doseStatus.progress,
+            doseStatuses: doseStatus.doseStatuses,
+            // Para compatibilidad con la tabla
+            vence: docGroup.baseDoc.vence === 'si',
+            tiempo_vencimiento: docGroup.baseDoc.tiempo_vencimiento,
+            // Usar las fechas más recientes del grupo de dosis
+            userDocData: doseStatus.latestUploadDate ? {
+              fecha_cargue: doseStatus.latestUploadDate,
+              fecha_revision: doseStatus.latestReviewDate
+            } : null,
+            fecha_expedicion: doseStatus.latestExpeditionDate,
+            fecha_vencimiento: doseStatus.latestExpirationDate,
+          };
+        } else {
+          // Es un documento individual
+          const userDoc = Array.isArray(userDocuments)
+            ? userDocuments.find(ud => ud.id_doc === docGroup.id_doc)
+            : null;
+          const status = getDocumentStatus(userDoc, docGroup);
+          return {
+            id_doc: docGroup.id_doc,
+            name: docGroup.nombre_doc || `Documento ID: ${docGroup.id_doc}`,
+            isDoseGroup: false,
+            vence: docGroup.vence === 'si',
+            tiempo_vencimiento: docGroup.tiempo_vencimiento,
+            userDocData: userDoc || null,
+            status: status,
+            fecha_expedicion: userDoc?.fecha_expedicion || null,
+            fecha_vencimiento: userDoc?.fecha_vencimiento || null,
+          };
+        }
       });
       setCombinedDocuments(combined);
     } else {
@@ -220,15 +263,46 @@ const Dashboard = () => {
   };
 
   // Function to open the upload modal with a selected document
-  const handleUpload = (documentTypeId, documentName) => { // Parameter name is documentTypeId
-    setSelectedDocumentId(documentTypeId); // Set the correct ID
-    setSelectedDocumentName(documentName);
-    setUploadModalOpen(true);
+  const handleUpload = (doc) => {
+    if (doc.isDoseGroup) {
+      // Abrir modal de dosis - pasar el documento base del grupo
+      setSelectedDoseGroup(doc.doseGroup.baseDoc);
+      setDoseModalOpen(true);
+    } else {
+      // Abrir modal normal
+      setSelectedDocumentId(doc.id_doc);
+      setSelectedDocumentName(doc.name);
+      setUploadModalOpen(true);
+    }
   };
 
   // Function to close the upload modal
   const handleCloseUploadModal = () => {
     setUploadModalOpen(false);
+  };
+
+  // Function to close the dose modal
+  const handleCloseDoseModal = () => {
+    setDoseModalOpen(false);
+    setSelectedDoseGroup(null);
+  };
+
+  // Functions to handle view menu
+  const handleViewMenuOpen = (event, doc) => {
+    setViewMenuAnchor(event.currentTarget);
+    setSelectedDocForView(doc);
+  };
+
+  const handleViewMenuClose = () => {
+    setViewMenuAnchor(null);
+    setSelectedDocForView(null);
+  };
+
+  const handleViewDose = (doseInfo) => {
+    if (doseInfo.userDoc?.ruta_archivo) {
+      window.open(doseInfo.userDoc.ruta_archivo, '_blank', 'noopener,noreferrer');
+    }
+    handleViewMenuClose();
   };
 
   const getRowBackground = (status) => {
@@ -320,27 +394,49 @@ const Dashboard = () => {
                     </TableRow>
                   ) : (
                     filteredDocuments
-                      .map((doc) => (
+                      .map((doc, index) => (
                         <TableRow
                           hover
-                          key={doc.id_doc} // Use the unique ID from the mapping (which is now id_tipoDoc)
+                          key={`${doc.id_doc || 'doc'}-${index}`} // Use unique key with fallback
                           sx={{ backgroundColor: getRowBackground(doc.status) }}
                         >
-                          <TableCell>{doc.name}</TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {doc.isDoseGroup && <VaccinesOutlined color="primary" fontSize="small" />}
+                              <Box>
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {doc.name}
+                                </Typography>
+                                {doc.isDoseGroup && (
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                    <Chip
+                                      label={doc.progress}
+                                      size="small"
+                                      color="primary"
+                                      variant="outlined"
+                                    />
+                                    <Typography variant="caption" color="text.secondary">
+                                      ({doc.doseStatuses?.filter(d => d.status === 'Aprobado' || d.status === 'aprobado' || d.status === 'cumplido').length || 0} aprobadas)
+                                    </Typography>
+                                  </Box>
+                                )}
+                              </Box>
+                            </Box>
+                          </TableCell>
                           <TableCell>
                             <Button
                               variant="contained"
                               color="primary"
-                              startIcon={<Upload />}
+                              startIcon={doc.isDoseGroup ? <VaccinesOutlined /> : <Upload />}
                               size="small"
-                              onClick={() => handleUpload(doc.id_doc, doc.name)} // Pass the correct ID (which is id_tipoDoc)
+                              onClick={() => handleUpload(doc)}
                               sx={{
                                 minWidth: '120px',
                                 px: 1.5,
                                 py: 0.7
                               }}
                             >
-                              {doc.userDocData ? 'Actualizar' : 'Cargar'}
+                              {doc.isDoseGroup ? 'Dosis' : (doc.userDocData ? 'Actualizar' : 'Cargar')}
                             </Button>
                           </TableCell>
                           <TableCell>
@@ -351,20 +447,72 @@ const Dashboard = () => {
                           <TableCell>{doc.vence ? formatDate(doc.fecha_vencimiento) : 'N/A'}</TableCell>
                           <TableCell>{formatDate(doc.userDocData?.fecha_revision)}</TableCell>
                           <TableCell>
-                            {doc.userDocData?.ruta_archivo ? (
-                              <Tooltip title="Ver documento cargado">
-                                <IconButton
-                                  color="primary"
-                                  component="a"
-                                  href={doc.userDocData.ruta_archivo}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Visibility />
-                                </IconButton>
-                              </Tooltip>
+                            {doc.isDoseGroup ? (
+                              // Para grupos de dosis, mostrar menú desplegable
+                              doc.doseStatuses?.some(d => d.userDoc?.ruta_archivo) ? (
+                                <>
+                                  <Tooltip title="Ver dosis cargadas">
+                                    <IconButton
+                                      color="primary"
+                                      onClick={(e) => handleViewMenuOpen(e, doc)}
+                                    >
+                                      <Visibility />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Menu
+                                    anchorEl={viewMenuAnchor}
+                                    open={Boolean(viewMenuAnchor) && selectedDocForView?.id_doc === doc.id_doc}
+                                    onClose={handleViewMenuClose}
+                                    PaperProps={{
+                                      sx: { minWidth: 200 }
+                                    }}
+                                  >
+                                    {doc.doseStatuses
+                                      ?.filter(d => d.userDoc?.ruta_archivo)
+                                      ?.map((doseInfo, index) => (
+                                        <MenuItem 
+                                          key={`dose-view-${doseInfo.doseNumber}-${index}`}
+                                          onClick={() => handleViewDose(doseInfo)}
+                                        >
+                                          <ListItemIcon>
+                                            <Visibility fontSize="small" />
+                                          </ListItemIcon>
+                                          <ListItemText 
+                                            primary={
+                                              doc.doseGroup?.baseDoc?.nombre_doc?.toLowerCase().includes('covid') 
+                                                ? doseInfo.doseNumber 
+                                                : `Dosis ${doseInfo.doseNumber}`
+                                            }
+                                            secondary={
+                                              doseInfo.status === 'Aprobado' || doseInfo.status === 'aprobado' || doseInfo.status === 'cumplido' ? 'Aprobada' :
+                                              doseInfo.status === 'Pendiente' || doseInfo.status === 'pendiente' || doseInfo.status === 'sin revisar' ? 'En revisión' :
+                                              doseInfo.status === 'Rechazado' || doseInfo.status === 'rechazado' ? 'Rechazada' : doseInfo.status
+                                            }
+                                          />
+                                        </MenuItem>
+                                      ))}
+                                  </Menu>
+                                </>
+                              ) : (
+                                '—'
+                              )
                             ) : (
-                              '—'
+                              // Para documentos individuales, mostrar enlace directo
+                              doc.userDocData?.ruta_archivo ? (
+                                <Tooltip title="Ver documento cargado">
+                                  <IconButton
+                                    color="primary"
+                                    component="a"
+                                    href={doc.userDocData.ruta_archivo}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Visibility />
+                                  </IconButton>
+                                </Tooltip>
+                              ) : (
+                                '—'
+                              )
                             )}
                           </TableCell>
                         </TableRow>
@@ -381,6 +529,14 @@ const Dashboard = () => {
             onClose={handleCloseUploadModal}
             selectedDocumentId={selectedDocumentId}
             documentName={selectedDocumentName}
+          />
+
+          {/* Render the Dose Upload Modal */}
+          <DoseUploadModal
+            open={doseModalOpen}
+            onClose={handleCloseDoseModal}
+            document={selectedDoseGroup}
+            documentName={selectedDoseGroup?.nombre_doc || ''}
           />
         </Box>
       </Container>
