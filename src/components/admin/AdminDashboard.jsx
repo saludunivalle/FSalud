@@ -1,6 +1,7 @@
 // src/components/admin/AdminDashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '../../context/UserContext'; // Importar useUser
 import { 
   Box, 
   Typography, 
@@ -203,6 +204,7 @@ const mockStudents = [
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useUser(); // Obtener el usuario del contexto
   const [loading, setLoading] = useState(true);
   const [students, setStudents] = useState([]);
   const [filteredStudents, setFilteredStudents] = useState([]);
@@ -215,6 +217,10 @@ const AdminDashboard = () => {
     approvedStudents: 0,
     incompleteStudents: 0
   });
+
+  // Determinar si es profesor para cambiar los textos
+  const isProfesor = user?.role === 'profesor';
+  const userLabel = isProfesor ? 'usuarios' : 'estudiantes';
 
   useEffect(() => {
     // Simulando carga de datos
@@ -294,11 +300,11 @@ const AdminDashboard = () => {
     <ThemeProvider theme={theme}>
       <Box sx={{ padding: 3, marginTop: 12 }}>
         <Typography variant="h5" gutterBottom>
-          Dashboard de Administrador
+          {isProfesor ? 'Dashboard de Profesor' : 'Dashboard de Administrador'}
         </Typography>
         
         <Typography variant="body1" color="text.secondary" paragraph>
-          Gestión de documentos de estudiantes para escenarios de práctica.
+          {isProfesor ? 'Gestión de documentos de usuarios para escenarios de práctica.' : 'Gestión de documentos de estudiantes para escenarios de práctica.'}
         </Typography>
         
         {/* Cards de estadísticas */}
@@ -323,7 +329,7 @@ const AdminDashboard = () => {
                     Completos
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Estudiantes con documentación completa
+                    {isProfesor ? 'Usuarios con documentación completa' : 'Estudiantes con documentación completa'}
                   </Typography>
                 </Box>
               </Box>
@@ -383,7 +389,7 @@ const AdminDashboard = () => {
                     Incompletos
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    Estudiantes con documentación incompleta
+                    {isProfesor ? 'Usuarios con documentación incompleta' : 'Estudiantes con documentación incompleta'}
                   </Typography>
                 </Box>
               </Box>
@@ -410,7 +416,7 @@ const AdminDashboard = () => {
                 <People sx={{ fontSize: 24, color: 'info.main' }} />
                 <Box>
                   <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'info.dark' }}>
-                    Estudiantes
+                    {isProfesor ? 'Usuarios' : 'Estudiantes'}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                     Total registrados
@@ -430,7 +436,7 @@ const AdminDashboard = () => {
         <Box sx={{ mb: 3 }}>
           <TextField
             fullWidth
-            placeholder="Buscar por nombre, apellido, código, correo o programa..."
+            placeholder={isProfesor ? "Buscar por nombre, apellido, código, correo o programa..." : "Buscar por nombre, apellido, código, correo o programa..."}
             variant="outlined"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -453,11 +459,11 @@ const AdminDashboard = () => {
         
         {/* Tabla de estudiantes */}
         <Paper sx={{ width: '100%', overflow: 'hidden' }}>
-          <TableContainer sx={{ maxHeight: 440 }}>
-            <Table stickyHeader aria-label="tabla de estudiantes">
+          <TableContainer>
+            <Table aria-label={isProfesor ? "tabla de usuarios" : "tabla de estudiantes"}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Estudiante</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>{isProfesor ? 'Usuario' : 'Estudiante'}</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Celular</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Cédula</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Programa</TableCell>
@@ -470,7 +476,7 @@ const AdminDashboard = () => {
                   <TableRow>
                     <TableCell colSpan={6} align="center"> {/* colSpan remains 6 */}
                       <Typography variant="body1" sx={{ py: 2 }}>
-                        No se encontraron estudiantes que coincidan con la búsqueda.
+                        {isProfesor ? 'No se encontraron usuarios que coincidan con la búsqueda.' : 'No se encontraron estudiantes que coincidan con la búsqueda.'}
                       </Typography>
                     </TableCell>
                   </TableRow>
@@ -522,6 +528,7 @@ const AdminDashboard = () => {
                                 rel="noopener noreferrer"
                                 aria-label={`Chat with ${student.nombre} on WhatsApp`}
                                 sx={{ color: 'success.main' }}
+                                onClick={(e) => e.stopPropagation()} // Prevenir que se abra la ficha del estudiante
                               >
                                 <WhatsApp fontSize="small" />
                               </IconButton>
