@@ -26,7 +26,10 @@ import {
   CardContent,
   Grid,
   Avatar,
-  LinearProgress
+  LinearProgress,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import { 
   Upload, 
@@ -41,7 +44,8 @@ import {
   VaccinesOutlined,
   Dashboard as DashboardIcon,
   Assignment,
-  TrendingUp
+  TrendingUp,
+  ExpandMore
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { useUser } from '../context/UserContext';
@@ -590,8 +594,146 @@ const Dashboard = () => {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredDocuments
-                        .map((doc, index) => (
+                      filteredDocuments.map((doc, index) => (
+                        doc.isDoseGroup ? (
+                          // Renderizar grupo de dosis como acordeón
+                          <TableRow
+                            key={`${doc.id_doc || 'doc'}-${index}`}
+                            sx={{ 
+                              '&:hover': { 
+                                backgroundColor: theme.palette.grey[50],
+                                transition: 'all 0.2s ease'
+                              },
+                              '&:last-child td': { borderBottom: 0 }
+                            }}
+                          >
+                            <TableCell colSpan={8} sx={{ p: 0 }}>
+                              <Accordion 
+                                sx={{ 
+                                  boxShadow: 'none',
+                                  border: '1px solid',
+                                  borderColor: 'divider',
+                                  '&:before': { display: 'none' },
+                                  '&.Mui-expanded': { margin: 0 }
+                                }}
+                              >
+                                <AccordionSummary
+                                  expandIcon={<ExpandMore />}
+                                  sx={{
+                                    backgroundColor: theme.palette.grey[50],
+                                    '&:hover': {
+                                      backgroundColor: theme.palette.grey[100],
+                                    }
+                                  }}
+                                >
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                                    <Avatar sx={{ 
+                                      width: 32, 
+                                      height: 32,
+                                      backgroundColor: theme.palette.primary.main,
+                                      color: 'white'
+                                    }}>
+                                      <VaccinesOutlined fontSize="small" />
+                                    </Avatar>
+                                    <Box sx={{ flex: 1 }}>
+                                      <Typography variant="body2" sx={{ 
+                                        fontWeight: 600,
+                                        color: theme.palette.secondary.main,
+                                        mb: 0.25,
+                                        fontSize: '0.85rem'
+                                      }}>
+                                        {doc.name}
+                                      </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <Chip
+                                          label={doc.progress}
+                                          size="small"
+                                          sx={{
+                                            backgroundColor: theme.palette.primary.light,
+                                            color: 'white',
+                                            fontWeight: 500,
+                                            fontSize: '0.65rem',
+                                            height: '20px'
+                                          }}
+                                        />
+                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                          {doc.doseStatuses?.filter(d => d.status === 'Aprobado' || d.status === 'aprobado' || d.status === 'cumplido').length || 0} aprobadas
+                                        </Typography>
+                                      </Box>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+                                      <StatusChip status={doc.status} />
+                                    </Box>
+                                  </Box>
+                                </AccordionSummary>
+                                <AccordionDetails sx={{ p: 2 }}>
+                                  <Grid container spacing={2}>
+                                    {doc.doseStatuses?.map((doseInfo, doseIndex) => (
+                                      <Grid item xs={12} sm={6} md={4} key={`dose-${doseInfo.doseNumber}-${doseIndex}`}>
+                                        <Card 
+                                          onClick={() => {
+                                            setSelectedDoseGroup({
+                                              ...doc.doseGroup.baseDoc,
+                                              doseNumber: doseInfo.doseNumber
+                                            });
+                                            setDoseModalOpen(true);
+                                          }}
+                                          sx={{ 
+                                            p: 2,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                              borderColor: theme.palette.primary.main,
+                                              boxShadow: '0 4px 12px rgba(178, 34, 34, 0.1)',
+                                              transform: 'translateY(-2px)',
+                                              transition: 'all 0.2s ease'
+                                            }
+                                          }}
+                                        >
+                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                              {doc.doseGroup?.baseDoc?.nombre_doc?.toLowerCase().includes('covid') 
+                                                ? doseInfo.doseNumber 
+                                                : `Dosis ${doseInfo.doseNumber}`}
+                                            </Typography>
+                                            <StatusChip status={doseInfo.status} />
+                                          </Box>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                              {doseInfo.userDoc?.fecha_cargue ? `Cargado: ${formatDate(doseInfo.userDoc.fecha_cargue)}` : 'No cargado'}
+                                            </Typography>
+                                            {doseInfo.userDoc?.ruta_archivo && (
+                                              <Tooltip title="Ver documento">
+                                                <IconButton
+                                                  size="small"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleViewDose(doseInfo);
+                                                  }}
+                                                  sx={{
+                                                    color: theme.palette.primary.main,
+                                                    '&:hover': {
+                                                      backgroundColor: theme.palette.primary.light,
+                                                      color: 'white'
+                                                    }
+                                                  }}
+                                                >
+                                                  <Visibility fontSize="small" />
+                                                </IconButton>
+                                              </Tooltip>
+                                            )}
+                                          </Box>
+                                        </Card>
+                                      </Grid>
+                                    ))}
+                                  </Grid>
+                                </AccordionDetails>
+                              </Accordion>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          // Renderizar documento normal como antes
                           <TableRow
                             hover
                             key={`${doc.id_doc || 'doc'}-${index}`}
@@ -609,10 +751,10 @@ const Dashboard = () => {
                                 <Avatar sx={{ 
                                   width: 32, 
                                   height: 32,
-                                  backgroundColor: doc.isDoseGroup ? theme.palette.primary.main : theme.palette.grey[200],
-                                  color: doc.isDoseGroup ? 'white' : theme.palette.grey[600]
+                                  backgroundColor: theme.palette.grey[200],
+                                  color: theme.palette.grey[600]
                                 }}>
-                                  {doc.isDoseGroup ? <VaccinesOutlined fontSize="small" /> : <Assignment fontSize="small" />}
+                                  <Assignment fontSize="small" />
                                 </Avatar>
                                 <Box sx={{ flex: 1 }}>
                                   <Typography variant="body2" sx={{ 
@@ -623,24 +765,6 @@ const Dashboard = () => {
                                   }}>
                                     {doc.name}
                                   </Typography>
-                                  {doc.isDoseGroup && (
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                      <Chip
-                                        label={doc.progress}
-                                        size="small"
-                                        sx={{
-                                          backgroundColor: theme.palette.primary.light,
-                                          color: 'white',
-                                          fontWeight: 500,
-                                          fontSize: '0.65rem',
-                                          height: '20px'
-                                        }}
-                                      />
-                                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                        {doc.doseStatuses?.filter(d => d.status === 'Aprobado' || d.status === 'aprobado' || d.status === 'cumplido').length || 0} aprobadas
-                                      </Typography>
-                                    </Box>
-                                  )}
                                 </Box>
                               </Box>
                             </TableCell>
@@ -648,7 +772,7 @@ const Dashboard = () => {
                               <Button
                                 variant="contained"
                                 size="small"
-                                startIcon={doc.isDoseGroup ? <VaccinesOutlined fontSize="small" /> : <Upload fontSize="small" />}
+                                startIcon={<Upload fontSize="small" />}
                                 onClick={() => handleUpload(doc)}
                                 sx={{
                                   borderRadius: 0.8,
@@ -670,7 +794,7 @@ const Dashboard = () => {
                                   }
                                 }}
                               >
-                                {doc.isDoseGroup ? 'Dosis' : (doc.userDocData ? 'Actualizar' : 'Cargar')}
+                                {doc.userDocData ? 'Actualizar' : 'Cargar'}
                               </Button>
                             </TableCell>
                             <TableCell>
@@ -681,14 +805,11 @@ const Dashboard = () => {
                             <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{doc.vence ? formatDate(doc.fecha_vencimiento) : 'N/A'}</Typography></TableCell>
                             <TableCell><Typography variant="body2" sx={{ fontSize: '0.8rem' }}>{formatDate(doc.userDocData?.fecha_revision)}</Typography></TableCell>
                             <TableCell sx={{ textAlign: 'center' }}>
-                              {doc.isDoseGroup ? (
-                                // Para grupos de dosis, mostrar menú desplegable
-                                doc.doseStatuses?.some(d => d.userDoc?.ruta_archivo) ? (
-                                  <>
-                                    <Tooltip title="Ver dosis cargadas" arrow>
+                              {doc.userDocData?.ruta_archivo ? (
+                                <Tooltip title="Ver documento cargado" arrow>
                                       <IconButton
                                         size="small"
-                                        onClick={(e) => handleViewMenuOpen(e, doc)}
+                                    onClick={() => window.open(doc.userDocData.ruta_archivo, '_blank', 'noopener,noreferrer')}
                                         sx={{
                                           backgroundColor: theme.palette.primary.light,
                                           color: 'white',
@@ -696,70 +817,6 @@ const Dashboard = () => {
                                           height: 32,
                                           '&:hover': {
                                             backgroundColor: theme.palette.primary.main,
-                                            transform: 'scale(1.1)',
-                                          }
-                                        }}
-                                      >
-                                        <Visibility fontSize="small" />
-                                      </IconButton>
-                                    </Tooltip>
-                                    <Menu
-                                      anchorEl={viewMenuAnchor}
-                                      open={Boolean(viewMenuAnchor) && selectedDocForView?.id_doc === doc.id_doc}
-                                      onClose={handleViewMenuClose}
-                                      PaperProps={{
-                                        sx: { minWidth: 200 }
-                                      }}
-                                    >
-                                      {doc.doseStatuses
-                                        ?.filter(d => d.userDoc?.ruta_archivo)
-                                        ?.map((doseInfo, index) => (
-                                          <MenuItem 
-                                            key={`dose-view-${doseInfo.doseNumber}-${index}`}
-                                            onClick={() => handleViewDose(doseInfo)}
-                                          >
-                                            <ListItemIcon>
-                                              <Visibility fontSize="small" />
-                                            </ListItemIcon>
-                                            <ListItemText 
-                                              primary={
-                                                doc.doseGroup?.baseDoc?.nombre_doc?.toLowerCase().includes('covid') 
-                                                  ? doseInfo.doseNumber 
-                                                  : `Dosis ${doseInfo.doseNumber}`
-                                              }
-                                              secondary={
-                                                doseInfo.status === 'Aprobado' || doseInfo.status === 'aprobado' || doseInfo.status === 'cumplido' ? 'Aprobada' :
-                                                doseInfo.status === 'Pendiente' || doseInfo.status === 'pendiente' || doseInfo.status === 'sin revisar' ? 'En revisión' :
-                                                doseInfo.status === 'Rechazado' || doseInfo.status === 'rechazado' ? 'Rechazada' : doseInfo.status
-                                              }
-                                            />
-                                          </MenuItem>
-                                        ))}
-                                    </Menu>
-                                  </>
-                                ) : (
-                                  <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center' }}>
-                                    —
-                                  </Typography>
-                                )
-                              ) : (
-                                // Para documentos individuales, mostrar enlace directo
-                                doc.userDocData?.ruta_archivo ? (
-                                  <Tooltip title="Ver documento cargado" arrow>
-                                    <IconButton
-                                      size="small"
-                                      component="a"
-                                      href={doc.userDocData.ruta_archivo}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      sx={{
-                                        backgroundColor: theme.palette.info.light,
-                                        color: theme.palette.info.main,
-                                        width: 32,
-                                        height: 32,
-                                        '&:hover': {
-                                          backgroundColor: theme.palette.info.main,
-                                          color: 'white',
                                           transform: 'scale(1.1)',
                                         }
                                       }}
@@ -771,10 +828,10 @@ const Dashboard = () => {
                                   <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center' }}>
                                     —
                                   </Typography>
-                                )
                               )}
                             </TableCell>
                           </TableRow>
+                        )
                         ))
                     )}
                   </TableBody>

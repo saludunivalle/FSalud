@@ -27,19 +27,19 @@ import {
   ButtonGroup,
   Stack
 } from '@mui/material';
-import { 
-  Search, 
-  Cancel, 
-  Description, 
-  AssignmentLate, 
-  AssignmentTurnedIn, 
-  WhatsApp,
-  People,
-  School,
-  PersonOutline,
-  Warning
-} from '@mui/icons-material';
+import SearchIcon from '@mui/icons-material/Search';
+import CancelIcon from '@mui/icons-material/Cancel';
+import DescriptionIcon from '@mui/icons-material/Description';
+import AssignmentLateIcon from '@mui/icons-material/AssignmentLate';
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import PeopleIcon from '@mui/icons-material/People';
+import SchoolIcon from '@mui/icons-material/School';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import WarningIcon from '@mui/icons-material/Warning';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import ReportGeneratorModal from './ReportGeneratorModal';
 
 // Tema personalizado
 const theme = createTheme({
@@ -242,6 +242,8 @@ const AdminDashboard = () => {
     expiredDocuments: 0
   });
 
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -358,9 +360,19 @@ const AdminDashboard = () => {
   return (
     <ThemeProvider theme={theme}>
       <Box sx={{ padding: 3, marginTop: 12 }}>
-        <Typography variant="h5" gutterBottom>
-          Dashboard de Administrador
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4" component="h1" gutterBottom>
+            Panel de Administración
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<FileDownloadIcon />}
+            onClick={() => setReportModalOpen(true)}
+          >
+            Generar Reporte
+          </Button>
+        </Box>
         
         <Typography variant="body1" color="text.secondary" paragraph>
           Gestión de documentos de usuarios para escenarios de práctica.
@@ -391,7 +403,7 @@ const AdminDashboard = () => {
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <AssignmentTurnedIn sx={{ 
+                <AssignmentTurnedInIcon sx={{ 
                   fontSize: 24, 
                   color: statusFilter === 'Completos' ? 'white' : 'success.main' 
                 }} />
@@ -444,7 +456,7 @@ const AdminDashboard = () => {
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <AssignmentLate sx={{ 
+                <AssignmentLateIcon sx={{ 
                   fontSize: 24, 
                   color: statusFilter === 'Pendientes' ? 'white' : 'info.main' 
                 }} />
@@ -497,7 +509,7 @@ const AdminDashboard = () => {
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <Warning sx={{ 
+                <WarningIcon sx={{ 
                   fontSize: 24, 
                   color: statusFilter === 'Vencidos' ? 'white' : 'warning.main' 
                 }} />
@@ -550,7 +562,7 @@ const AdminDashboard = () => {
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <Cancel sx={{ 
+                <CancelIcon sx={{ 
                   fontSize: 24, 
                   color: statusFilter === 'Rechazados' ? 'white' : 'error.main' 
                 }} />
@@ -603,7 +615,7 @@ const AdminDashboard = () => {
               }}
             >
               <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-                <Description sx={{ 
+                <DescriptionIcon sx={{ 
                   fontSize: 24, 
                   color: statusFilter === 'Sin cargar' ? 'white' : '#616161' 
                 }} />
@@ -647,7 +659,7 @@ const AdminDashboard = () => {
               <ButtonGroup size="small" sx={{ bgcolor: 'background.paper' }}>
                 <Button
                   variant={roleFilter === 'Ambos' ? 'contained' : 'outlined'}
-                  startIcon={<People fontSize="small" />}
+                  startIcon={<PeopleIcon fontSize="small" />}
                   onClick={() => handleRoleFilterChange('Ambos')}
                   sx={{ 
                     borderColor: 'divider',
@@ -658,7 +670,7 @@ const AdminDashboard = () => {
                 </Button>
                 <Button
                   variant={roleFilter === 'Estudiante' ? 'contained' : 'outlined'}
-                  startIcon={<School fontSize="small" />}
+                  startIcon={<SchoolIcon fontSize="small" />}
                   onClick={() => handleRoleFilterChange('Estudiante')}
                   sx={{ 
                     borderColor: 'divider',
@@ -669,7 +681,7 @@ const AdminDashboard = () => {
                 </Button>
                 <Button
                   variant={roleFilter === 'Docente' ? 'contained' : 'outlined'}
-                  startIcon={<PersonOutline fontSize="small" />}
+                  startIcon={<PersonOutlineIcon fontSize="small" />}
                   onClick={() => handleRoleFilterChange('Docente')}
                   sx={{ 
                     borderColor: 'divider',
@@ -737,13 +749,13 @@ const AdminDashboard = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search />
+                  <SearchIcon />
                 </InputAdornment>
               ),
               endAdornment: searchTerm && (
                 <InputAdornment position="end">
                   <IconButton onClick={handleClearSearch} edge="end">
-                    <Cancel />
+                    <CancelIcon />
                   </IconButton>
                 </InputAdornment>
               )
@@ -825,7 +837,7 @@ const AdminDashboard = () => {
                                 sx={{ color: 'success.main' }}
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <WhatsApp fontSize="small" />
+                                <WhatsAppIcon fontSize="small" />
                               </IconButton>
                             </Box>
                           ) : (
@@ -964,6 +976,11 @@ const AdminDashboard = () => {
             labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
           />
         </Paper>
+        
+        <ReportGeneratorModal
+          open={reportModalOpen}
+          onClose={() => setReportModalOpen(false)}
+        />
       </Box>
     </ThemeProvider>
   );

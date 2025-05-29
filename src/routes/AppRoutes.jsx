@@ -5,7 +5,7 @@ import HomePage from '../pages/Home';
 import DashboardPage from '../pages/Dashboard';
 import AdminDashboard from '../components/admin/AdminDashboard';
 import FirstLoginForm from '../components/auth/FirstLoginForm';
-import AuthComponent from '../components/auth/AuthComponent'; // Updated import
+import AuthComponent from '../components/auth/AuthComponent';
 import NotFoundPage from '../pages/NotFound';
 import Header from '../components/common/Header';
 import DocumentHistory from '../components/student/DocumentHistory';
@@ -29,6 +29,13 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 const AppRoutes = () => {
   const { isLogin, user } = useUser();
 
+  const renderDashboard = () => {
+    if (user?.role === 'admin' || user?.role === 'administrador') {
+      return <AdminDashboard />;
+    }
+    return <DashboardPage />;
+  };
+
   return (
     <>
       {isLogin && <Header userData={user} />}
@@ -43,7 +50,7 @@ const AppRoutes = () => {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              {(user?.role === 'admin' || user?.role === 'administrador') ? <AdminDashboard /> : <DashboardPage />}
+              {renderDashboard()}
             </ProtectedRoute>
           }
         />
