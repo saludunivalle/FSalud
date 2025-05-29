@@ -14,8 +14,6 @@ import {
   CircularProgress,
   Typography,
   Box,
-  Tabs,
-  Tab,
   FormControl,
   InputLabel,
   Select,
@@ -29,15 +27,17 @@ import {
   Fade,
   Chip,
 } from '@mui/material';
+import { blue } from '@mui/material/colors';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import DownloadIcon from '@mui/icons-material/Download';
-import InfoIcon from '@mui/icons-material/Info';
 import ClearIcon from '@mui/icons-material/Clear';
-import PersonIcon from '@mui/icons-material/Person';
 import GroupIcon from '@mui/icons-material/Group';
 import AssignmentIcon from '@mui/icons-material/Assignment';
 import CloseIcon from '@mui/icons-material/Close';
+import PeopleIcon from '@mui/icons-material/People';
+import SchoolIcon from '@mui/icons-material/School';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import * as XLSX from 'xlsx';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import axios from 'axios';
@@ -162,12 +162,10 @@ const ReportGeneratorModal = ({ open, onClose }) => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [reportType, setReportType] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [filters, setFilters] = useState({
-    role: 'all',
     documentStatus: 'all',
-    dateRange: 'all'
+    userType: 'all'
   });
   const [documentos, setDocumentos] = useState([]);
 
@@ -248,7 +246,6 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                   nombre: `${user.nombre_usuario} ${user.apellido_usuario}`,
                   cedula: user.documento_usuario,
                   correo: user.correo_usuario,
-                  rol: user.rol,
                   documentos: userDocs
                 };
               } catch (userError) {
@@ -268,7 +265,6 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                   nombre: `${user.nombre_usuario} ${user.apellido_usuario}`,
                   cedula: user.documento_usuario,
                   correo: user.correo_usuario,
-                  rol: user.rol,
                   documentos: emptyDocs
                 };
               }
@@ -307,7 +303,6 @@ const ReportGeneratorModal = ({ open, onClose }) => {
               nombre: 'Juan Carlos Pérez',
               cedula: '12345678',
               correo: 'juan.perez@ejemplo.com',
-              rol: 'estudiante',
               documentos: {
                 'Documento de Identificación': { estado: 'Cumplido', fecha: '2024-01-15' },
                 'Carné EPS': { estado: 'Cumplido', fecha: '2024-01-16' },
@@ -328,7 +323,6 @@ const ReportGeneratorModal = ({ open, onClose }) => {
               nombre: 'María García López',
               cedula: '87654321',
               correo: 'maria.garcia@ejemplo.com',
-              rol: 'profesor',
               documentos: {
                 'Documento de Identificación': { estado: 'Cumplido', fecha: '2024-02-01' },
                 'Carné EPS': { estado: 'Cumplido', fecha: '2024-02-02' },
@@ -387,7 +381,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
         : users;
 
       // Preparar encabezados de columnas - usar las columnas dinámicas extraídas de la base de datos
-      const headers = ['NOMBRE', 'CEDULA', 'CORREO', 'ROL'];
+      const headers = ['NOMBRE', 'CEDULA', 'CORREO'];
       
       // Agregar todas las columnas de documentos dinámicamente
       documentos.forEach(nombreDoc => {
@@ -399,8 +393,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
         // Título y metadatos
         ['REPORTE DE USUARIOS CON DOCUMENTOS', '', '', ''],
         ['Fecha de generación:', new Date().toLocaleDateString(), '', ''],
-        ['Tipo de reporte:', reportType === 'all' ? 'Todos los usuarios' : 
-                          reportType === 'students' ? 'Solo estudiantes' : 'Solo profesores', '', ''],
+        ['Tipo de reporte:', 'Todos los usuarios', '', ''],
         ['Total de usuarios:', reportData.length, '', ''],
         ['Total de columnas de documentos:', documentos.length, '', ''],
         ['', '', '', ''],
@@ -412,7 +405,6 @@ const ReportGeneratorModal = ({ open, onClose }) => {
             user.nombre,
             user.cedula,
             user.correo,
-            user.rol === 'estudiante' ? 'Estudiante' : 'Profesor'
           ];
 
           // Agregar estados de documentos dinámicamente
@@ -433,7 +425,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
 
       // Establecer el ancho de las columnas dinámicamente
       const colWidths = headers.map((header, index) => {
-        if (index < 4) return { wch: 25 }; // Columnas básicas
+        if (index < 3) return { wch: 25 }; // Columnas básicas
         if (header.includes('HEPATITIS') || header.includes('COVID')) return { wch: 30 };
         if (header.includes('IDENTIFICACIÓN') || header.includes('EPS')) return { wch: 35 };
         return { wch: 25 }; // Ancho por defecto para otras columnas
@@ -503,7 +495,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `reporte_documentos_${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`);
+      link.setAttribute('download', `reporte_documentos_${new Date().toISOString().split('T')[0]}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -533,10 +525,10 @@ const ReportGeneratorModal = ({ open, onClose }) => {
       user.cedula.includes(searchTerm) ||
       user.correo.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesRole = filters.role === 'all' || user.rol === filters.role;
     const matchesDocumentStatus = filters.documentStatus === 'all' || user.documentStatus === filters.documentStatus;
+    const matchesUserType = filters.userType === 'all' || user.tipo_usuario === filters.userType;
 
-    return matchesSearch && matchesRole && matchesDocumentStatus;
+    return matchesSearch && matchesDocumentStatus && matchesUserType;
   });
 
   return (
@@ -588,54 +580,16 @@ const ReportGeneratorModal = ({ open, onClose }) => {
         </DialogTitle>
 
         <DialogContent sx={{ p: 0 }}>
-          {/* Selector de tipo de reporte */}
+          {/* Información del tipo de reporte */}
           <Paper elevation={0} sx={{ bgcolor: 'secondary.light', borderRadius: 0 }}>
             <Box sx={{ px: 3, py: 2 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <InfoIcon color="primary" fontSize="small" />
-                Paso 1: Seleccione el tipo de reporte
+              <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <GroupIcon color="primary" fontSize="small" />
+                Reporte de Todos los Usuarios
               </Typography>
-              <Tabs
-                value={reportType}
-                onChange={(e, newValue) => setReportType(newValue)}
-                variant="fullWidth"
-                sx={{
-                  '& .MuiTab-root': {
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    fontSize: '1rem',
-                    py: 2,
-                  }
-                }}
-              >
-                <Tab 
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <GroupIcon />
-                      Todos los Usuarios
-                    </Box>
-                  } 
-                  value="all" 
-                />
-                <Tab 
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <PersonIcon />
-                      Solo Estudiantes
-                    </Box>
-                  } 
-                  value="students" 
-                />
-                <Tab 
-                  label={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <AssignmentIcon />
-                      Solo Profesores
-                    </Box>
-                  } 
-                  value="teachers" 
-                />
-              </Tabs>
+              <Typography variant="body2" color="text.secondary">
+                Este reporte incluirá todos los usuarios registrados en el sistema con sus respectivos documentos.
+              </Typography>
             </Box>
           </Paper>
 
@@ -643,7 +597,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
             {/* Barra de búsqueda mejorada */}
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
               <SearchIcon color="primary" />
-              Paso 2: Busque usuarios específicos (opcional)
+              Busque usuarios específicos (opcional)
             </Typography>
             
             <Grid container spacing={2} alignItems="center" sx={{ mb: 3 }}>
@@ -706,12 +660,12 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                   Filtros Avanzados
                 </Typography>
                 <Grid container spacing={3}>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth>
                       <InputLabel sx={{ fontWeight: 500 }}>Tipo de Usuario</InputLabel>
                       <Select
-                        value={filters.role}
-                        onChange={(e) => handleFilterChange('role', e.target.value)}
+                        value={filters.userType}
+                        onChange={(e) => handleFilterChange('userType', e.target.value)}
                         label="Tipo de Usuario"
                         sx={{ 
                           borderRadius: 2,
@@ -720,26 +674,26 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                       >
                         <MenuItem value="all">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <GroupIcon fontSize="small" />
-                            Todos los usuarios
+                            <PeopleIcon color="primary" />
+                            <Typography>Todos los usuarios</Typography>
                           </Box>
                         </MenuItem>
                         <MenuItem value="estudiante">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <PersonIcon fontSize="small" />
-                            Solo estudiantes
+                            <SchoolIcon color="primary" />
+                            <Typography>Solo estudiantes</Typography>
                           </Box>
                         </MenuItem>
                         <MenuItem value="profesor">
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <AssignmentIcon fontSize="small" />
-                            Solo profesores
+                            <AssignmentIndIcon color="primary" />
+                            <Typography>Solo profesores</Typography>
                           </Box>
                         </MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={6}>
                     <FormControl fullWidth>
                       <InputLabel sx={{ fontWeight: 500 }}>Estado de Documentos</InputLabel>
                       <Select
@@ -753,7 +707,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                       >
                         <MenuItem value="all">Todos los estados</MenuItem>
                         <MenuItem value="pending">
-                          <Chip label="Pendientes" color="warning" size="small" sx={{ mr: 1 }} />
+                          <Chip label="Pendientes" color="primary" size="small" sx={{ mr: 1, bgcolor: blue[100], color: blue[700] }} />
                           Documentos pendientes
                         </MenuItem>
                         <MenuItem value="approved">
@@ -765,34 +719,13 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                           Documentos rechazados
                         </MenuItem>
                         <MenuItem value="expired">
-                          <Chip label="Vencidos" color="error" size="small" sx={{ mr: 1 }} />
+                          <Chip label="Vencidos" color="warning" size="small" sx={{ mr: 1 }} />
                           Documentos vencidos
                         </MenuItem>
                         <MenuItem value="not_uploaded">
                           <Chip label="Sin cargar" color="default" size="small" sx={{ mr: 1 }} />
                           Sin documentos
                         </MenuItem>
-                      </Select>
-                    </FormControl>
-                  </Grid>
-                  <Grid item xs={12} md={4}>
-                    <FormControl fullWidth>
-                      <InputLabel sx={{ fontWeight: 500 }}>Período de Tiempo</InputLabel>
-                      <Select
-                        value={filters.dateRange}
-                        onChange={(e) => handleFilterChange('dateRange', e.target.value)}
-                        label="Período de Tiempo"
-                        sx={{ 
-                          borderRadius: 2,
-                          bgcolor: 'background.paper'
-                        }}
-                      >
-                        <MenuItem value="all">Todo el historial</MenuItem>
-                        <MenuItem value="lastWeek">Última semana</MenuItem>
-                        <MenuItem value="lastMonth">Último mes</MenuItem>
-                        <MenuItem value="lastYear">Último año</MenuItem>
-                        <MenuItem value="thisSemester">Semestre actual</MenuItem>
-                        <MenuItem value="lastSemester">Semestre anterior</MenuItem>
                       </Select>
                     </FormControl>
                   </Grid>
@@ -805,7 +738,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
             {/* Área de resultados */}
             <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
               <GroupIcon color="primary" />
-              Paso 3: Seleccione usuarios para el reporte
+              Seleccione usuarios para el reporte
             </Typography>
 
             {error && (
