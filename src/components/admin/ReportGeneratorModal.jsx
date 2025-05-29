@@ -41,6 +41,7 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import * as XLSX from 'xlsx';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 
 // Tema clínico profesional con tonos sangre de toro
 const clinicalTheme = createTheme({
@@ -98,41 +99,6 @@ const clinicalTheme = createTheme({
   },
 });
 
-// Definición de documentos basada en la estructura de la base de datos
-const DOCUMENTOS = {
-  IDENTIFICACION: {
-    nombre: "Documento de identificación",
-    tieneDosis: false
-  },
-  EPS: {
-    nombre: "Carné de EPS",
-    tieneDosis: false
-  },
-  HEPATITIS: {
-    nombre: "Hepatitis B",
-    tieneDosis: true,
-    dosis: ["Dosis 1", "Dosis 2", "Dosis 3"]
-  },
-  TETANOS: {
-    nombre: "Tétanos y Difteria",
-    tieneDosis: true,
-    dosis: ["Dosis 1", "Dosis 2", "Dosis 3"]
-  },
-  VARICELA: {
-    nombre: "Varicela",
-    tieneDosis: false
-  },
-  INFLUENZA: {
-    nombre: "Influenza",
-    tieneDosis: false
-  },
-  COVID: {
-    nombre: "COVID-19",
-    tieneDosis: true,
-    dosis: ["Dosis 1", "Dosis 2", "Refuerzo"]
-  }
-};
-
 // Función para formatear el estado del documento
 const formatearEstadoDocumento = (estado, fecha) => {
   if (!estado || estado === 'Sin cargar') return "SIN CARGAR";
@@ -175,35 +141,60 @@ const ReportGeneratorModal = ({ open, onClose }) => {
       const fetchData = async () => {
         try {
           setLoading(true);
+          setError(null); // Limpiar errores previos
           
-          // PASO 1: Obtener TODOS los tipos de documentos de la hoja DOCUMENTOS
-          const docsResponse = await axios.get('http://localhost:3001/api/documents');
-          const documentTypes = docsResponse.data || [];
+          // PASO 1: Obtener tipos de documentos
+          const docsResponse = await axios.get(`${API_BASE_URL}/api/documentos/tipos`);
+          console.log('Respuesta completa de documentos:', docsResponse);
+          console.log('Datos de documentos recibidos:', docsResponse.data);
+          console.log('Tipo de docsResponse.data:', typeof docsResponse.data);
+          console.log('Es array docsResponse.data:', Array.isArray(docsResponse.data));
           
-          // PASO 2: Crear TODAS las columnas basadas en la hoja DOCUMENTOS (nombre_doc)
+          // Manejar formato de respuesta consistente { success: true, data: [...] }
+          if (!docsResponse.data || !docsResponse.data.success || !Array.isArray(docsResponse.data.data)) {
+            console.error('Error de formato - docsResponse.data no tiene el formato esperado:', docsResponse.data);
+            throw new Error('Formato de respuesta inválido para documentos');
+          }
+          const documentTypes = docsResponse.data.data;
+          
+          // Agregar logs para debugging
+          console.log('Tipos de documentos recibidos:', documentTypes);
+          
+          // PASO 2: Crear columnas basadas en los documentos reales
           const documentColumns = [];
           documentTypes.forEach(docType => {
-            const nombreDoc = docType.nombre_doc;
+            console.log('Procesando documento:', docType);
+            const nombreDoc = docType?.nombre_doc?.trim();
+            if (!nombreDoc) {
+              console.error('Documento sin nombre_doc:', docType);
+              return;
+            }
+            
             const dosis = parseInt(docType.dosis) || 1;
+            console.log(`Documento válido: ${nombreDoc}, Dosis: ${dosis}`);
             
             if (dosis > 1) {
-              // Crear columnas separadas para cada dosis
               for (let i = 1; i <= dosis; i++) {
-                documentColumns.push(`${nombreDoc} - Dosis ${i}`);
+                const columnName = `${nombreDoc} - Dosis ${i}`;
+                documentColumns.push(columnName);
               }
             } else {
-              // Documento simple
               documentColumns.push(nombreDoc);
             }
           });
           
-          console.log('Columnas de documentos creadas desde DOCUMENTOS sheet:', documentColumns);
+          if (documentColumns.length === 0) {
+            throw new Error('No se encontraron tipos de documentos en la base de datos');
+          }
           
-          // PASO 3: Obtener todos los usuarios de la hoja USUARIOS
-          const usersResponse = await axios.get('http://localhost:3001/api/users/all');
-          const usersData = usersResponse.data.data || [];
+          // PASO 3: Obtener usuarios
+          const usersResponse = await axios.get(`${API_BASE_URL}/api/users/all`);
+          if (!usersResponse.data || !usersResponse.data.data || !Array.isArray(usersResponse.data.data)) {
+            throw new Error('Formato de respuesta inválido para usuarios');
+          }
+          const usersData = usersResponse.data.data;
           
-          // PASO 4: Procesar cada usuario - TODOS tendrán TODAS las columnas de documentos
+          // PASO 4: Procesar cada usuario
           const processedUsers = await Promise.all(
             usersData.map(async (user) => {
               try {
@@ -216,12 +207,18 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                   };
                 });
                 
-                // Obtener documentos del usuario (si los tiene)
-                const userDocsResponse = await axios.get(`http://localhost:3001/api/documents/user/${user.id_usuario}`);
-                const userDocuments = userDocsResponse.data || [];
+                // Obtener documentos del usuario
+                const userDocsResponse = await axios.get(`${API_BASE_URL}/api/documentos/usuario/${user.id_usuario}`);
+                if (userDocsResponse.data && userDocsResponse.data.success && Array.isArray(userDocsResponse.data.data)) {
+                  const userDocuments = userDocsResponse.data.data;
                 
                 // Mapear solo los documentos que el usuario SÍ tiene cargados
                 userDocuments.forEach(doc => {
+                    if (!doc.nombre_doc) {
+                      console.warn('Documento de usuario sin nombre_doc:', doc);
+                      return;
+                    }
+
                   const nombreDoc = doc.nombre_doc;
                   const dosis = parseInt(doc.dosis) || 1;
                   
@@ -240,6 +237,7 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                     };
                   }
                 });
+                }
 
                 return {
                   id: user.id_usuario,
@@ -249,99 +247,34 @@ const ReportGeneratorModal = ({ open, onClose }) => {
                   documentos: userDocs
                 };
               } catch (userError) {
-                console.error(`Error fetching documents for user ${user.id_usuario}:`, userError);
-                
-                // Incluso con error, asegurar que el usuario tenga TODAS las columnas de documentos
-                const emptyDocs = {};
-                documentColumns.forEach(columnName => {
-                  emptyDocs[columnName] = {
-                    estado: 'Sin cargar',
-                    fecha: null
-                  };
-                });
-                
+                console.error(`Error procesando usuario ${user.id_usuario}:`, userError);
+                // Retornar usuario con documentos sin cargar en caso de error
                 return {
                   id: user.id_usuario,
                   nombre: `${user.nombre_usuario} ${user.apellido_usuario}`,
                   cedula: user.documento_usuario,
                   correo: user.correo_usuario,
-                  documentos: emptyDocs
+                  documentos: Object.fromEntries(
+                    documentColumns.map(col => [col, { estado: 'Sin cargar', fecha: null }])
+                  )
                 };
               }
             })
           );
 
           setUsers(processedUsers);
-          setDocumentos(documentColumns); // TODAS las columnas de la hoja DOCUMENTOS
-          setError(null);
-          
-          console.log(`Procesados ${processedUsers.length} usuarios con ${documentColumns.length} columnas de documentos cada uno`);
+          setDocumentos(documentColumns);
+          console.log('Datos cargados exitosamente:', {
+            usuarios: processedUsers.length,
+            columnas: documentColumns
+          });
           
         } catch (err) {
           console.error('Error fetching data:', err);
-          setError('Error al cargar los datos. Verificar que el servidor esté ejecutándose en el puerto 3001.');
-          
-          // Datos de ejemplo que muestran TODAS las columnas posibles
-          const exampleDocumentColumns = [
-            'Documento de Identificación',
-            'Carné EPS',
-            'Hepatitis B - Dosis 1',
-            'Hepatitis B - Dosis 2',
-            'Hepatitis B - Dosis 3',
-            'Tétanos - Dosis 1',
-            'Tétanos - Dosis 2',
-            'Varicela',
-            'Influenza',
-            'COVID-19 - Dosis 1',
-            'COVID-19 - Dosis 2',
-            'COVID-19 - Refuerzo'
-          ];
-          
-          const mockUsers = [
-            {
-              id: '1',
-              nombre: 'Juan Carlos Pérez',
-              cedula: '12345678',
-              correo: 'juan.perez@ejemplo.com',
-              documentos: {
-                'Documento de Identificación': { estado: 'Cumplido', fecha: '2024-01-15' },
-                'Carné EPS': { estado: 'Cumplido', fecha: '2024-01-16' },
-                'Hepatitis B - Dosis 1': { estado: 'Cumplido', fecha: '2024-01-17' },
-                'Hepatitis B - Dosis 2': { estado: 'Sin revisar', fecha: '2024-01-18' },
-                'Hepatitis B - Dosis 3': { estado: 'Sin cargar', fecha: null },
-                'Tétanos - Dosis 1': { estado: 'Cumplido', fecha: '2024-01-19' },
-                'Tétanos - Dosis 2': { estado: 'Sin cargar', fecha: null },
-                'Varicela': { estado: 'Cumplido', fecha: '2024-01-20' },
-                'Influenza': { estado: 'Sin cargar', fecha: null },
-                'COVID-19 - Dosis 1': { estado: 'Cumplido', fecha: '2024-01-21' },
-                'COVID-19 - Dosis 2': { estado: 'Cumplido', fecha: '2024-01-22' },
-                'COVID-19 - Refuerzo': { estado: 'Sin cargar', fecha: null }
-              }
-            },
-            {
-              id: '2',
-              nombre: 'María García López',
-              cedula: '87654321',
-              correo: 'maria.garcia@ejemplo.com',
-              documentos: {
-                'Documento de Identificación': { estado: 'Cumplido', fecha: '2024-02-01' },
-                'Carné EPS': { estado: 'Cumplido', fecha: '2024-02-02' },
-                'Hepatitis B - Dosis 1': { estado: 'Cumplido', fecha: '2024-02-03' },
-                'Hepatitis B - Dosis 2': { estado: 'Cumplido', fecha: '2024-02-04' },
-                'Hepatitis B - Dosis 3': { estado: 'Cumplido', fecha: '2024-02-05' },
-                'Tétanos - Dosis 1': { estado: 'Cumplido', fecha: '2024-02-06' },
-                'Tétanos - Dosis 2': { estado: 'Cumplido', fecha: '2024-02-07' },
-                'Varicela': { estado: 'Cumplido', fecha: '2024-02-08' },
-                'Influenza': { estado: 'Cumplido', fecha: '2024-02-09' },
-                'COVID-19 - Dosis 1': { estado: 'Cumplido', fecha: '2024-02-10' },
-                'COVID-19 - Dosis 2': { estado: 'Cumplido', fecha: '2024-02-11' },
-                'COVID-19 - Refuerzo': { estado: 'Sin cargar', fecha: null }
-              }
-            }
-          ];
-          
-          setUsers(mockUsers);
-          setDocumentos(exampleDocumentColumns);
+          setError('Error al cargar los datos. Por favor, intente nuevamente.');
+          // NO establecer datos de ejemplo aquí
+          setUsers([]);
+          setDocumentos([]);
         } finally {
           setLoading(false);
         }
