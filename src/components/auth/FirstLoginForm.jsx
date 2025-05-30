@@ -129,11 +129,13 @@ const FirstLoginForm = () => {
     personalEmail: '',
     role: 'estudiante', // Valor predeterminado
     birthDate: '',
-    program: ''
+    program: '',
+    sede: '' // Add sede field
   });
   const [errors, setErrors] = useState({});
   const [showEmailAlert, setShowEmailAlert] = useState(true);
   const [programs, setPrograms] = useState([]);
+  const [sedes, setSedes] = useState([]); // Add sedes state
 
   // Opciones para el tipo de documento
   const documentTypes = [
@@ -143,14 +145,20 @@ const FirstLoginForm = () => {
     { value: 'PAS', label: 'Pasaporte' }
   ];
 
-  // Cargar programas académicos desde la base de datos
+  // Cargar programas académicos y sedes desde la base de datos
   useEffect(() => {
     const loadPrograms = async () => {
       try {
         setProgramsLoading(true);
         const programsData = await getAllPrograms();
+        
+        // Extract unique sedes from programs and sort them alphabetically
+        const uniqueSedes = [...new Set(programsData.map(p => p.sede))].filter(Boolean).sort();
+        setSedes(uniqueSedes.map(sede => ({ value: sede, label: sede })));
+        
         setPrograms(programsData);
         console.log('Programas cargados:', programsData);
+        console.log('Sedes disponibles:', uniqueSedes);
       } catch (error) {
         console.error('Error cargando programas:', error);
         // Los programas fallback ya se manejan en el servicio
@@ -161,6 +169,11 @@ const FirstLoginForm = () => {
 
     loadPrograms();
   }, []);
+
+  // Filter programs based on selected sede
+  const filteredPrograms = formData.sede 
+      ? programs.filter(p => p.sede === formData.sede)
+      : [];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -208,6 +221,9 @@ const FirstLoginForm = () => {
       }
     }
     
+    // Validar sede
+    if (!formData.sede) newErrors.sede = 'La sede es requerida';
+    
     // Validar programa académico
     if (!formData.program) newErrors.program = 'El programa académico es requerido';
     
@@ -224,6 +240,7 @@ const FirstLoginForm = () => {
       // Create the user data object with all required fields
       const userData = {
         programa_academico: formData.program,
+        sede: formData.sede,
         documento_usuario: formData.documentNumber,
         tipoDoc: formData.documentType,
         telefono: formData.phone,
@@ -478,89 +495,125 @@ const FirstLoginForm = () => {
               />
             </Grid>
 
+            {/* Sede */}
+            <Grid item xs={12} md={4}>
+                <FormControl fullWidth error={!!errors.sede} required size="small">
+                    <InputLabel id="sede-label">Sede</InputLabel>
+                    <StyledSelect
+                        labelId="sede-label"
+                        name="sede"
+                        value={formData.sede}
+                        onChange={(e) => {
+                            handleChange(e);
+                            // Clear program when sede changes
+                            setFormData(prev => ({ ...prev, program: '' }));
+                        }}
+                        label="Sede"
+                        startAdornment={
+                            <InputAdornment position="start">
+                                <School fontSize="small" color="action" />
+                            </InputAdornment>
+                        }
+                    >
+                        {sedes.map(sede => (
+                            <MenuItem key={sede.value} value={sede.value}>
+                                {sede.label}
+                            </MenuItem>
+                        ))}
+                    </StyledSelect>
+                    {errors.sede && (
+                        <Typography variant="caption" color="error">
+                            {errors.sede}
+                        </Typography>
+                    )}
+                </FormControl>
+            </Grid>
+
             {/* Programa académico */}
             <Grid item xs={12} md={8}>
-              <Autocomplete
-                options={programs}
-                getOptionLabel={(option) => option.label || ''}
-                value={programs.find(p => p.value === formData.program) || null}
-                onChange={(event, newValue) => {
-                  const e = {
-                    target: {
-                      name: 'program',
-                      value: newValue ? newValue.value : ''
-                    }
-                  };
-                  handleChange(e);
-                }}
-                loading={programsLoading}
-                disabled={programsLoading}
-                isOptionEqualToValue={(option, value) => option.value === value.value}
-                filterOptions={(options, { inputValue }) => {
-                  return options.filter(option =>
-                    option.label.toLowerCase().includes(inputValue.toLowerCase())
-                  );
-                }}
-                selectOnFocus
-                clearOnBlur
-                handleHomeEndKeys
-                renderInput={(params) => (
-                  <StyledTextField
-                    {...params}
-                    label="Programa académico"
-                    placeholder={programsLoading ? "Cargando..." : "Buscar programa..."}
-                    required
-                    error={!!errors.program}
-                    helperText={errors.program || (programs.length > 0 ? `${programs.length} programas disponibles` : ' ')}
-                    InputProps={{
-                      ...params.InputProps,
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <School fontSize="small" color="action" />
-                        </InputAdornment>
-                      ),
-                      endAdornment: (
-                        <>
-                          {programsLoading ? <CircularProgress size={20} /> : null}
-                          {params.InputProps.endAdornment}
-                        </>
-                      ),
+                <Autocomplete
+                    options={filteredPrograms}
+                    getOptionLabel={(option) => option.label || ''}
+                    value={filteredPrograms.find(p => p.value === formData.program) || null}
+                    onChange={(event, newValue) => {
+                        const e = {
+                            target: {
+                                name: 'program',
+                                value: newValue ? newValue.value : ''
+                            }
+                        };
+                        handleChange(e);
                     }}
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <li {...props} key={option.value}>
-                    <School fontSize="small" sx={{ mr: 1, color: 'action.active' }} />
-                    {option.label}
-                  </li>
-                )}
-                noOptionsText={
-                  programsLoading 
-                    ? "Cargando programas..." 
-                    : "No se encontraron programas"
-                }
-                loadingText="Cargando programas..."
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    height: '52px', // Mantener consistencia con otros campos
-                    fontSize: '0.95rem',
-                    '&:hover fieldset': {
-                      borderColor: 'rgba(0,0,0,0.3)',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    transform: 'translate(14px, 15px) scale(1)',
-                    fontSize: '0.95rem',
-                  },
-                  '& .MuiInputLabel-shrink': {
-                    transform: 'translate(14px, -6px) scale(0.75)',
-                  },
-                  '& .MuiFormHelperText-root': {
-                    fontSize: '0.8rem',
-                  }
-                }}
-              />
+                    loading={programsLoading}
+                    disabled={programsLoading || !formData.sede}
+                    isOptionEqualToValue={(option, value) => option.value === value.value}
+                    filterOptions={(options, { inputValue }) => {
+                        return options.filter(option =>
+                            option.label.toLowerCase().includes(inputValue.toLowerCase())
+                        );
+                    }}
+                    selectOnFocus
+                    clearOnBlur
+                    handleHomeEndKeys
+                    renderInput={(params) => (
+                        <StyledTextField
+                            {...params}
+                            label="Programa académico"
+                            placeholder={!formData.sede ? "Selecciona primero una sede" : programsLoading ? "Cargando..." : "Buscar programa..."}
+                            required
+                            error={!!errors.program}
+                            helperText={errors.program || (filteredPrograms.length > 0 ? `${filteredPrograms.length} programas disponibles` : ' ')}
+                            InputProps={{
+                                ...params.InputProps,
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <School fontSize="small" color="action" />
+                                    </InputAdornment>
+                                ),
+                                endAdornment: (
+                                    <>
+                                        {programsLoading ? <CircularProgress size={20} /> : null}
+                                        {params.InputProps.endAdornment}
+                                    </>
+                                ),
+                            }}
+                        />
+                    )}
+                    renderOption={(props, option) => (
+                        <li {...props} key={option.value}>
+                            <School fontSize="small" sx={{ mr: 1, color: 'action.active' }} />
+                            {option.label}
+                        </li>
+                    )}
+                    noOptionsText={
+                        !formData.sede 
+                            ? "Selecciona primero una sede" 
+                            : programsLoading 
+                                ? "Cargando programas..." 
+                                : "No se encontraron programas para esta sede"
+                    }
+                    loadingText="Cargando programas..."
+                    sx={{ 
+                        '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            height: '52px',
+                            fontSize: '0.95rem',
+                            '&:hover fieldset': {
+                                borderColor: 'rgba(0,0,0,0.3)',
+                            },
+                        },
+                        '& .MuiInputLabel-root': {
+                            transform: 'translate(14px, 15px) scale(1)',
+                            fontSize: '0.95rem',
+                        },
+                        '& .MuiInputLabel-shrink': {
+                            transform: 'translate(14px, -6px) scale(0.75)',
+                        },
+                        '& .MuiFormHelperText-root': {
+                            fontSize: '0.8rem',
+                        }
+                    }}
+                />
             </Grid>
 
             <Grid item xs={12}>

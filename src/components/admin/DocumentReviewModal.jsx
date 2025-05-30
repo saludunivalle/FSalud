@@ -30,12 +30,14 @@ import {
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import axios from 'axios';
+import API_BASE_URL from '../../config/api';
 
 // Tema personalizado
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#B22222', // Color rojo sangre toro (Universidad del Valle)
+      main: '#B22222',
     },
     secondary: {
       main: '#1976d2',
@@ -63,6 +65,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState(null);
   
   const [estado, setEstado] = useState(document.estado || 'pendiente');
   const [fechaExpedicion, setFechaExpedicion] = useState(document.fechaExpedicion || '');
@@ -154,27 +157,60 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     setError('');
 
     try {
-      // Simulando llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Llamar a la API real en lugar de simular
+      const response = await axios.put(
+        `${API_BASE_URL}/api/documentos/revisar/${document.id_usuarioDoc}`,
+        {
+          estado,
+          comentario
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('google_token')}`
+          }
+        }
+      );
 
-      // Crear objeto con datos actualizados
-      const updatedDocument = {
-        ...document,
-        estado,
-        fechaExpedicion,
-        fechaVencimiento: document.vence ? fechaVencimiento : null,
-        comentarios: comentario,
-        fechaRevision: new Date().toISOString().split('T')[0] // Fecha actual como fecha de revisión
-      };
-
-      setSuccess(true);
-      
-      // Después de un tiempo, cerrar el modal y pasar los datos actualizados
-      setTimeout(() => {
-        onClose(updatedDocument);
-      }, 1500);
+      if (response.data.success) {
+        // Mostrar mensaje de éxito con notificación
+        setSuccessMessage({
+          title: 'Documento actualizado',
+          message: response.data.message,
+          notification: response.data.notification
+        });
+        setSuccess(true);
+        
+        // Cerrar el modal después de mostrar el mensaje de éxito
+        setTimeout(() => {
+          onClose({
+            ...document,
+            estado,
+            fechaExpedicion,
+            fechaVencimiento: document.vence ? fechaVencimiento : null,
+            comentarios: comentario,
+            fecha_revision: new Date().toISOString().split('T')[0]
+          });
+        }, 2000); // Dar más tiempo para leer el mensaje
+      }
     } catch (err) {
-      setError('Ha ocurrido un error al guardar los cambios. Intente nuevamente.');
+      // Manejar diferentes tipos de errores
+      let errorMessage = 'Ha ocurrido un error al guardar los cambios. Intente nuevamente.';
+      
+      if (err.response) {
+        // Error de la API
+        errorMessage = err.response.data.error || errorMessage;
+        
+        // Si es un error de validación, mostrar los detalles
+        if (err.response.data.details) {
+          console.error('Detalles del error:', err.response.data.details);
+        }
+      } else if (err.request) {
+        // Error de red
+        errorMessage = 'Error de conexión. Verifique su conexión a internet.';
+      }
+      
+      setError(errorMessage);
+      console.error('Error al revisar documento:', err);
     } finally {
       setLoading(false);
     }
@@ -232,188 +268,196 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
         </DialogTitle>
         
         <DialogContent dividers>
-          {success ? (
-            <Box textAlign="center" py={3}>
-              <Box
-                sx={{
-                  width: 60,
-                  height: 60,
-                  borderRadius: '50%',
-                  backgroundColor: 'success.light',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  margin: '0 auto',
-                  mb: 2
-                }}
-              >
-                <SaveIcon sx={{ color: 'success.main', fontSize: 30 }} />
-              </Box>
-              <Typography variant="h6" gutterBottom>
-                Documento actualizado con éxito
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Los cambios han sido guardados correctamente.
-              </Typography>
-            </Box>
-          ) : (
-            <>
-              {error && (
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              )}
-              
-              <Box mb={3}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" alignItems="center">
-                      <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                        {studentName?.split(' ')[0]?.[0]}{studentName?.split(' ')?.[1]?.[0] || ''}
-                      </Avatar>
-                      <Box>
-                        <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
-                          {studentName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Documento: {document.nombre}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </Grid>
-                  
-                  <Grid item xs={12} sm={6}>
-                    <Box display="flex" justifyContent="flex-end" alignItems="center" height="100%">
-                      <Chip
-                        label={`Estado actual: ${document.estado || 'Sin estado'}`}
-                        color={getStateColor(document.estado)}
-                        variant="outlined"
-                      />
-                      
-                      {document.rutaArchivo && (
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<VisibilityIcon />}
-                          component="a"
-                          href={document.rutaArchivo}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          sx={{ ml: 2 }}
-                        >
-                          Ver Documento
-                        </Button>
-                      )}
-                    </Box>
-                  </Grid>
-                </Grid>
-              </Box>
-              
-              <Divider sx={{ mb: 3 }} />
-              
-              <Grid container spacing={3}>
-                <Grid item xs={12} sm={6}>
-                  <FormControl fullWidth error={!!formErrors.estado}>
-                    <InputLabel id="estado-label">Estado del Documento</InputLabel>
-                    <Select
-                      labelId="estado-label"
-                      value={estado}
-                      onChange={(e) => setEstado(e.target.value)}
-                      label="Estado del Documento"
-                      disabled={loading}
-                    >
-                      <MenuItem value="aprobado">Aprobado</MenuItem>
-                      <MenuItem value="rechazado">Rechazado</MenuItem>
-                      <MenuItem value="pendiente">Pendiente</MenuItem>
-                      <MenuItem value="vencido">Vencido</MenuItem>
-                    </Select>
-                    {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
-                  </FormControl>
-                </Grid>
-                
-                <Grid item xs={12} sm={6}>
-                  <TextField
-                    label="Fecha de Expedición"
-                    type="date"
-                    value={fechaExpedicion}
-                    onChange={(e) => setFechaExpedicion(e.target.value)}
-                    fullWidth
-                    InputLabelProps={{ shrink: true }}
-                    disabled={loading}
-                    error={!!formErrors.fechaExpedicion}
-                    helperText={formErrors.fechaExpedicion}
-                    inputProps={{ max: new Date().toISOString().split('T')[0] }}
-                    InputProps={{
-                      startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                    }}
-                  />
-                </Grid>
-                
-                {document.vence && (
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      label="Fecha de Vencimiento"
-                      type="date"
-                      value={fechaVencimiento}
-                      onChange={(e) => setFechaVencimiento(e.target.value)}
-                      fullWidth
-                      InputLabelProps={{ shrink: true }}
-                      disabled={loading}
-                      error={!!formErrors.fechaVencimiento}
-                      helperText={formErrors.fechaVencimiento}
-                      inputProps={{ min: fechaExpedicion }}
-                      InputProps={{
-                        startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
-                      }}
-                    />
-                  </Grid>
-                )}
-                
-                <Grid item xs={document.vence ? 12 : 12} sm={document.vence ? 6 : 12}>
-                  <Box display="flex" flexDirection="column">
-                    <Typography variant="caption" color="text.secondary" gutterBottom>
-                      Información adicional
-                    </Typography>
-                    <Box display="flex" gap={2} flexWrap="wrap">
-                      <Chip 
-                        size="small" 
-                        icon={<CalendarIcon />} 
-                        label={`Cargue: ${formatDate(document.fechaCargue) || 'No disponible'}`} 
-                      />
-                      <Chip 
-                        size="small" 
-                        icon={<CalendarIcon />} 
-                        label={`Revisión: ${formatDate(document.fechaRevision) || 'No revisado'}`} 
-                      />
-                    </Box>
-                  </Box>
-                </Grid>
-                
-                <Grid item xs={12}>
-                  <TextField
-                    label="Comentarios"
-                    multiline
-                    rows={4}
-                    value={comentario}
-                    onChange={(e) => setComentario(e.target.value)}
-                    fullWidth
-                    placeholder="Ingrese comentarios sobre el documento..."
-                    disabled={loading}
-                    error={!!formErrors.comentario}
-                    helperText={formErrors.comentario || (estado === 'rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
-                  />
-                </Grid>
-                
-                {estado === 'rechazado' && (
-                  <Grid item xs={12}>
-                    <Alert severity="info">
-                      Al rechazar un documento, es importante proporcionar un motivo claro para que el estudiante pueda corregirlo adecuadamente.
-                    </Alert>
-                  </Grid>
-                )}
-              </Grid>
-            </>
+          {success && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div className="text-center">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+                    <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    {successMessage.title}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {successMessage.message}
+                  </p>
+                  {successMessage.notification && (
+                    <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-blue-700">
+                            {successMessage.notification}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           )}
+          
+          {error && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          )}
+          
+          <Box mb={3}>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" alignItems="center">
+                  <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
+                    {studentName?.split(' ')[0]?.[0]}{studentName?.split(' ')?.[1]?.[0] || ''}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                      {studentName}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      Documento: {document.nombre}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+              
+              <Grid item xs={12} sm={6}>
+                <Box display="flex" justifyContent="flex-end" alignItems="center" height="100%">
+                  <Chip
+                    label={`Estado actual: ${document.estado || 'Sin estado'}`}
+                    color={getStateColor(document.estado)}
+                    variant="outlined"
+                  />
+                  
+                  {document.rutaArchivo && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<VisibilityIcon />}
+                      component="a"
+                      href={document.rutaArchivo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{ ml: 2 }}
+                    >
+                      Ver Documento
+                    </Button>
+                  )}
+                </Box>
+              </Grid>
+            </Grid>
+          </Box>
+          
+          <Divider sx={{ mb: 3 }} />
+          
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth error={!!formErrors.estado}>
+                <InputLabel id="estado-label">Estado del Documento</InputLabel>
+                <Select
+                  labelId="estado-label"
+                  value={estado}
+                  onChange={(e) => setEstado(e.target.value)}
+                  label="Estado del Documento"
+                  disabled={loading}
+                >
+                  <MenuItem value="aprobado">Aprobado</MenuItem>
+                  <MenuItem value="rechazado">Rechazado</MenuItem>
+                  <MenuItem value="pendiente">Pendiente</MenuItem>
+                  <MenuItem value="vencido">Vencido</MenuItem>
+                </Select>
+                {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Fecha de Expedición"
+                type="date"
+                value={fechaExpedicion}
+                onChange={(e) => setFechaExpedicion(e.target.value)}
+                fullWidth
+                InputLabelProps={{ shrink: true }}
+                disabled={loading}
+                error={!!formErrors.fechaExpedicion}
+                helperText={formErrors.fechaExpedicion}
+                inputProps={{ max: new Date().toISOString().split('T')[0] }}
+                InputProps={{
+                  startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                }}
+              />
+            </Grid>
+            
+            {document.vence && (
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Fecha de Vencimiento"
+                  type="date"
+                  value={fechaVencimiento}
+                  onChange={(e) => setFechaVencimiento(e.target.value)}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  disabled={loading}
+                  error={!!formErrors.fechaVencimiento}
+                  helperText={formErrors.fechaVencimiento}
+                  inputProps={{ min: fechaExpedicion }}
+                  InputProps={{
+                    startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                  }}
+                />
+              </Grid>
+            )}
+            
+            <Grid item xs={document.vence ? 12 : 12} sm={document.vence ? 6 : 12}>
+              <Box display="flex" flexDirection="column">
+                <Typography variant="caption" color="text.secondary" gutterBottom>
+                  Información adicional
+                </Typography>
+                <Box display="flex" gap={2} flexWrap="wrap">
+                  <Chip 
+                    size="small" 
+                    icon={<CalendarIcon />} 
+                    label={`Cargue: ${formatDate(document.fechaCargue) || 'No disponible'}`} 
+                  />
+                  <Chip 
+                    size="small" 
+                    icon={<CalendarIcon />} 
+                    label={`Revisión: ${formatDate(document.fechaRevision) || 'No revisado'}`} 
+                  />
+                </Box>
+              </Box>
+            </Grid>
+            
+            <Grid item xs={12}>
+              <TextField
+                label="Comentarios"
+                multiline
+                rows={4}
+                value={comentario}
+                onChange={(e) => setComentario(e.target.value)}
+                fullWidth
+                placeholder="Ingrese comentarios sobre el documento..."
+                disabled={loading}
+                error={!!formErrors.comentario}
+                helperText={formErrors.comentario || (estado === 'rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
+              />
+            </Grid>
+            
+            {estado === 'rechazado' && (
+              <Grid item xs={12}>
+                <Alert severity="info">
+                  Al rechazar un documento, es importante proporcionar un motivo claro para que el estudiante pueda corregirlo adecuadamente.
+                </Alert>
+              </Grid>
+            )}
+          </Grid>
         </DialogContent>
         
         {!success && (
