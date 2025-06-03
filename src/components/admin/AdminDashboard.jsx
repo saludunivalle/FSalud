@@ -134,6 +134,10 @@ const AdminDashboard = () => {
           hasRealData: u.totalDocumentosRequeridos !== undefined
         })));
         
+        if (transformedUsers.length === 0) {
+          throw new Error('No se pudieron procesar los datos de usuarios');
+        }
+        
         // Log específico para documentos pendientes
         const usuariosConPendientes = transformedUsers.filter(u => u.documentosPendientes > 0);
         console.log('🔍 Usuarios con documentos pendientes:', usuariosConPendientes.map(u => ({
@@ -147,10 +151,6 @@ const AdminDashboard = () => {
           console.warn('⚠️ No se encontraron usuarios con documentos pendientes en la API');
         } else {
           console.log(`✅ Encontrados ${usuariosConPendientes.length} usuarios con documentos pendientes`);
-        }
-        
-        if (transformedUsers.length === 0) {
-          throw new Error('No se pudieron procesar los datos de usuarios');
         }
         
         setStudents(transformedUsers);
