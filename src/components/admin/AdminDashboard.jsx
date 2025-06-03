@@ -38,8 +38,11 @@ import SchoolIcon from '@mui/icons-material/School';
 import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import WarningIcon from '@mui/icons-material/Warning';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import ReportGeneratorModal from './ReportGeneratorModal';
+import { getAllUsers, transformUsersForDashboard, getUsersWithDocumentStats } from '../../services/userService';
+import { getDocumentStatistics } from '../../services/docsService';
 
 // Tema personalizado
 const theme = createTheme({
@@ -69,157 +72,6 @@ const theme = createTheme({
   },
 });
 
-// Datos de ejemplo
-const mockStudents = [
-  {
-    id: 1,
-    nombre: 'Juan Carlos',
-    apellido: 'Pérez Mendoza',
-    codigo: '2012345',
-    email: 'juan.perez@correounivalle.edu.co',
-    celular: '3001234567',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    documentosPendientes: 2,
-    documentosAprobados: 3,
-    documentosRechazados: 1,
-    documentosVencidos: 1,
-    documentosSinCargar: 3,
-    programa: 'Medicina',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Hospital Universitario',
-    rotacion: 'Pediatría',
-    completado: false
-  },
-  {
-    id: 2,
-    nombre: 'María José',
-    apellido: 'García López',
-    codigo: '2045678',
-    email: 'maria.garcia@correounivalle.edu.co',
-    celular: '3012345678',
-    rol: 'Docente',
-    documentosFaltantes: 'No',
-    documentosPendientes: 0,
-    documentosAprobados: 6,
-    documentosRechazados: 0,
-    documentosVencidos: 0,
-    documentosSinCargar: 0,
-    programa: 'Enfermería',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Clínica Valle del Lili',
-    rotacion: 'Cuidados Intensivos',
-    completado: true
-  },
-  {
-    id: 3,
-    nombre: 'Carlos Andrés',
-    apellido: 'Ramírez Roa',
-    codigo: '2078901',
-    email: 'carlos.ramirez@correounivalle.edu.co',
-    celular: '3023456789',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    documentosPendientes: 1,
-    documentosAprobados: 4,
-    documentosRechazados: 1,
-    documentosVencidos: 1,
-    documentosSinCargar: 2,
-    programa: 'Odontología',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Hospital Departamental',
-    rotacion: 'Cirugía Oral',
-    completado: false
-  },
-  {
-    id: 4,
-    nombre: 'Ana María',
-    apellido: 'Martínez Solano',
-    codigo: '2023456',
-    email: 'ana.martinez@correounivalle.edu.co',
-    celular: '3109876543',
-    rol: 'Docente',
-    documentosFaltantes: 'No',
-    documentosPendientes: 0,
-    documentosAprobados: 6,
-    documentosRechazados: 0,
-    documentosVencidos: 0,
-    documentosSinCargar: 0,
-    programa: 'Fisioterapia',
-    sede: 'Palmira',
-    nivel: 'Pregrado',
-    escenarios: 'Centro de Rehabilitación',
-    rotacion: 'Fisioterapia Deportiva',
-    completado: true
-  },
-  {
-    id: 5,
-    nombre: 'Luis Felipe',
-    apellido: 'Hernández Torres',
-    codigo: '2034567',
-    email: 'luis.hernandez@correounivalle.edu.co',
-    celular: '3118765432',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    documentosPendientes: 3,
-    documentosAprobados: 2,
-    documentosRechazados: 1,
-    documentosVencidos: 0,
-    documentosSinCargar: 4,
-    programa: 'Bacteriología',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Laboratorio Clínico',
-    rotacion: 'Microbiología',
-    completado: false
-  },
-  {
-    id: 6,
-    nombre: 'Daniela',
-    apellido: 'Sánchez Mejía',
-    codigo: '2056789',
-    email: 'daniela.sanchez@correounivalle.edu.co',
-    celular: '3127654321',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    documentosPendientes: 1,
-    documentosAprobados: 3,
-    documentosRechazados: 2,
-    documentosVencidos: 0,
-    documentosSinCargar: 1,
-    programa: 'Fonoaudiología',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Centro de Terapia del Lenguaje',
-    rotacion: 'Trastornos del Habla',
-    completado: false
-  },
-  {
-    id: 7,
-    nombre: 'Santiago',
-    apellido: 'López Vidal',
-    codigo: '2067890',
-    email: 'santiago.lopez@correounivalle.edu.co',
-    celular: '3136543210',
-    rol: 'Docente',
-    documentosFaltantes: 'No',
-    documentosPendientes: 0,
-    documentosAprobados: 6,
-    documentosRechazados: 0,
-    documentosVencidos: 0,
-    documentosSinCargar: 0,
-    programa: 'Medicina',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Hospital Infantil Club Noel',
-    rotacion: 'Pediatría',
-    completado: true
-  }
-];
-
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useUser();
@@ -229,6 +81,7 @@ const AdminDashboard = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState(null);
   
   // Estados para filtros
   const [roleFilter, setRoleFilter] = useState('Ambos');
@@ -247,33 +100,153 @@ const AdminDashboard = () => {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setStudents(mockStudents);
-      
-      // Calcular estadísticas
-      const pendingDocuments = mockStudents.reduce((acc, student) => 
-        acc + student.documentosPendientes, 0);
-      const rejectedDocuments = mockStudents.reduce((acc, student) => 
-        acc + student.documentosRechazados, 0);
-      const expiredDocuments = mockStudents.reduce((acc, student) => 
-        acc + student.documentosVencidos, 0);
-      const approvedStudents = mockStudents.filter(student => student.completado).length;
-      const usersWithoutUploads = mockStudents.filter(student => student.documentosSinCargar > 0).length;
-      
-      setStats({
-        pendingDocuments,
-        approvedStudents,
-        usersWithoutUploads,
-        rejectedDocuments,
-        expiredDocuments
-      });
-      
-      setLoading(false);
+      setError(null);
+      try {
+        console.log('Cargando datos de usuarios y estadísticas...');
+        
+        // Obtener usuarios con estadísticas de documentos y estadísticas generales en paralelo
+        const [usersWithStats, statsResponse] = await Promise.all([
+          getUsersWithDocumentStats(),
+          getDocumentStatistics()
+        ]);
+        
+        console.log('Respuesta de usuarios con estadísticas:', usersWithStats);
+        console.log('Respuesta de estadísticas:', statsResponse);
+        
+        // Verificar que tenemos datos reales
+        if (!usersWithStats || usersWithStats.length === 0) {
+          throw new Error('No se encontraron usuarios en la base de datos');
+        }
+        
+        // Procesar usuarios
+        const transformedUsers = transformUsersForDashboard(usersWithStats);
+        
+        console.log('Usuarios transformados en AdminDashboard:', transformedUsers.map(u => ({ 
+          nombre: u.nombre, 
+          apellido: u.apellido,
+          aprobados: u.documentosAprobados, 
+          pendientes: u.documentosPendientes,
+          rechazados: u.documentosRechazados,
+          vencidos: u.documentosVencidos,
+          sinCargar: u.documentosSinCargar,
+          total: u.totalDocumentosRequeridos,
+          indicador: `${u.documentosAprobados}/${u.totalDocumentosRequeridos || 'undefined'}`,
+          hasRealData: u.totalDocumentosRequeridos !== undefined
+        })));
+        
+        // Log específico para documentos pendientes
+        const usuariosConPendientes = transformedUsers.filter(u => u.documentosPendientes > 0);
+        console.log('🔍 Usuarios con documentos pendientes:', usuariosConPendientes.map(u => ({
+          nombre: `${u.nombre} ${u.apellido}`,
+          pendientes: u.documentosPendientes,
+          aprobados: u.documentosAprobados,
+          total: u.totalDocumentosRequeridos
+        })));
+        
+        if (usuariosConPendientes.length === 0) {
+          console.warn('⚠️ No se encontraron usuarios con documentos pendientes en la API');
+        } else {
+          console.log(`✅ Encontrados ${usuariosConPendientes.length} usuarios con documentos pendientes`);
+        }
+        
+        if (transformedUsers.length === 0) {
+          throw new Error('No se pudieron procesar los datos de usuarios');
+        }
+        
+        setStudents(transformedUsers);
+        
+        // Procesar estadísticas reales de documentos
+        const documentStats = statsResponse.data || statsResponse || {};
+        const approvedStudents = transformedUsers.filter(student => student.completado).length;
+        const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
+        
+        setStats({
+          pendingDocuments: documentStats.porEstado?.pendiente || 0,
+          approvedStudents: approvedStudents,
+          usersWithoutUploads: usersWithoutUploads,
+          rejectedDocuments: documentStats.porEstado?.rechazado || 0,
+          expiredDocuments: documentStats.vencidos || 0
+        });
+        
+        console.log('✅ Datos cargados exitosamente desde la API:', {
+          totalUsuarios: transformedUsers.length,
+          usuariosConDatosReales: transformedUsers.filter(u => u.totalDocumentosRequeridos !== undefined).length,
+          promedioDocumentosAprobados: (transformedUsers.reduce((sum, u) => sum + u.documentosAprobados, 0) / transformedUsers.length).toFixed(2)
+        });
+        
+      } catch (error) {
+        console.error('Error cargando datos:', error);
+        setError(error.message || 'Error cargando datos del dashboard');
+        // En caso de error, usar datos vacíos
+        setStudents([]);
+        setStats({
+          pendingDocuments: 0,
+          approvedStudents: 0,
+          usersWithoutUploads: 0,
+          rejectedDocuments: 0,
+          expiredDocuments: 0
+        });
+      } finally {
+        setLoading(false);
+      }
     };
     
     loadData();
   }, []);
+
+  // Función para recargar datos
+  const handleRetry = () => {
+    const loadData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        console.log('Recargando datos...');
+        
+        const [usersWithStats, statsResponse] = await Promise.all([
+          getUsersWithDocumentStats(),
+          getDocumentStatistics()
+        ]);
+        
+        // Verificar que tenemos datos reales
+        if (!usersWithStats || usersWithStats.length === 0) {
+          throw new Error('No se encontraron usuarios en la base de datos');
+        }
+        
+        const transformedUsers = transformUsersForDashboard(usersWithStats);
+        
+        if (transformedUsers.length === 0) {
+          throw new Error('No se pudieron procesar los datos de usuarios');
+        }
+        
+        setStudents(transformedUsers);
+        
+        const documentStats = statsResponse.data || statsResponse || {};
+        const approvedStudents = transformedUsers.filter(student => student.completado).length;
+        const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
+        
+        setStats({
+          pendingDocuments: documentStats.porEstado?.pendiente || 0,
+          approvedStudents: approvedStudents,
+          usersWithoutUploads: usersWithoutUploads,
+          rejectedDocuments: documentStats.porEstado?.rechazado || 0,
+          expiredDocuments: documentStats.vencidos || 0
+        });
+        
+        console.log('✅ Datos recargados exitosamente desde la API:', {
+          totalUsuarios: transformedUsers.length,
+          usuariosConDatosReales: transformedUsers.filter(u => u.totalDocumentosRequeridos !== undefined).length
+        });
+        
+      } catch (error) {
+        console.error('Error recargando datos:', error);
+        setError(error.message || 'Error recargando datos del dashboard');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  };
 
   // Efecto para filtrar estudiantes
   useEffect(() => {
@@ -349,10 +322,76 @@ const AdminDashboard = () => {
     setSearchTerm('');
   };
 
+  // Función de debug para verificar datos en consola
+  const debugData = () => {
+    console.log('=== DEBUG ADMIN DASHBOARD ===');
+    console.log('Total de estudiantes:', students.length);
+    console.log('Estudiantes con datos reales:', students.filter(s => s.totalDocumentosRequeridos !== undefined).length);
+    
+    // Debug específico para documentos pendientes
+    const usuariosConPendientes = students.filter(s => s.documentosPendientes > 0);
+    console.log('\n📋 ANÁLISIS DE DOCUMENTOS PENDIENTES:');
+    console.log(`- Usuarios con documentos pendientes: ${usuariosConPendientes.length}`);
+    console.log(`- Total documentos pendientes en el sistema: ${students.reduce((sum, s) => sum + (s.documentosPendientes || 0), 0)}`);
+    
+    if (usuariosConPendientes.length > 0) {
+      console.log('\n📝 Detalle de usuarios con documentos pendientes:');
+      usuariosConPendientes.forEach(student => {
+        console.log(`  • ${student.nombre} ${student.apellido}:`);
+        console.log(`    - Pendientes: ${student.documentosPendientes}`);
+        console.log(`    - Aprobados: ${student.documentosAprobados}`);
+        console.log(`    - Total requeridos: ${student.totalDocumentosRequeridos || 'N/A'}`);
+      });
+    } else {
+      console.warn('⚠️ NO SE ENCONTRARON USUARIOS CON DOCUMENTOS PENDIENTES');
+      console.log('Esto podría indicar:');
+      console.log('1. Todos los documentos están aprobados/rechazados/vencidos');
+      console.log('2. Los usuarios no han subido documentos aún');
+      console.log('3. Problema en la carga de datos desde la API');
+    }
+    
+    console.log('\n📊 Muestra de datos de estudiantes:');
+    students.slice(0, 3).forEach(student => {
+      console.log(`- ${student.nombre} ${student.apellido}:`);
+      console.log(`  Aprobados: ${student.documentosAprobados}/${student.totalDocumentosRequeridos || 'N/A'}`);
+      console.log(`  Pendientes: ${student.documentosPendientes} ⭐`);
+      console.log(`  Rechazados: ${student.documentosRechazados}`);
+      console.log(`  Vencidos: ${student.documentosVencidos}`);
+      console.log(`  Sin cargar: ${student.documentosSinCargar}`);
+      console.log(`  Completado: ${student.completado}`);
+    });
+    
+    console.log('\n📈 Estadísticas generales:', stats);
+    console.log('=== FIN DEBUG ===');
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>
+          Cargando datos del dashboard...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center" minHeight="400px" sx={{ p: 3 }}>
+        <Typography variant="h6" color="error" gutterBottom>
+          Error al cargar los datos
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={handleRetry}
+          startIcon={<CancelIcon />}
+        >
+          Intentar de nuevo
+        </Button>
       </Box>
     );
   }
@@ -361,17 +400,47 @@ const AdminDashboard = () => {
     <ThemeProvider theme={theme}>
       <Box sx={{ padding: 3, marginTop: 12 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Panel de Administración
-          </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<FileDownloadIcon />}
-            onClick={() => setReportModalOpen(true)}
-          >
-            Generar Reporte
-          </Button>
+          <Box>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Panel de Administración
+            </Typography>
+            {students.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Chip
+                  icon={<RefreshIcon />}
+                  label={`${students.length} usuarios cargados desde API`}
+                  color="success"
+                  variant="outlined"
+                  size="small"
+                />
+                <Chip
+                  label={`${students.filter(u => u.totalDocumentosRequeridos !== undefined).length} con datos de documentos actualizados`}
+                  color="info"
+                  variant="outlined"
+                  size="small"
+                />
+              </Box>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<RefreshIcon />}
+              onClick={handleRetry}
+              disabled={loading}
+            >
+              Actualizar
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<FileDownloadIcon />}
+              onClick={() => setReportModalOpen(true)}
+            >
+              Generar Reporte
+            </Button>
+          </Box>
         </Box>
         
         <Typography variant="body1" color="text.secondary" paragraph>
@@ -873,23 +942,33 @@ const AdminDashboard = () => {
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={0.5} flexWrap="wrap">
                             {/* Total de documentos */}
-                            <Chip 
-                              size="small" 
-                              label={`${student.documentosAprobados}/${student.documentosAprobados + student.documentosPendientes + student.documentosRechazados + student.documentosVencidos + student.documentosSinCargar}`}
-                              sx={{ 
-                                bgcolor: student.completado ? 'success.light' : 'grey.200', 
-                                color: student.completado ? 'success.dark' : 'text.secondary',
-                                fontWeight: 'bold',
-                                fontSize: '0.75rem',
-                                minWidth: '45px'
-                              }} 
-                            />
-                            
-                            {/* Indicador de Pendientes - siempre visible */}
-                            <Tooltip title={`${student.documentosPendientes} pendientes de revisión`}>
+                            <Tooltip title={
+                              student.totalDocumentosRequeridos 
+                                ? `Total real (con dosis): ${student.totalDocumentosRequeridos} documentos`
+                                : `Calculado dinámicamente: ${student.documentosAprobados + student.documentosPendientes + student.documentosRechazados + student.documentosVencidos + student.documentosSinCargar} documentos`
+                            }>
                               <Chip 
                                 size="small" 
-                                label={student.documentosPendientes} 
+                                label={
+                                  student.totalDocumentosRequeridos 
+                                    ? `${student.documentosAprobados}/${student.totalDocumentosRequeridos}` 
+                                    : `${student.documentosAprobados}/${student.documentosAprobados + student.documentosPendientes + student.documentosRechazados + student.documentosVencidos + student.documentosSinCargar}`
+                                }
+                                sx={{ 
+                                  bgcolor: student.completado ? 'success.light' : 'grey.200', 
+                                  color: student.completado ? 'success.dark' : 'text.secondary',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.75rem',
+                                  minWidth: '45px'
+                                }} 
+                              />
+                            </Tooltip>
+                            
+                            {/* Indicador de Pendientes - siempre visible */}
+                            <Tooltip title={`${student.documentosPendientes || 0} documentos pendientes de revisión`}>
+                              <Chip 
+                                size="small" 
+                                label={student.documentosPendientes || 0} 
                                 sx={{ 
                                   bgcolor: student.documentosPendientes > 0 ? 'info.light' : 'rgba(33, 150, 243, 0.1)', 
                                   color: student.documentosPendientes > 0 ? 'info.dark' : 'rgba(33, 150, 243, 0.5)',
@@ -898,7 +977,14 @@ const AdminDashboard = () => {
                                   minWidth: '25px',
                                   height: '24px',
                                   opacity: student.documentosPendientes > 0 ? 1 : 0.6,
-                                  border: student.documentosPendientes === 0 ? '1px solid rgba(33, 150, 243, 0.2)' : 'none'
+                                  border: student.documentosPendientes > 0 
+                                    ? '2px solid #2196f3' 
+                                    : '1px solid rgba(33, 150, 243, 0.2)',
+                                  // Hacer más visible cuando hay pendientes
+                                  transform: student.documentosPendientes > 0 ? 'scale(1.1)' : 'scale(1)',
+                                  boxShadow: student.documentosPendientes > 0 
+                                    ? '0 2px 8px rgba(33, 150, 243, 0.3)' 
+                                    : 'none'
                                 }} 
                               />
                             </Tooltip>
@@ -980,6 +1066,7 @@ const AdminDashboard = () => {
         <ReportGeneratorModal
           open={reportModalOpen}
           onClose={() => setReportModalOpen(false)}
+          students={filteredStudents}
         />
       </Box>
     </ThemeProvider>

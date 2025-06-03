@@ -25,8 +25,7 @@ export const UserProvider = ({ children }) => {
 
         if (googleToken && email && userId) {
           try {
-            const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
-              params: { userId },
+            const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/api/users/id/${userId}`, {
               headers: {
                 'Authorization': `Bearer ${googleToken}`
               }

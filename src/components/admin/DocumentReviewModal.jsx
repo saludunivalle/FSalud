@@ -30,8 +30,7 @@ import {
   CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import axios from 'axios';
-import API_BASE_URL from '../../config/api';
+import { reviewDocument } from '../../services/docsService';
 
 // Tema personalizado
 const theme = createTheme({
@@ -158,25 +157,20 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
 
     try {
       // Llamar a la API real en lugar de simular
-      const response = await axios.put(
-        `${API_BASE_URL}/api/documentos/revisar/${document.id_usuarioDoc}`,
+      const response = await reviewDocument(
+        document.id_usuarioDoc,
         {
           estado,
           comentario
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('google_token')}`
-          }
         }
       );
 
-      if (response.data.success) {
+      if (response.success) {
         // Mostrar mensaje de éxito con notificación
         setSuccessMessage({
           title: 'Documento actualizado',
-          message: response.data.message,
-          notification: response.data.notification
+          message: response.message,
+          notification: response.notification
         });
         setSuccess(true);
         

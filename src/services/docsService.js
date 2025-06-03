@@ -134,6 +134,38 @@ export const calculateExpirationDate = (expeditionDate, expirationTime) => {
   return date.toISOString().split('T')[0]; // Formato YYYY-MM-DD
 };
 
+/**
+ * Obtiene estadísticas de documentos desde el backend
+ */
+export const getDocumentStatistics = async () => {
+  try {
+    console.log('Obteniendo estadísticas de documentos...');
+    const response = await api.get('/api/documentos/estadisticas');
+    console.log('Respuesta estadísticas:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo estadísticas:', error);
+    throw new Error(error.response?.data?.message || 'Error al obtener estadísticas de documentos');
+  }
+};
+
+/**
+ * Revisa y actualiza el estado de un documento
+ * @param {string} documentId - ID del documento del usuario
+ * @param {object} reviewData - Datos de la revisión (estado, comentario)
+ */
+export const reviewDocument = async (documentId, reviewData) => {
+  try {
+    console.log(`Revisando documento ${documentId}:`, reviewData);
+    const response = await api.put(`/api/documentos/revisar/${documentId}`, reviewData);
+    console.log('Respuesta revisión documento:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error revisando documento:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al revisar el documento');
+  }
+};
+
 export default {
   getUserDocuments,
   uploadDocument,
@@ -141,5 +173,7 @@ export default {
   deleteDocument,
   getUserDocument,
   isDocumentExpired,
-  calculateExpirationDate
+  calculateExpirationDate,
+  getDocumentStatistics,
+  reviewDocument
 };

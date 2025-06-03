@@ -25,3 +25,343 @@ export const updateUserData = async (userId, userData) => {
     throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al actualizar información del usuario');
   }
 };
+
+// Nueva función para obtener todos los usuarios
+export const getAllUsers = async () => {
+  try {
+    console.log('Obteniendo todos los usuarios...');
+    const response = await api.get('/api/users/all');
+    console.log('Respuesta getAllUsers:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error en getAllUsers:', error.response ? error.response.data : error.message);
+    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener lista de usuarios');
+  }
+};
+
+// Función para obtener usuario específico por ID (para StudentDocumentManager)
+export const getUserById = async (userId) => {
+  try {
+    console.log(`Obteniendo usuario por ID: ${userId}...`);
+    const response = await api.get(`/api/users/id/${userId}`);
+    console.log('Respuesta getUserById:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error obteniendo usuario ${userId}:`, error);
+    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener datos del usuario');
+  }
+};
+
+// Función para obtener documentos de un usuario con detalles completos
+export const getUserDocumentsWithDetails = async (userId) => {
+  try {
+    console.log(`Obteniendo documentos detallados para usuario ${userId}...`);
+    const response = await api.get(`/api/documentos/usuario/${userId}`);
+    console.log(`Documentos detallados del usuario ${userId}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error obteniendo documentos detallados del usuario ${userId}:`, error);
+    // Si no tiene documentos, devolver estructura vacía
+    return { success: true, data: [] };
+  }
+};
+
+// Función para obtener tipos de documentos requeridos
+export const getRequiredDocumentTypes = async () => {
+  try {
+    console.log('Obteniendo tipos de documentos requeridos...');
+    const response = await api.get('/api/documentos/tipos');
+    console.log('Tipos de documentos:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo tipos de documentos:', error);
+    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener tipos de documentos');
+  }
+};
+
+// Función para transformar datos del usuario para el StudentDocumentManager
+export const transformUserForManager = (backendUser, userDocuments = [], documentTypes = []) => {
+  const user = {
+    id: backendUser.id_usuario,
+    nombre: backendUser.nombre_usuario || '',
+    apellido: backendUser.apellido_usuario || '',
+    codigo: backendUser.documento_usuario && backendUser.documento_usuario.trim() !== '' ? backendUser.documento_usuario : '',
+    email: backendUser.correo_usuario || '',
+    celular: backendUser.telefono || '',
+    rol: backendUser.rol === 'docente' || backendUser.rol === 'profesor' ? 'Docente' : 'Estudiante',
+    programa: backendUser.programa_academico || 'Sin asignar',
+    sede: backendUser.sede || 'Sin asignar',
+    nivel: 'Pregrado',
+    escenarios: 'Por asignar',
+    rotacion: 'Por asignar',
+    completado: backendUser.primer_login === 'si' && 
+               backendUser.programa_academico && 
+               backendUser.documento_usuario && 
+               backendUser.telefono && 
+               backendUser.fecha_nac,
+    documentos: [],
+    userDocuments: userDocuments, // Agregar documentos del usuario para gestión de dosis
+    documentTypes: documentTypes   // Agregar tipos de documentos para gestión de dosis
+  };
+
+  // Crear mapa de documentos del usuario por tipo
+  const userDocsMap = {};
+  userDocuments.forEach(doc => {
+    // Usar id_doc como key en lugar de id_tipo_documento
+    const docKey = doc.id_doc || doc.id_tipo_documento;
+    if (!userDocsMap[docKey]) {
+      userDocsMap[docKey] = [];
+    }
+    userDocsMap[docKey].push(doc);
+  });
+
+  // Generar lista completa de documentos (cargados y por cargar)
+  const documentList = documentTypes.map((docType, index) => {
+    // Usar id_doc como key principal
+    const docKey = docType.id_doc || docType.id_tipo_documento;
+    const userDocs = userDocsMap[docKey] || [];
+    const dosis = parseInt(docType.dosis) || 1;
+    
+    if (dosis > 1) {
+      // Documento con múltiples dosis - crear grupo
+      return {
+        id: docKey,
+        id_usuarioDoc: null,
+        id_tipo_documento: docKey,
+        nombre: docType.nombre_doc || docType.nombre_documento || 'Documento sin nombre',
+        estado: 'sin cargar', // Se calculará el estado consolidado después
+        isDoseGroup: true,
+        dosis: dosis,
+        totalDoses: dosis,
+        baseDoc: docType,
+        userDocs: userDocs,
+        vence: docType.vence === 'si' || docType.vence === true,
+        tiempoVencimiento: docType.tiempo_vencimiento || null,
+        descripcion: docType.descripcion || ''
+      };
+    } else {
+      // Documento normal
+      const userDoc = userDocs[0]; // Tomar el primer documento si existe
+      
+      if (userDoc) {
+        // Documento cargado por el usuario
+        return {
+          id: userDoc.id_usuarioDoc || userDoc.id || index + 1,
+          id_usuarioDoc: userDoc.id_usuarioDoc,
+          id_tipo_documento: docKey,
+          nombre: docType.nombre_doc || docType.nombre_documento || userDoc.nombre_doc || 'Documento sin nombre',
+          estado: userDoc.estado || 'pendiente',
+          fechaExpedicion: userDoc.fecha_expedicion || '',
+          fechaVencimiento: userDoc.fecha_vencimiento || null,
+          fechaCargue: userDoc.fecha_cargue || '',
+          fechaRevision: userDoc.fecha_revision || '',
+          comentarios: userDoc.comentarios || '',
+          rutaArchivo: userDoc.ruta_archivo || '',
+          vence: docType.vence === 'si' || docType.vence === true,
+          tiempoVencimiento: docType.tiempo_vencimiento || null,
+          descripcion: docType.descripcion || '',
+          dosis: 1,
+          isDoseGroup: false
+        };
+      } else {
+        // Documento no cargado - SIEMPRE mostrar todos los documentos requeridos
+        return {
+          id: index + 1,
+          id_usuarioDoc: null,
+          id_tipo_documento: docKey,
+          nombre: docType.nombre_doc || docType.nombre_documento || 'Documento sin nombre',
+          estado: 'sin cargar',
+          fechaExpedicion: '',
+          fechaVencimiento: null,
+          fechaCargue: '',
+          fechaRevision: '',
+          comentarios: '',
+          rutaArchivo: '',
+          vence: docType.vence === 'si' || docType.vence === true,
+          tiempoVencimiento: docType.tiempo_vencimiento || null,
+          descripcion: docType.descripcion || '',
+          dosis: 1,
+          isDoseGroup: false
+        };
+      }
+    }
+  });
+
+  user.documentos = documentList;
+  return user;
+};
+
+// Función para obtener documentos de un usuario específico
+export const getUserDocuments = async (userId) => {
+  try {
+    console.log(`Obteniendo documentos para usuario ${userId}...`);
+    const response = await api.get(`/api/documentos/usuario/${userId}`);
+    console.log(`Documentos del usuario ${userId}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`Error obteniendo documentos del usuario ${userId}:`, error);
+    // Si no tiene documentos, devolver estructura vacía
+    return { success: true, data: [] };
+  }
+};
+
+// Función para obtener usuarios con estadísticas reales de documentos
+export const getUsersWithDocumentStats = async () => {
+  try {
+    console.log('Obteniendo usuarios con estadísticas de documentos...');
+    
+    // Obtener todos los usuarios y tipos de documentos en paralelo
+    const [usersResponse, documentTypesResponse] = await Promise.all([
+      getAllUsers(),
+      getRequiredDocumentTypes()
+    ]);
+    
+    const users = usersResponse.data || usersResponse || [];
+    const documentTypes = documentTypesResponse.data || [];
+    
+    console.log('Tipos de documentos obtenidos:', documentTypes.map(dt => ({ id: dt.id_doc, nombre: dt.nombre_doc, dosis: dt.dosis })));
+    
+    // Calcular total de documentos requeridos considerando dosis múltiples
+    const totalDocumentosRequeridos = documentTypes.reduce((total, docType) => {
+      const dosis = parseInt(docType.dosis) || 1;
+      console.log(`Documento ${docType.nombre_doc}: ${dosis} dosis`);
+      return total + dosis;
+    }, 0);
+    
+    console.log(`Total de documentos requeridos calculado: ${totalDocumentosRequeridos} (de ${documentTypes.length} tipos de documentos)`);
+    
+    console.log(`Procesando ${users.length} usuarios con ${totalDocumentosRequeridos} documentos requeridos totales (incluyendo dosis)...`);
+    
+    // Para cada usuario, obtener sus documentos y calcular estadísticas
+    const usersWithStats = await Promise.all(
+      users.map(async (user) => {
+        try {
+          const documentsResponse = await getUserDocuments(user.id_usuario);
+          const documents = documentsResponse.data || [];
+          
+          console.log(`Usuario ${user.nombre_usuario}: tiene ${documents.length} documentos cargados de ${totalDocumentosRequeridos} requeridos`);
+          
+          // Calcular estadísticas reales de documentos
+          const stats = {
+            documentosPendientes: documents.filter(doc => doc.estado === 'pendiente').length,
+            documentosAprobados: documents.filter(doc => doc.estado === 'aprobado').length,
+            documentosRechazados: documents.filter(doc => doc.estado === 'rechazado').length,
+            documentosVencidos: documents.filter(doc => doc.estado === 'vencido').length,
+            documentosSinCargar: Math.max(0, totalDocumentosRequeridos - documents.length) // Total requeridos (con dosis) menos los que tiene
+          };
+          
+          const userWithStats = {
+            ...user,
+            documentStats: stats,
+            hasDocuments: documents.length > 0,
+            totalDocumentosRequeridos // Agregar el total para usar en el frontend
+          };
+          
+          console.log(`Usuario ${user.nombre_usuario} procesado: aprobados=${stats.documentosAprobados}, total=${totalDocumentosRequeridos}`);
+          
+          return userWithStats;
+        } catch (error) {
+          console.error(`Error obteniendo documentos para usuario ${user.id_usuario}:`, error);
+          // Si hay error, usar estadísticas por defecto
+          return {
+            ...user,
+            documentStats: {
+              documentosPendientes: 0,
+              documentosAprobados: 0,
+              documentosRechazados: 0,
+              documentosVencidos: 0,
+              documentosSinCargar: totalDocumentosRequeridos
+            },
+            hasDocuments: false,
+            totalDocumentosRequeridos
+          };
+        }
+      })
+    );
+    
+    console.log('Usuarios con estadísticas procesados:', usersWithStats.length);
+    return usersWithStats;
+    
+  } catch (error) {
+    console.error('Error obteniendo usuarios con estadísticas:', error);
+    throw error;
+  }
+};
+
+// Función para transformar datos del backend al formato del dashboard
+export const transformUsersForDashboard = (backendUsers) => {
+  return backendUsers.map((user, index) => {
+    const estaCompleto = user.primer_login === 'si' && 
+                        user.programa_academico && 
+                        user.documento_usuario && 
+                        user.telefono && 
+                        user.fecha_nac;
+    
+    // Usar estadísticas reales si están disponibles, sino usar valores por defecto
+    const stats = user.documentStats || {
+      documentosPendientes: 0,
+      documentosAprobados: 0,
+      documentosRechazados: 0,
+      documentosVencidos: 0,
+      documentosSinCargar: 0 // Será calculado dinámicamente si no está disponible
+    };
+    
+    console.log(`Usuario ${user.nombre_usuario}: totalDocumentosRequeridos=${user.totalDocumentosRequeridos}, stats:`, stats);
+    
+    // Mapear roles correctamente - solo mostrar Estudiante ya que no incluimos admins
+    let rolDisplay = 'Estudiante';
+    if (user.rol === 'docente' || user.rol === 'profesor') {
+      rolDisplay = 'Docente';
+    }
+    
+    // El usuario está completado SOLO si:
+    // 1. Ha completado su perfil (primer_login, etc.)
+    // 2. NO tiene documentos sin cargar (documentosSinCargar === 0)
+    // 3. NO tiene documentos pendientes, rechazados o vencidos
+    // 4. Tiene al menos algunos documentos aprobados
+    const documentacionCompleta = stats.documentosSinCargar === 0 && 
+                                 stats.documentosPendientes === 0 && 
+                                 stats.documentosRechazados === 0 && 
+                                 stats.documentosVencidos === 0 &&
+                                 stats.documentosAprobados > 0;
+    
+    const transformedUser = {
+      id: user.id_usuario || index + 1,
+      nombre: user.nombre_usuario || '',
+      apellido: user.apellido_usuario || '',
+      codigo: user.documento_usuario && user.documento_usuario.trim() !== '' ? user.documento_usuario : '',
+      email: user.correo_usuario || '',
+      celular: user.telefono || '',
+      rol: rolDisplay,
+      documentosFaltantes: stats.documentosSinCargar > 0 ? 'Sí' : 'No',
+      
+      // Usar estadísticas reales
+      documentosPendientes: stats.documentosPendientes,
+      documentosAprobados: stats.documentosAprobados,
+      documentosRechazados: stats.documentosRechazados,
+      documentosVencidos: stats.documentosVencidos,
+      documentosSinCargar: stats.documentosSinCargar,
+      
+      // Incluir el total de documentos requeridos para mostrar el indicador correcto
+      totalDocumentosRequeridos: user.totalDocumentosRequeridos,
+      
+      programa: user.programa_academico || 'Sin asignar',
+      sede: user.sede || 'Sin asignar',
+      nivel: 'Pregrado',
+      escenarios: 'Por asignar',
+      rotacion: 'Por asignar',
+      completado: estaCompleto && documentacionCompleta, // Solo completo si perfil Y documentación están completos
+      
+      // Datos adicionales del backend
+      tipoDoc: user.tipoDoc || '',
+      fecha_nac: user.fecha_nac || '',
+      email_personal: user.email || '',
+      primer_login: user.primer_login || 'no',
+      hasDocuments: user.hasDocuments || false
+    };
+    
+    console.log(`Usuario transformado ${transformedUser.nombre}: indicador=${transformedUser.documentosAprobados}/${transformedUser.totalDocumentosRequeridos}`);
+    
+    return transformedUser;
+  }).filter(user => user.id && user.email); // Filtrar usuarios sin datos básicos
+};

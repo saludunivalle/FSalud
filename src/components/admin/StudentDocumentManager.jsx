@@ -21,7 +21,12 @@ import {
   CircularProgress,
   Stack,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Alert,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Card
 } from '@mui/material';
 import {
   ArrowBack,
@@ -35,10 +40,15 @@ import {
   Edit,
   Person,
   WhatsApp,
-  Search
+  Search,
+  Refresh,
+  ExpandMore,
+  VaccinesOutlined
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import DocumentReviewModal from './DocumentReviewModal';
+import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager } from '../../services/userService';
+import { groupDocumentsByDose, getDoseGroupStatus } from '../../utils/documentUtils';
 
 // Tema personalizado
 const theme = createTheme({
@@ -151,191 +161,13 @@ const StatusChip = ({ status }) => {
   );
 };
 
-// Datos de ejemplo (esto se reemplazará con datos reales)
-const mockStudents = [
-  {
-    id: 1,
-    nombre: 'Juan Carlos',
-    apellido: 'Pérez Mendoza',
-    codigo: '2012345',
-    email: 'juan.perez@correounivalle.edu.co',
-    celular: '3001234567',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    programa: 'Medicina',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Hospital Universitario',
-    rotacion: 'Pediatría',
-    completado: false,
-    documentos: [
-      {
-        id: 1,
-        nombre: 'Documento de Identidad',
-        estado: 'aprobado',
-        fechaExpedicion: '2020-01-15',
-        fechaVencimiento: null,
-        fechaCargue: '2023-10-10',
-        fechaRevision: '2023-10-12',
-        comentarios: 'Documento en regla.',
-        rutaArchivo: 'https://example.com/doc1.pdf',
-        vence: false
-      },
-      {
-        id: 2,
-        nombre: 'Carné de Vacunación',
-        estado: 'rechazado',
-        fechaExpedicion: '2022-05-20',
-        fechaVencimiento: null,
-        fechaCargue: '2023-10-11',
-        fechaRevision: '2023-10-13',
-        comentarios: 'Falta la vacuna contra la Hepatitis B.',
-        rutaArchivo: 'https://example.com/doc2.pdf',
-        vence: false
-      },
-      {
-        id: 3,
-        nombre: 'Seguro Estudiantil',
-        estado: 'vencido',
-        fechaExpedicion: '2023-01-01',
-        fechaVencimiento: '2023-12-31',
-        fechaCargue: '2023-01-05',
-        fechaRevision: '2023-01-07',
-        comentarios: 'Debe renovar antes del vencimiento.',
-        rutaArchivo: 'https://example.com/doc3.pdf',
-        vence: true
-      },
-      {
-        id: 4,
-        nombre: 'Examen Médico',
-        estado: 'pendiente',
-        fechaExpedicion: '2023-09-01',
-        fechaVencimiento: '2024-09-01',
-        fechaCargue: '2023-09-05',
-        fechaRevision: null,
-        comentarios: null,
-        rutaArchivo: 'https://example.com/doc4.pdf',
-        vence: true
-      },
-      {
-        id: 5,
-        nombre: 'Certificado de ARL',
-        estado: 'aprobado',
-        fechaExpedicion: '2023-08-15',
-        fechaVencimiento: '2024-08-15',
-        fechaCargue: '2023-08-20',
-        fechaRevision: '2023-08-22',
-        comentarios: 'Todo en orden.',
-        rutaArchivo: 'https://example.com/doc5.pdf',
-        vence: true
-      },
-      {
-        id: 6,
-        nombre: 'Carta de Compromiso',
-        estado: 'sin cargar',
-        fechaExpedicion: null,
-        fechaVencimiento: null,
-        fechaCargue: null,
-        fechaRevision: null,
-        comentarios: null,
-        rutaArchivo: null,
-        vence: false
-      }
-    ]
-  },
-  // Otros estudiantes para pruebas
-  {
-    id: 2,
-    nombre: 'María José',
-    apellido: 'García López',
-    codigo: '2045678',
-    email: 'maria.garcia@correounivalle.edu.co',
-    celular: '3012345678',
-    rol: 'Docente',
-    documentosFaltantes: 'No',
-    programa: 'Enfermería',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Clínica Valle del Lili',
-    rotacion: 'Cuidados Intensivos',
-    completado: true,
-    documentos: [
-      {
-        id: 1,
-        nombre: 'Documento de Identidad',
-        estado: 'aprobado',
-        fechaExpedicion: '2021-03-10',
-        fechaVencimiento: null,
-        fechaCargue: '2023-09-15',
-        fechaRevision: '2023-09-16',
-        comentarios: 'Documento verificado correctamente.',
-        rutaArchivo: 'https://example.com/doc_maria1.pdf',
-        vence: false
-      },
-      {
-        id: 2,
-        nombre: 'Carné de Vacunación',
-        estado: 'aprobado',
-        fechaExpedicion: '2023-01-15',
-        fechaVencimiento: null,
-        fechaCargue: '2023-09-15',
-        fechaRevision: '2023-09-16',
-        comentarios: 'Esquema de vacunación completo.',
-        rutaArchivo: 'https://example.com/doc_maria2.pdf',
-        vence: false
-      }
-    ]
-  },
-  {
-    id: 3,
-    nombre: 'Carlos Andrés',
-    apellido: 'Ramírez Roa',
-    codigo: '2078901',
-    email: 'carlos.ramirez@correounivalle.edu.co',
-    celular: '3023456789',
-    rol: 'Estudiante',
-    documentosFaltantes: 'Sí',
-    programa: 'Odontología',
-    sede: 'Cali',
-    nivel: 'Pregrado',
-    escenarios: 'Hospital Departamental',
-    rotacion: 'Cirugía Oral',
-    completado: false,
-    documentos: [
-      {
-        id: 1,
-        nombre: 'Documento de Identidad',
-        estado: 'aprobado',
-        fechaExpedicion: '2019-11-20',
-        fechaVencimiento: null,
-        fechaCargue: '2023-10-01',
-        fechaRevision: '2023-10-02',
-        comentarios: 'Documento en regla.',
-        rutaArchivo: 'https://example.com/doc_carlos1.pdf',
-        vence: false
-      },
-      {
-        id: 2,
-        nombre: 'Seguro Estudiantil',
-        estado: 'pendiente',
-        fechaExpedicion: '2023-08-01',
-        fechaVencimiento: '2024-08-01',
-        fechaCargue: '2023-10-01',
-        fechaRevision: null,
-        comentarios: null,
-        rutaArchivo: 'https://example.com/doc_carlos2.pdf',
-        vence: true
-      }
-    ]
-  }
-];
-
 const StudentDocumentManager = () => {
   const { studentId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [error, setError] = useState(null);
   const [documentStats, setDocumentStats] = useState({
     aprobados: 0,
     pendientes: 0,
@@ -353,16 +185,73 @@ const StudentDocumentManager = () => {
   useEffect(() => {
     const loadStudentData = async () => {
       setLoading(true);
-      // Simulando un retardo para mostrar el efecto de carga
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setError(null);
       
-      // Buscar el estudiante por ID en los datos de ejemplo
-      const foundStudent = mockStudents.find(s => s.id === parseInt(studentId, 10));
-      
-      if (foundStudent) {
-        setStudent(foundStudent);
+      try {
+        console.log(`Cargando datos del estudiante: ${studentId}`);
         
-        // Calcular estadísticas de documentos
+        // Obtener datos del usuario, sus documentos y tipos de documentos en paralelo
+        const [userResponse, documentsResponse, documentTypesResponse] = await Promise.all([
+          getUserById(studentId),
+          getUserDocumentsWithDetails(studentId),
+          getRequiredDocumentTypes()
+        ]);
+        
+        console.log('Respuesta usuario:', userResponse);
+        console.log('Respuesta documentos:', documentsResponse);
+        console.log('Respuesta tipos:', documentTypesResponse);
+        
+        // Procesar datos
+        const userData = userResponse.data || userResponse;
+        const userDocuments = documentsResponse.data || [];
+        const documentTypes = documentTypesResponse.data || [];
+        
+        if (!userData || !userData.id_usuario) {
+          throw new Error('Usuario no encontrado');
+        }
+        
+        // Transformar datos al formato esperado por el componente
+        const transformedStudent = transformUserForManager(userData, userDocuments, documentTypes);
+        
+        // Procesar grupos de dosis y calcular estado consolidado
+        const processedDocuments = transformedStudent.documentos.map(doc => {
+          if (doc.isDoseGroup) {
+            // Función para obtener estado de documento individual
+            const getDocumentStatus = (userDoc, docType) => {
+              if (!userDoc) return 'sin cargar';
+              return userDoc.estado || 'pendiente';
+            };
+            
+            // Obtener estado consolidado del grupo de dosis
+            const doseGroupStatus = getDoseGroupStatus(
+              { 
+                baseDoc: doc.baseDoc, 
+                totalDoses: doc.totalDoses 
+              }, 
+              doc.userDocs, 
+              getDocumentStatus
+            );
+            
+            return {
+              ...doc,
+              estado: doseGroupStatus.consolidatedStatus,
+              doseStatuses: doseGroupStatus.doseStatuses,
+              progress: doseGroupStatus.progress,
+              completedDoses: doseGroupStatus.completedDoses,
+              uploadedDoses: doseGroupStatus.uploadedDoses,
+              fechaCargue: doseGroupStatus.latestUploadDate,
+              fechaExpedicion: doseGroupStatus.latestExpeditionDate,
+              fechaVencimiento: doseGroupStatus.latestExpirationDate,
+              fechaRevision: doseGroupStatus.latestReviewDate
+            };
+          }
+          return doc;
+        });
+        
+        console.log('Estudiante transformado:', { ...transformedStudent, documentos: processedDocuments });
+        setStudent({ ...transformedStudent, documentos: processedDocuments });
+        
+        // Calcular estadísticas de documentos (considerando dosis individuales)
         const stats = {
           aprobados: 0,
           pendientes: 0,
@@ -371,40 +260,205 @@ const StudentDocumentManager = () => {
           sinCargar: 0
         };
         
-        foundStudent.documentos.forEach(doc => {
-          switch (doc.estado?.toLowerCase()) {
-            case 'aprobado':
-              stats.aprobados++;
-              break;
-            case 'pendiente':
-              stats.pendientes++;
-              break;
-            case 'rechazado':
-              stats.rechazados++;
-              break;
-            case 'vencido':
-              stats.vencidos++;
-              break;
-            case 'sin cargar':
-              stats.sinCargar++;
-              break;
-            default:
-              stats.sinCargar++;
-              break;
+        processedDocuments.forEach(doc => {
+          if (doc.isDoseGroup) {
+            // Para grupos de dosis, contar cada dosis individual
+            doc.doseStatuses?.forEach(doseStatus => {
+              switch (doseStatus.status?.toLowerCase()) {
+                case 'aprobado':
+                case 'cumplido':
+                  stats.aprobados++;
+                  break;
+                case 'pendiente':
+                case 'sin revisar':
+                  stats.pendientes++;
+                  break;
+                case 'rechazado':
+                  stats.rechazados++;
+                  break;
+                case 'vencido':
+                  stats.vencidos++;
+                  break;
+                case 'sin cargar':
+                default:
+                  stats.sinCargar++;
+                  break;
+              }
+            });
+          } else {
+            // Para documentos normales
+            switch (doc.estado?.toLowerCase()) {
+              case 'aprobado':
+              case 'cumplido':
+                stats.aprobados++;
+                break;
+              case 'pendiente':
+              case 'sin revisar':
+                stats.pendientes++;
+                break;
+              case 'rechazado':
+                stats.rechazados++;
+                break;
+              case 'vencido':
+                stats.vencidos++;
+                break;
+              case 'sin cargar':
+              default:
+                stats.sinCargar++;
+                break;
+            }
           }
         });
         
         setDocumentStats(stats);
-      } else {
-        // Si no se encuentra el estudiante, podríamos redirigir al dashboard
-        navigate('/admin/dashboard');
+        
+      } catch (error) {
+        console.error('Error cargando datos del estudiante:', error);
+        setError(error.message || 'Error al cargar los datos del estudiante');
+        
+        // Si es un error 404, redirigir al dashboard después de un momento
+        if (error.message && error.message.includes('no encontrado')) {
+          setTimeout(() => {
+            navigate('/admin/dashboard');
+          }, 3000);
+        }
+      } finally {
+        setLoading(false);
       }
+    };
+    
+    if (studentId) {
+      loadStudentData();
+    }
+  }, [studentId, navigate]);
+
+  // Función para recargar datos
+  const handleReload = () => {
+    const loadStudentData = async () => {
+      setLoading(true);
+      setError(null);
       
-      setLoading(false);
+      try {
+        const [userResponse, documentsResponse, documentTypesResponse] = await Promise.all([
+          getUserById(studentId),
+          getUserDocumentsWithDetails(studentId),
+          getRequiredDocumentTypes()
+        ]);
+        
+        const userData = userResponse.data || userResponse;
+        const userDocuments = documentsResponse.data || [];
+        const documentTypes = documentTypesResponse.data || [];
+        
+        const transformedStudent = transformUserForManager(userData, userDocuments, documentTypes);
+        
+        // Procesar grupos de dosis y calcular estado consolidado
+        const processedDocuments = transformedStudent.documentos.map(doc => {
+          if (doc.isDoseGroup) {
+            // Función para obtener estado de documento individual
+            const getDocumentStatus = (userDoc, docType) => {
+              if (!userDoc) return 'sin cargar';
+              return userDoc.estado || 'pendiente';
+            };
+            
+            // Obtener estado consolidado del grupo de dosis
+            const doseGroupStatus = getDoseGroupStatus(
+              { 
+                baseDoc: doc.baseDoc, 
+                totalDoses: doc.totalDoses 
+              }, 
+              doc.userDocs, 
+              getDocumentStatus
+            );
+            
+            return {
+              ...doc,
+              estado: doseGroupStatus.consolidatedStatus,
+              doseStatuses: doseGroupStatus.doseStatuses,
+              progress: doseGroupStatus.progress,
+              completedDoses: doseGroupStatus.completedDoses,
+              uploadedDoses: doseGroupStatus.uploadedDoses,
+              fechaCargue: doseGroupStatus.latestUploadDate,
+              fechaExpedicion: doseGroupStatus.latestExpeditionDate,
+              fechaVencimiento: doseGroupStatus.latestExpirationDate,
+              fechaRevision: doseGroupStatus.latestReviewDate
+            };
+          }
+          return doc;
+        });
+        
+        setStudent({ ...transformedStudent, documentos: processedDocuments });
+        
+        // Recalcular estadísticas (considerando dosis individuales)
+        const stats = {
+          aprobados: 0,
+          pendientes: 0,
+          rechazados: 0,
+          vencidos: 0,
+          sinCargar: 0
+        };
+        
+        processedDocuments.forEach(doc => {
+          if (doc.isDoseGroup) {
+            // Para grupos de dosis, contar cada dosis individual
+            doc.doseStatuses?.forEach(doseStatus => {
+              switch (doseStatus.status?.toLowerCase()) {
+                case 'aprobado':
+                case 'cumplido':
+                  stats.aprobados++;
+                  break;
+                case 'pendiente':
+                case 'sin revisar':
+                  stats.pendientes++;
+                  break;
+                case 'rechazado':
+                  stats.rechazados++;
+                  break;
+                case 'vencido':
+                  stats.vencidos++;
+                  break;
+                case 'sin cargar':
+                default:
+                  stats.sinCargar++;
+                  break;
+              }
+            });
+          } else {
+            // Para documentos normales
+            switch (doc.estado?.toLowerCase()) {
+              case 'aprobado':
+              case 'cumplido':
+                stats.aprobados++;
+                break;
+              case 'pendiente':
+              case 'sin revisar':
+                stats.pendientes++;
+                break;
+              case 'rechazado':
+                stats.rechazados++;
+                break;
+              case 'vencido':
+                stats.vencidos++;
+                break;
+              case 'sin cargar':
+              default:
+                stats.sinCargar++;
+                break;
+            }
+          }
+        });
+        
+        setDocumentStats(stats);
+        
+      } catch (error) {
+        console.error('Error recargando datos:', error);
+        setError(error.message || 'Error al recargar los datos');
+      } finally {
+        setLoading(false);
+      }
     };
     
     loadStudentData();
-  }, [studentId, navigate]);
+  };
 
   // Efecto para filtrar documentos
   useEffect(() => {
@@ -445,49 +499,9 @@ const StudentDocumentManager = () => {
 
   const handleCloseModal = (updatedDoc = null) => {
     if (updatedDoc) {
-      // Actualizar el documento en la lista del estudiante
-      const updatedDocs = student.documentos.map(doc => 
-        doc.id === updatedDoc.id ? updatedDoc : doc
-      );
-      
-      setStudent({
-        ...student,
-        documentos: updatedDocs
-      });
-      
-      // Recalcular estadísticas
-      const stats = {
-        aprobados: 0,
-        pendientes: 0,
-        rechazados: 0,
-        vencidos: 0,
-        sinCargar: 0
-      };
-      
-      updatedDocs.forEach(doc => {
-        switch (doc.estado?.toLowerCase()) {
-          case 'aprobado':
-            stats.aprobados++;
-            break;
-          case 'pendiente':
-            stats.pendientes++;
-            break;
-          case 'rechazado':
-            stats.rechazados++;
-            break;
-          case 'vencido':
-            stats.vencidos++;
-            break;
-          case 'sin cargar':
-            stats.sinCargar++;
-            break;
-          default:
-            stats.sinCargar++;
-            break;
-        }
-      });
-      
-      setDocumentStats(stats);
+      // En lugar de actualizar manualmente el estado, recargar los datos
+      console.log('Documento actualizado, recargando datos...');
+      handleReload();
     }
     
     setSelectedDocument(null);
@@ -561,7 +575,56 @@ const StudentDocumentManager = () => {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>
+          Cargando datos del usuario...
+        </Typography>
       </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemeProvider theme={theme}>
+        <Box sx={{ padding: 3, marginTop: 12 }}>
+          <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
+            <IconButton
+              size="small"
+              onClick={() => navigate('/admin/dashboard')}
+              sx={{ 
+                color: 'primary.main', 
+                borderRadius: 1.5,
+                bgcolor: 'primary.light',
+                '&:hover': {
+                  bgcolor: alpha(theme.palette.primary.main, 0.25),
+                } 
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+            <Typography variant="h6">Error al cargar usuario</Typography>
+          </Stack>
+          
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+          
+          <Box display="flex" gap={2}>
+            <Button 
+              variant="contained" 
+              onClick={handleReload}
+              startIcon={<Refresh />}
+            >
+              Reintentar
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => navigate('/admin/dashboard')}
+            >
+              Volver al Dashboard
+            </Button>
+          </Box>
+        </Box>
+      </ThemeProvider>
     );
   }
 
@@ -947,91 +1010,269 @@ const StudentDocumentManager = () => {
                   </TableRow>
                 ) : (
                   filteredDocuments.map((doc) => (
-                  <TableRow
-                    key={doc.id}
-                    hover
-                    sx={{ backgroundColor: getRowBackground(doc.estado) }}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-                        {doc.nombre}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {doc.fechaCargue ? `Cargado: ${formatDate(doc.fechaCargue)}` : 'No cargado'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <StatusChip status={doc.estado} />
-                    </TableCell>
-                    <TableCell>{formatDate(doc.fechaExpedicion)}</TableCell>
-                    <TableCell>
-                      {doc.vence ? formatDate(doc.fechaVencimiento) : 'No vence'}
-                    </TableCell>
-                    <TableCell>
-                      {doc.comentarios ? (
-                        <Tooltip title={doc.comentarios}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              maxWidth: 150,
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
+                    doc.isDoseGroup ? (
+                      // Renderizar grupo de dosis como acordeón
+                      <TableRow
+                        key={`dose-group-${doc.id}`}
+                        sx={{ backgroundColor: getRowBackground(doc.estado) }}
+                      >
+                        <TableCell colSpan={6} sx={{ p: 0 }}>
+                          <Accordion 
+                            sx={{ 
+                              boxShadow: 'none',
+                              border: '1px solid',
+                              borderColor: 'divider',
+                              '&:before': { display: 'none' },
+                              '&.Mui-expanded': { margin: 0 }
                             }}
                           >
-                            {doc.comentarios}
-                          </Typography>
-                        </Tooltip>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell align="center">
-                      <Stack direction="row" spacing={1} justifyContent="center">
-                        {doc.rutaArchivo && (
-                          <Tooltip title="Ver documento">
-                            <IconButton
-                              size="small"
-                              component="a"
-                              href={doc.rutaArchivo}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              sx={{ 
-                                bgcolor: 'primary.light',
-                                color: 'primary.main',
+                            <AccordionSummary
+                              expandIcon={<ExpandMore />}
+                              sx={{
+                                backgroundColor: getRowBackground(doc.estado),
                                 '&:hover': {
-                                  bgcolor: alpha(theme.palette.primary.main, 0.25),
+                                  backgroundColor: alpha(theme.palette.grey[300], 0.3),
                                 }
                               }}
                             >
-                              <Visibility fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        
-                        <Tooltip title={doc.estado === 'sin cargar' ? 'No hay documento para revisar' : 'Revisar documento'}>
-                          <span>
-                            <Button
-                              variant="outlined"
-                              color={getButtonColor(doc.estado)}
-                              size="small"
-                              onClick={() => handleOpenModal(doc)}
-                              disabled={doc.estado === 'sin cargar'}
-                              sx={{ 
-                                px: 1.5, 
-                                py: 0.5, 
-                                minWidth: 'auto',
-                                fontSize: '0.75rem',
-                                borderWidth: 1
-                              }}
-                            >
-                              Revisar
-                            </Button>
-                          </span>
-                        </Tooltip>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%' }}>
+                                <Avatar sx={{ 
+                                  width: 32, 
+                                  height: 32,
+                                  backgroundColor: theme.palette.primary.main,
+                                  color: 'white'
+                                }}>
+                                  <VaccinesOutlined fontSize="small" />
+                                </Avatar>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography variant="body2" sx={{ 
+                                    fontWeight: 600,
+                                    color: theme.palette.secondary.main,
+                                    mb: 0.25,
+                                    fontSize: '0.85rem'
+                                  }}>
+                                    {doc.nombre}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <Chip
+                                      label={doc.progress || `0/${doc.totalDoses}`}
+                                      size="small"
+                                      sx={{
+                                        backgroundColor: theme.palette.primary.light,
+                                        color: 'white',
+                                        fontWeight: 500,
+                                        fontSize: '0.65rem',
+                                        height: '20px'
+                                      }}
+                                    />
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                      {doc.completedDoses || 0} aprobadas
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mr: 2 }}>
+                                  <StatusChip status={doc.estado} />
+                                  <Typography variant="caption" color="text.secondary">
+                                    {doc.fechaCargue ? `Última carga: ${formatDate(doc.fechaCargue)}` : 'Sin cargar'}
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </AccordionSummary>
+                            <AccordionDetails sx={{ p: 2 }}>
+                              <Grid container spacing={2}>
+                                {doc.doseStatuses?.map((doseInfo, doseIndex) => (
+                                  <Grid item xs={12} sm={6} md={4} key={`dose-${doseInfo.doseNumber}-${doseIndex}`}>
+                                    <Card 
+                                      sx={{ 
+                                        p: 2,
+                                        border: '1px solid',
+                                        borderColor: 'divider',
+                                        backgroundColor: getRowBackground(doseInfo.status),
+                                        '&:hover': {
+                                          borderColor: theme.palette.primary.main,
+                                          boxShadow: '0 4px 12px rgba(178, 34, 34, 0.1)',
+                                          transform: 'translateY(-2px)',
+                                          transition: 'all 0.2s ease'
+                                        }
+                                      }}
+                                    >
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                        <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                          {doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') 
+                                            ? doseInfo.doseNumber 
+                                            : `Dosis ${doseInfo.doseNumber}`}
+                                        </Typography>
+                                        <StatusChip status={doseInfo.status} />
+                                      </Box>
+                                      <Box sx={{ mb: 1 }}>
+                                        <Typography variant="caption" color="text.secondary" display="block">
+                                          {doseInfo.userDoc?.fecha_cargue ? `Cargado: ${formatDate(doseInfo.userDoc.fecha_cargue)}` : 'No cargado'}
+                                        </Typography>
+                                        {doseInfo.userDoc?.fecha_expedicion && (
+                                          <Typography variant="caption" color="text.secondary" display="block">
+                                            Expedición: {formatDate(doseInfo.userDoc.fecha_expedicion)}
+                                          </Typography>
+                                        )}
+                                        {doseInfo.userDoc?.fecha_vencimiento && (
+                                          <Typography variant="caption" color="text.secondary" display="block">
+                                            Vencimiento: {formatDate(doseInfo.userDoc.fecha_vencimiento)}
+                                          </Typography>
+                                        )}
+                                      </Box>
+                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                                        {doseInfo.userDoc?.comentarios && (
+                                          <Tooltip title={doseInfo.userDoc.comentarios}>
+                                            <Typography variant="caption" sx={{
+                                              maxWidth: 120,
+                                              whiteSpace: 'nowrap',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              color: 'text.secondary'
+                                            }}>
+                                              {doseInfo.userDoc.comentarios}
+                                            </Typography>
+                                          </Tooltip>
+                                        )}
+                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                          {doseInfo.userDoc?.ruta_archivo && (
+                                            <Tooltip title="Ver documento">
+                                              <IconButton
+                                                size="small"
+                                                onClick={() => window.open(doseInfo.userDoc.ruta_archivo, '_blank', 'noopener,noreferrer')}
+                                                sx={{
+                                                  bgcolor: 'primary.light',
+                                                  color: 'primary.main',
+                                                  '&:hover': {
+                                                    bgcolor: alpha(theme.palette.primary.main, 0.25),
+                                                  }
+                                                }}
+                                              >
+                                                <Visibility fontSize="small" />
+                                              </IconButton>
+                                            </Tooltip>
+                                          )}
+                                          
+                                          {doseInfo.userDoc && (
+                                            <Tooltip title="Revisar dosis">
+                                              <Button
+                                                variant="outlined"
+                                                color={getButtonColor(doseInfo.status)}
+                                                size="small"
+                                                onClick={() => handleOpenModal({
+                                                  ...doseInfo.userDoc,
+                                                  nombre: `${doc.nombre} - ${doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') ? doseInfo.doseNumber : `Dosis ${doseInfo.doseNumber}`}`,
+                                                  vence: doc.vence
+                                                })}
+                                                sx={{ 
+                                                  px: 1, 
+                                                  py: 0.25, 
+                                                  minWidth: 'auto',
+                                                  fontSize: '0.7rem',
+                                                  borderWidth: 1
+                                                }}
+                                              >
+                                                Revisar
+                                              </Button>
+                                            </Tooltip>
+                                          )}
+                                        </Box>
+                                      </Box>
+                                    </Card>
+                                  </Grid>
+                                ))}
+                              </Grid>
+                            </AccordionDetails>
+                          </Accordion>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      // Renderizar documento normal
+                      <TableRow
+                        key={doc.id}
+                        hover
+                        sx={{ backgroundColor: getRowBackground(doc.estado) }}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                            {doc.nombre}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {doc.fechaCargue ? `Cargado: ${formatDate(doc.fechaCargue)}` : 'No cargado'}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <StatusChip status={doc.estado} />
+                        </TableCell>
+                        <TableCell>{formatDate(doc.fechaExpedicion)}</TableCell>
+                        <TableCell>
+                          {doc.vence ? formatDate(doc.fechaVencimiento) : 'No vence'}
+                        </TableCell>
+                        <TableCell>
+                          {doc.comentarios ? (
+                            <Tooltip title={doc.comentarios}>
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  maxWidth: 150,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis'
+                                }}
+                              >
+                                {doc.comentarios}
+                              </Typography>
+                            </Tooltip>
+                          ) : (
+                            '—'
+                          )}
+                        </TableCell>
+                        <TableCell align="center">
+                          <Stack direction="row" spacing={1} justifyContent="center">
+                            {doc.rutaArchivo && (
+                              <Tooltip title="Ver documento">
+                                <IconButton
+                                  size="small"
+                                  component="a"
+                                  href={doc.rutaArchivo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  sx={{ 
+                                    bgcolor: 'primary.light',
+                                    color: 'primary.main',
+                                    '&:hover': {
+                                      bgcolor: alpha(theme.palette.primary.main, 0.25),
+                                    }
+                                  }}
+                                >
+                                  <Visibility fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            
+                            <Tooltip title={doc.estado === 'sin cargar' ? 'No hay documento para revisar' : 'Revisar documento'}>
+                              <span>
+                                <Button
+                                  variant="outlined"
+                                  color={getButtonColor(doc.estado)}
+                                  size="small"
+                                  onClick={() => handleOpenModal(doc)}
+                                  disabled={doc.estado === 'sin cargar'}
+                                  sx={{ 
+                                    px: 1.5, 
+                                    py: 0.5, 
+                                    minWidth: 'auto',
+                                    fontSize: '0.75rem',
+                                    borderWidth: 1
+                                  }}
+                                >
+                                  Revisar
+                                </Button>
+                              </span>
+                            </Tooltip>
+                          </Stack>
+                        </TableCell>
+                      </TableRow>
+                    )
                   ))
                 )}
               </TableBody>
