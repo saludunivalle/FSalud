@@ -984,7 +984,7 @@ const StudentDocumentManager = () => {
             borderColor: 'divider'
           }}
         >
-          <TableContainer sx={{ maxHeight: 440 }}>
+          <TableContainer>
             <Table stickyHeader size="small" aria-label="tabla de documentos">
               <TableHead>
                 <TableRow>

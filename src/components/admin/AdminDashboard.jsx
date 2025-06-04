@@ -404,23 +404,6 @@ const AdminDashboard = () => {
             <Typography variant="h4" component="h1" gutterBottom>
               Panel de Administración
             </Typography>
-            {students.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                <Chip
-                  icon={<RefreshIcon />}
-                  label={`${students.length} usuarios cargados desde API`}
-                  color="success"
-                  variant="outlined"
-                  size="small"
-                />
-                <Chip
-                  label={`${students.filter(u => u.totalDocumentosRequeridos !== undefined).length} con datos de documentos actualizados`}
-                  color="info"
-                  variant="outlined"
-                  size="small"
-                />
-              </Box>
-            )}
           </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Button
