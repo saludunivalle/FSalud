@@ -145,12 +145,28 @@ export const transformUserForManager = (backendUser, userDocuments = [], documen
       
       if (userDoc) {
         // Documento cargado por el usuario
+        // Determinar el estado del documento usando lógica mejorada
+        let documentoEstado;
+        const hasFile = userDoc.ruta_archivo && userDoc.ruta_archivo.trim() !== '';
+        const hasUploadDate = userDoc.fecha_cargue && userDoc.fecha_cargue.trim() !== '';
+        
+        // Si no tiene archivo ni fecha de carga, considerar sin cargar
+        if (!hasFile && !hasUploadDate) {
+          documentoEstado = 'sin cargar';
+        } else if (!userDoc.estado || userDoc.estado.trim() === '') {
+          // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+          documentoEstado = 'pendiente';
+        } else {
+          // Devolver el estado que tiene asignado
+          documentoEstado = userDoc.estado;
+        }
+        
         return {
           id: userDoc.id_usuarioDoc || userDoc.id || index + 1,
           id_usuarioDoc: userDoc.id_usuarioDoc,
           id_tipo_documento: docKey,
           nombre: docType.nombre_doc || docType.nombre_documento || userDoc.nombre_doc || 'Documento sin nombre',
-          estado: userDoc.estado || 'pendiente',
+          estado: documentoEstado,
           fechaExpedicion: userDoc.fecha_expedicion || '',
           fechaVencimiento: userDoc.fecha_vencimiento || null,
           fechaCargue: userDoc.fecha_cargue || '',

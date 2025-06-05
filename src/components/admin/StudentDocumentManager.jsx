@@ -216,10 +216,25 @@ const StudentDocumentManager = () => {
         // Procesar grupos de dosis y calcular estado consolidado
         const processedDocuments = transformedStudent.documentos.map(doc => {
           if (doc.isDoseGroup) {
-            // Función para obtener estado de documento individual
+            // Función mejorada para obtener estado de documento individual
             const getDocumentStatus = (userDoc, docType) => {
+              // Si no hay documento cargado
               if (!userDoc) return 'sin cargar';
-              return userDoc.estado || 'pendiente';
+              
+              // Si existe el documento y tiene archivo o fecha de carga, está cargado
+              const hasFile = userDoc.ruta_archivo && userDoc.ruta_archivo.trim() !== '';
+              const hasUploadDate = userDoc.fecha_cargue && userDoc.fecha_cargue.trim() !== '';
+              
+              // Si no tiene archivo ni fecha de carga, considerar sin cargar
+              if (!hasFile && !hasUploadDate) return 'sin cargar';
+              
+              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              if (!userDoc.estado || userDoc.estado.trim() === '') {
+                return 'pendiente';
+              }
+              
+              // Devolver el estado que tiene asignado
+              return userDoc.estado;
             };
             
             // Obtener estado consolidado del grupo de dosis
@@ -244,8 +259,26 @@ const StudentDocumentManager = () => {
               fechaVencimiento: doseGroupStatus.latestExpirationDate,
               fechaRevision: doseGroupStatus.latestReviewDate
             };
+          } else {
+            // Procesar documentos normales con lógica mejorada de estado
+            const hasFile = doc.rutaArchivo && doc.rutaArchivo.trim() !== '';
+            const hasUploadDate = doc.fechaCargue && doc.fechaCargue.trim() !== '';
+            
+            let improvedStatus = doc.estado;
+            
+            // Si no tiene archivo ni fecha de carga, considerar sin cargar
+            if (!hasFile && !hasUploadDate) {
+              improvedStatus = 'sin cargar';
+            } else if (!doc.estado || doc.estado.trim() === '') {
+              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              improvedStatus = 'pendiente';
+            }
+            
+            return {
+              ...doc,
+              estado: improvedStatus
+            };
           }
-          return doc;
         });
         
         console.log('Estudiante transformado:', { ...transformedStudent, documentos: processedDocuments });
@@ -354,10 +387,25 @@ const StudentDocumentManager = () => {
         // Procesar grupos de dosis y calcular estado consolidado
         const processedDocuments = transformedStudent.documentos.map(doc => {
           if (doc.isDoseGroup) {
-            // Función para obtener estado de documento individual
+            // Función mejorada para obtener estado de documento individual
             const getDocumentStatus = (userDoc, docType) => {
+              // Si no hay documento cargado
               if (!userDoc) return 'sin cargar';
-              return userDoc.estado || 'pendiente';
+              
+              // Si existe el documento y tiene archivo o fecha de carga, está cargado
+              const hasFile = userDoc.ruta_archivo && userDoc.ruta_archivo.trim() !== '';
+              const hasUploadDate = userDoc.fecha_cargue && userDoc.fecha_cargue.trim() !== '';
+              
+              // Si no tiene archivo ni fecha de carga, considerar sin cargar
+              if (!hasFile && !hasUploadDate) return 'sin cargar';
+              
+              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              if (!userDoc.estado || userDoc.estado.trim() === '') {
+                return 'pendiente';
+              }
+              
+              // Devolver el estado que tiene asignado
+              return userDoc.estado;
             };
             
             // Obtener estado consolidado del grupo de dosis
@@ -382,8 +430,26 @@ const StudentDocumentManager = () => {
               fechaVencimiento: doseGroupStatus.latestExpirationDate,
               fechaRevision: doseGroupStatus.latestReviewDate
             };
+          } else {
+            // Procesar documentos normales con lógica mejorada de estado
+            const hasFile = doc.rutaArchivo && doc.rutaArchivo.trim() !== '';
+            const hasUploadDate = doc.fechaCargue && doc.fechaCargue.trim() !== '';
+            
+            let improvedStatus = doc.estado;
+            
+            // Si no tiene archivo ni fecha de carga, considerar sin cargar
+            if (!hasFile && !hasUploadDate) {
+              improvedStatus = 'sin cargar';
+            } else if (!doc.estado || doc.estado.trim() === '') {
+              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              improvedStatus = 'pendiente';
+            }
+            
+            return {
+              ...doc,
+              estado: improvedStatus
+            };
           }
-          return doc;
         });
         
         setStudent({ ...transformedStudent, documentos: processedDocuments });

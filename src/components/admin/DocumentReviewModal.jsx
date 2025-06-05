@@ -66,29 +66,60 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState(null);
   
-  const [estado, setEstado] = useState(document.estado || 'pendiente');
-  const [fechaExpedicion, setFechaExpedicion] = useState(document.fechaExpedicion || '');
+  const [estado, setEstado] = useState(() => {
+    // Mapear estados antiguos a nuevos si es necesario
+    const currentState = document.estado || '';
+    switch (currentState.toLowerCase()) {
+      case 'aprobado':
+        return 'Cumplido';
+      case 'rechazado':
+        return 'Rechazado';
+      case 'vencido':
+        return 'Expirado';
+      case 'pendiente':
+      default:
+        return 'Cumplido'; // Por defecto, sugerir como cumplido para revisión
+    }
+  });
+  const [fechaRevision, setFechaRevision] = useState(() => {
+    // Si ya tiene fecha de revisión, usarla; si no, usar la fecha actual
+    return document.fechaRevision || new Date().toISOString().split('T')[0];
+  });
   const [fechaVencimiento, setFechaVencimiento] = useState(document.fechaVencimiento || '');
   const [comentario, setComentario] = useState(document.comentarios || '');
   
   const [formErrors, setFormErrors] = useState({
     estado: '',
-    fechaExpedicion: '',
+    fechaRevision: '',
     fechaVencimiento: '',
     comentario: ''
   });
 
   useEffect(() => {
     // Resetear estados cuando cambia el documento
-    setEstado(document.estado || 'pendiente');
-    setFechaExpedicion(document.fechaExpedicion || '');
+    setEstado(() => {
+      // Mapear estados antiguos a nuevos si es necesario
+      const currentState = document.estado || '';
+      switch (currentState.toLowerCase()) {
+        case 'aprobado':
+          return 'Cumplido';
+        case 'rechazado':
+          return 'Rechazado';
+        case 'vencido':
+          return 'Expirado';
+        case 'pendiente':
+        default:
+          return 'Cumplido'; // Por defecto, sugerir como cumplido para revisión
+      }
+    });
+    setFechaRevision(document.fechaRevision || new Date().toISOString().split('T')[0]);
     setFechaVencimiento(document.fechaVencimiento || '');
     setComentario(document.comentarios || '');
     setSuccess(false);
     setError('');
     setFormErrors({
       estado: '',
-      fechaExpedicion: '',
+      fechaRevision: '',
       fechaVencimiento: '',
       comentario: ''
     });
@@ -97,7 +128,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const validateForm = () => {
     const errors = {
       estado: '',
-      fechaExpedicion: '',
+      fechaRevision: '',
       fechaVencimiento: '',
       comentario: ''
     };
@@ -109,15 +140,15 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       isValid = false;
     }
 
-    // Validación de la fecha de expedición
-    if (!fechaExpedicion) {
-      errors.fechaExpedicion = 'La fecha de expedición es requerida';
+    // Validación de la fecha de revisión
+    if (!fechaRevision) {
+      errors.fechaRevision = 'La fecha de revisión es requerida';
       isValid = false;
     } else {
-      const expedicionDate = new Date(fechaExpedicion);
+      const revisionDate = new Date(fechaRevision);
       const today = new Date();
-      if (expedicionDate > today) {
-        errors.fechaExpedicion = 'La fecha de expedición no puede ser futura';
+      if (revisionDate > today) {
+        errors.fechaRevision = 'La fecha de revisión no puede ser futura';
         isValid = false;
       }
     }
@@ -127,8 +158,8 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       if (!fechaVencimiento) {
         errors.fechaVencimiento = 'La fecha de vencimiento es requerida';
         isValid = false;
-      } else if (fechaExpedicion) {
-        const expedicionDate = new Date(fechaExpedicion);
+      } else if (document.fechaExpedicion) {
+        const expedicionDate = new Date(document.fechaExpedicion);
         const vencimientoDate = new Date(fechaVencimiento);
         if (vencimientoDate <= expedicionDate) {
           errors.fechaVencimiento = 'La fecha de vencimiento debe ser posterior a la de expedición';
@@ -138,7 +169,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     }
 
     // Si el estado es rechazado, requerir comentario
-    if (estado === 'rechazado' && !comentario.trim()) {
+    if (estado === 'Rechazado' && !comentario.trim()) {
       errors.comentario = 'Debe proporcionar un motivo del rechazo';
       isValid = false;
     }
@@ -156,13 +187,21 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     setError('');
 
     try {
-      // Llamar a la API real en lugar de simular
+      // Preparar datos para enviar al backend según las columnas de DOCUMENTOS_USUARIOS
+      const reviewData = {
+        estado,
+        comentario,
+        fecha_revision: fechaRevision,
+        // Si hay fecha de vencimiento, incluirla
+        ...(fechaVencimiento && { fecha_vencimiento: fechaVencimiento })
+      };
+
+      console.log('Enviando datos de revisión:', reviewData);
+
+      // Llamar a la API real
       const response = await reviewDocument(
         document.id_usuarioDoc,
-        {
-          estado,
-          comentario
-        }
+        reviewData
       );
 
       if (response.success) {
@@ -179,10 +218,10 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
           onClose({
             ...document,
             estado,
-            fechaExpedicion,
+            fechaRevision,
             fechaVencimiento: document.vence ? fechaVencimiento : null,
             comentarios: comentario,
-            fecha_revision: new Date().toISOString().split('T')[0]
+            fecha_revision: fechaRevision
           });
         }, 2000); // Dar más tiempo para leer el mensaje
       }
@@ -225,12 +264,14 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   // Función para obtener el color según el estado
   const getStateColor = (state) => {
     switch (state?.toLowerCase()) {
-      case 'aprobado':
+      case 'cumplido':
         return 'success';
       case 'rechazado':
         return 'error';
-      case 'vencido':
+      case 'expirado':
         return 'warning';
+      case 'no aplica':
+        return 'default';
       case 'pendiente':
         return 'info';
       default:
@@ -362,10 +403,10 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                   label="Estado del Documento"
                   disabled={loading}
                 >
-                  <MenuItem value="aprobado">Aprobado</MenuItem>
-                  <MenuItem value="rechazado">Rechazado</MenuItem>
-                  <MenuItem value="pendiente">Pendiente</MenuItem>
-                  <MenuItem value="vencido">Vencido</MenuItem>
+                  <MenuItem value="Cumplido">Cumplido</MenuItem>
+                  <MenuItem value="Rechazado">Rechazado</MenuItem>
+                  <MenuItem value="Expirado">Expirado</MenuItem>
+                  <MenuItem value="No aplica">No aplica</MenuItem>
                 </Select>
                 {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
               </FormControl>
@@ -373,15 +414,15 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
             
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Fecha de Expedición"
+                label="Fecha de Revisión"
                 type="date"
-                value={fechaExpedicion}
-                onChange={(e) => setFechaExpedicion(e.target.value)}
+                value={fechaRevision}
+                onChange={(e) => setFechaRevision(e.target.value)}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 disabled={loading}
-                error={!!formErrors.fechaExpedicion}
-                helperText={formErrors.fechaExpedicion}
+                error={!!formErrors.fechaRevision}
+                helperText={formErrors.fechaRevision}
                 inputProps={{ max: new Date().toISOString().split('T')[0] }}
                 InputProps={{
                   startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
@@ -401,7 +442,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                   disabled={loading}
                   error={!!formErrors.fechaVencimiento}
                   helperText={formErrors.fechaVencimiento}
-                  inputProps={{ min: fechaExpedicion }}
+                  inputProps={{ min: fechaRevision }}
                   InputProps={{
                     startAdornment: <CalendarIcon sx={{ mr: 1, color: 'text.secondary' }} />
                   }}
@@ -440,11 +481,11 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                 placeholder="Ingrese comentarios sobre el documento..."
                 disabled={loading}
                 error={!!formErrors.comentario}
-                helperText={formErrors.comentario || (estado === 'rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
+                helperText={formErrors.comentario || (estado === 'Rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
               />
             </Grid>
             
-            {estado === 'rechazado' && (
+            {estado === 'Rechazado' && (
               <Grid item xs={12}>
                 <Alert severity="info">
                   Al rechazar un documento, es importante proporcionar un motivo claro para que el estudiante pueda corregirlo adecuadamente.
