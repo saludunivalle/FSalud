@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -53,6 +53,8 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   const [error, setError] = useState('');
   const [documentInfo, setDocumentInfo] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  
+  const fileInputRef = useRef(null);
 
   // Base URL para API
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
@@ -358,7 +360,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                       borderColor: '#aaa'
                     }
                   }}
-                  onClick={() => document.getElementById('fileInputModal').click()}
+                  onClick={() => fileInputRef.current?.click()}
                   onDrop={(e) => {
                     e.preventDefault();
                     if (e.dataTransfer.files?.[0]) {
@@ -369,7 +371,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                 >
                   <input
                     type="file"
-                    id="fileInputModal"
+                    ref={fileInputRef}
                     accept=".pdf,.jpg,.jpeg,.png"
                     style={{ display: 'none' }}
                     onChange={handleFileChange}
