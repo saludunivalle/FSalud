@@ -217,19 +217,28 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('id_usuario', user.id_usuario);
-      formData.append('id_doc', document.id_doc);
-      formData.append('numero_dosis', document.doseNumber);
-      formData.append('fecha_expedicion', expeditionDate);
+      formData.append('userId', user.id_usuario || user.id);
+      formData.append('documentType', document.id_doc);
+      formData.append('numeroDosis', document.doseNumber);
+      formData.append('expeditionDate', expeditionDate);
       if (expirationDate) {
-        formData.append('fecha_vencimiento', expirationDate);
+        formData.append('expirationDate', expirationDate);
+      }
+      formData.append('userName', user.name || user.nombre || 'Usuario');
+      formData.append('userEmail', user.email || 'unknown@example.com');
+
+      console.log("Submitting FormData to /api/documentos/subir (DoseUploadModal):");
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value}`);
       }
 
-      const response = await axios.post(`${BASE_URL}/api/documents/upload`, formData, {
+      const response = await axios.post(`${BASE_URL}/api/documentos/subir`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
+
+      console.log("Server Response (DoseUploadModal):", response.data);
 
       if (response.data.success) {
         setSuccess(true);
