@@ -388,6 +388,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                     onChange={handleFileChange}
                   />
                   <Box
+                    onClick={() => fileInputRef.current?.click()}
                     sx={{
                       border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
                       borderRadius: 2,

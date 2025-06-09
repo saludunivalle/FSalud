@@ -71,20 +71,17 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     const state = backendState?.toLowerCase() || '';
     switch (state) {
       case 'cumplido':
-      case 'aprobado':
-        return 'aprobado';
+        return 'Aprobado';
       case 'rechazado':
-        return 'rechazado';
+        return 'Rechazado';
       case 'expirado':
-      case 'vencido':
-        return 'vencido';
+        return 'Vencido';
       case 'pendiente':
-      case 'sin revisar':
-        return 'pendiente';
+        return 'Pendiente';
       case 'sin cargar':
-        return 'sin cargar';
+        return 'Sin cargar';
       default:
-        return 'pendiente';
+        return 'Pendiente';
     }
   };
 
@@ -160,7 +157,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     }
 
     // Si el estado es rechazado, requerir comentario
-    if (estado === 'rechazado' && !comentario.trim()) {
+    if (estado === 'Rechazado' && !comentario.trim()) {
       errors.comentario = 'Debe proporcionar un motivo del rechazo';
       isValid = false;
     }
@@ -223,18 +220,16 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   // Función para obtener el color según el estado
   const getStateColor = (state) => {
     switch (state?.toLowerCase()) {
-      case 'cumplido':
-      case 'aprobado':
+      case 'Aprobado':
         return 'success';
-      case 'rechazado':
+      case 'Rechazado':
         return 'error';
-      case 'expirado':
-      case 'vencido':
+      case 'Vencido':
         return 'warning';
-      case 'no aplica':
+      case 'Pendiente':
         return 'default';
-      case 'pendiente':
-        return 'info';
+      case 'Sin cargar':
+        return 'default';
       default:
         return 'default';
     }
@@ -355,19 +350,18 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
           
           <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth error={!!formErrors.estado}>
-                <InputLabel id="estado-label">Estado del Documento</InputLabel>
+              <FormControl fullWidth margin="normal" error={!!formErrors.estado}>
+                <InputLabel>Estado</InputLabel>
                 <Select
-                  labelId="estado-label"
                   value={estado}
                   onChange={(e) => setEstado(e.target.value)}
-                  label="Estado del Documento"
-                  disabled={loading}
+                  label="Estado"
                 >
-                  <MenuItem value="aprobado">Aprobado</MenuItem>
-                  <MenuItem value="rechazado">Rechazado</MenuItem>
-                  <MenuItem value="vencido">Vencido</MenuItem>
-                  <MenuItem value="pendiente">Pendiente</MenuItem>
+                  <MenuItem value="Aprobado">Aprobado</MenuItem>
+                  <MenuItem value="Rechazado">Rechazado</MenuItem>
+                  <MenuItem value="Vencido">Vencido</MenuItem>
+                  <MenuItem value="Pendiente">Pendiente</MenuItem>
+                  <MenuItem value="Sin cargar">Sin cargar</MenuItem>
                 </Select>
                 {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
               </FormControl>
@@ -442,11 +436,11 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                 placeholder="Ingrese comentarios sobre el documento..."
                 disabled={loading}
                 error={!!formErrors.comentario}
-                helperText={formErrors.comentario || (estado === 'rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
+                helperText={formErrors.comentario || (estado === 'Rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
               />
             </Grid>
             
-            {estado === 'rechazado' && (
+            {estado === 'Rechazado' && (
               <Grid item xs={12}>
                 <Alert severity="info">
                   Al rechazar un documento, es importante proporcionar un motivo claro para que el estudiante pueda corregirlo adecuadamente.

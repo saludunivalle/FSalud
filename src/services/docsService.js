@@ -170,27 +170,15 @@ export const reviewDocument = async (documentId, reviewData) => {
     throw new Error('Token de autenticación no encontrado');
   }
 
-  // Mapeo de estados del frontend al backend para asegurar compatibilidad.
-  const estadoBackend = ((estado) => {
-    const estadoMinusculas = estado?.toLowerCase();
-    switch (estadoMinusculas) {
-      case 'aprobado':
-        return 'Cumplido';
-      case 'rechazado':
-        return 'Rechazado';
-      case 'vencido':
-        return 'Expirado';
-      case 'pendiente':
-        return 'No aplica';
-      case 'sin cargar':
-        return 'No aplica';
-      default:
-        // Este error no debería ocurrir gracias a la validación anterior
-        throw new Error(`Estado '${estado}' no se pudo mapear a un estado de backend.`);
-    }
-  })(estadoNormalizado);
+  // Mapear estados del frontend a estados del backend
+  const estadoBackend = {
+    'Aprobado': 'Cumplido',
+    'Rechazado': 'Rechazado',
+    'Vencido': 'Expirado',
+    'Pendiente': 'Pendiente',
+    'Sin cargar': 'Sin cargar'
+  }[estadoNormalizado] || estadoNormalizado;
 
-  // Crear una copia de los datos para no modificar el objeto original.
   const dataToSend = {
     ...reviewData,
     estado: estadoBackend,
