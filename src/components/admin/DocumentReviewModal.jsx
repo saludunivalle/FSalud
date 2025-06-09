@@ -70,16 +70,14 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const getNormalizedState = (backendState) => {
     const state = backendState?.toLowerCase() || '';
     switch (state) {
-      case 'cumplido':
+      case 'aprobado':
         return 'Aprobado';
       case 'rechazado':
         return 'Rechazado';
-      case 'expirado':
+      case 'vencido':
         return 'Vencido';
       case 'pendiente':
         return 'Pendiente';
-      case 'sin cargar':
-        return 'Sin cargar';
       default:
         return 'Pendiente';
     }
@@ -176,14 +174,21 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       setError(null);
       setSuccess(false);
       
-      const normalizedState = estado.charAt(0).toUpperCase() + estado.slice(1);
-      
-      await reviewDocument(document.id_usuarioDoc, {
-        estado: normalizedState,
+      const reviewData = {
+        estado: estado,
         comentario: comentario,
         fecha_revision: fechaRevision,
         ...(fechaVencimiento && { fecha_vencimiento: fechaVencimiento })
-      });
+      };
+
+      // If document is rejected, ensure there's a comment
+      if (estado === 'Rechazado' && !comentario.trim()) {
+        setError('Debe proporcionar un motivo del rechazo');
+        setLoading(false);
+        return;
+      }
+
+      await reviewDocument(document.id_usuarioDoc, reviewData);
 
       setSuccess(true);
       setTimeout(() => {
@@ -220,15 +225,13 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   // Función para obtener el color según el estado
   const getStateColor = (state) => {
     switch (state?.toLowerCase()) {
-      case 'Aprobado':
+      case 'aprobado':
         return 'success';
-      case 'Rechazado':
+      case 'rechazado':
         return 'error';
-      case 'Vencido':
+      case 'vencido':
         return 'warning';
-      case 'Pendiente':
-        return 'default';
-      case 'Sin cargar':
+      case 'pendiente':
         return 'default';
       default:
         return 'default';
@@ -361,7 +364,6 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                   <MenuItem value="Rechazado">Rechazado</MenuItem>
                   <MenuItem value="Vencido">Vencido</MenuItem>
                   <MenuItem value="Pendiente">Pendiente</MenuItem>
-                  <MenuItem value="Sin cargar">Sin cargar</MenuItem>
                 </Select>
                 {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
               </FormControl>

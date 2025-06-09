@@ -157,8 +157,8 @@ export const getDocumentStatistics = async () => {
 export const reviewDocument = async (documentId, reviewData) => {
   const { estado, comentario, fecha_vencimiento } = reviewData;
 
-  // Frontend validation before sending to backend (case-insensitive)
-  const estadosValidos = ['Aprobado', 'Rechazado', 'Vencido', 'Pendiente', 'Sin cargar'];
+  // Frontend validation before sending to backend
+  const estadosValidos = ['Aprobado', 'Rechazado', 'Vencido', 'Pendiente'];
   const estadoNormalizado = estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
 
   if (!estadosValidos.map(s => s.toLowerCase()).includes(estado.toLowerCase())) {
@@ -172,11 +172,10 @@ export const reviewDocument = async (documentId, reviewData) => {
 
   // Mapear estados del frontend a estados del backend
   const estadoBackend = {
-    'Aprobado': 'Cumplido',
+    'Aprobado': 'Aprobado',
     'Rechazado': 'Rechazado',
-    'Vencido': 'Expirado',
-    'Pendiente': 'Pendiente',
-    'Sin cargar': 'Sin cargar'
+    'Vencido': 'Vencido',
+    'Pendiente': 'Pendiente'
   }[estadoNormalizado] || estadoNormalizado;
 
   const dataToSend = {
@@ -191,7 +190,6 @@ export const reviewDocument = async (documentId, reviewData) => {
     return response.data;
   } catch (error) {
     console.error('Error revisando documento:', error);
-    // Extraer un mensaje de error más claro si está disponible
     const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al revisar el documento';
     throw new Error(errorMessage);
   }
