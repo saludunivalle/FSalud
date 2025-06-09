@@ -81,6 +81,8 @@ export const getRequiredDocumentTypes = async () => {
 
 // Función para transformar datos del usuario para el StudentDocumentManager
 export const transformUserForManager = (backendUser, userDocuments = [], documentTypes = []) => {
+  console.log(`🔄 transformUserForManager - ${backendUser.nombre_usuario}: ${userDocuments.length} documentos`);
+  
   const user = {
     id: backendUser.id_usuario,
     nombre: backendUser.nombre_usuario || '',
@@ -157,8 +159,21 @@ export const transformUserForManager = (backendUser, userDocuments = [], documen
           // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
           documentoEstado = 'pendiente';
         } else {
-          // Devolver el estado que tiene asignado
-          documentoEstado = userDoc.estado;
+          // Devolver el estado que tiene asignado, unificando terminología
+          switch (userDoc.estado.toLowerCase()) {
+            case 'cumplido':
+              documentoEstado = 'aprobado';
+              break;
+            case 'expirado':
+              documentoEstado = 'vencido';
+              break;
+            case 'sin revisar':
+              documentoEstado = 'pendiente';
+              break;
+            default:
+              documentoEstado = userDoc.estado.toLowerCase(); // Usar el estado original si es estándar
+              break;
+          }
         }
         
         return {
@@ -257,14 +272,81 @@ export const getUsersWithDocumentStats = async () => {
           
           console.log(`Usuario ${user.nombre_usuario}: tiene ${documents.length} documentos cargados de ${totalDocumentosRequeridos} requeridos`);
           
-          // Calcular estadísticas reales de documentos
+          // Debug: mostrar documentos con su estado real
+          console.log(`🔍 DEBUG - Documentos del usuario ${user.nombre_usuario}:`, documents.map(doc => ({
+            id: doc.id_usuarioDoc,
+            nombre: doc.nombre_doc || 'Sin nombre',
+            estado_original: doc.estado,
+            tiene_archivo: !!(doc.ruta_archivo && doc.ruta_archivo.trim() !== ''),
+            fecha_cargue: doc.fecha_cargue,
+            es_pendiente_revision: (!doc.estado || doc.estado.trim() === '') && 
+                                  (doc.ruta_archivo && doc.ruta_archivo.trim() !== '' || doc.fecha_cargue && doc.fecha_cargue.trim() !== '')
+          })));
+          
+          // Reiniciar estadísticas
           const stats = {
-            documentosPendientes: documents.filter(doc => doc.estado === 'pendiente').length,
-            documentosAprobados: documents.filter(doc => doc.estado === 'aprobado').length,
-            documentosRechazados: documents.filter(doc => doc.estado === 'rechazado').length,
-            documentosVencidos: documents.filter(doc => doc.estado === 'vencido').length,
-            documentosSinCargar: Math.max(0, totalDocumentosRequeridos - documents.length) // Total requeridos (con dosis) menos los que tiene
+            documentosPendientes: 0,
+            documentosAprobados: 0,
+            documentosRechazados: 0,
+            documentosVencidos: 0,
+            documentosSinCargar: 0
           };
+          
+          // Lógica de conteo mejorada: iterar sobre los tipos de doc requeridos
+          documentTypes.forEach(docType => {
+            const dosisRequeridas = parseInt(docType.dosis) || 1;
+            const userDocsForType = documents.filter(d => d.id_doc === docType.id_doc);
+            
+            if (userDocsForType.length === 0) {
+              // Si no hay ningún documento cargado para este tipo, todos cuentan como "sin cargar"
+              stats.documentosSinCargar += dosisRequeridas;
+            } else {
+              // Si hay documentos cargados, verificar el estado de cada dosis
+              for (let i = 1; i <= dosisRequeridas; i++) {
+                const doseDoc = userDocsForType.find(d => parseInt(d.numero_dosis) === i);
+                
+                if (!doseDoc) {
+                  stats.documentosSinCargar++;
+                  continue;
+                }
+                
+                // Determinar el estado real del documento
+                let realStatus = 'sin cargar';
+                const hasFile = doseDoc.ruta_archivo && doseDoc.ruta_archivo.trim() !== '';
+                const hasUploadDate = doseDoc.fecha_cargue && doseDoc.fecha_cargue.trim() !== '';
+
+                if (hasFile || hasUploadDate) {
+                  realStatus = (doseDoc.estado && doseDoc.estado.trim() !== '') ? doseDoc.estado.toLowerCase() : 'pendiente';
+                }
+                
+                // Normalizar y contar
+                switch (realStatus) {
+                  case 'pendiente':
+                  case 'sin revisar':
+                    stats.documentosPendientes++;
+                    break;
+                  case 'aprobado':
+                  case 'cumplido':
+                    stats.documentosAprobados++;
+                    break;
+                  case 'rechazado':
+                    stats.documentosRechazados++;
+                    break;
+                  case 'vencido':
+                  case 'expirado':
+                    stats.documentosVencidos++;
+                    break;
+                  default: // 'sin cargar' y otros casos
+                    stats.documentosSinCargar++;
+                    break;
+                }
+              }
+            }
+          });
+          
+          // Los documentos sin cargar también incluyen los tipos de documento que no han sido subidos
+          const documentosPorSubir = Math.max(0, totalDocumentosRequeridos - documents.length);
+          stats.documentosSinCargar += documentosPorSubir;
           
           const userWithStats = {
             ...user,
@@ -273,7 +355,14 @@ export const getUsersWithDocumentStats = async () => {
             totalDocumentosRequeridos // Agregar el total para usar en el frontend
           };
           
-          console.log(`Usuario ${user.nombre_usuario} procesado: aprobados=${stats.documentosAprobados}, total=${totalDocumentosRequeridos}`);
+          console.log(`📊 Usuario ${user.nombre_usuario} procesado:`, {
+            aprobados: stats.documentosAprobados,
+            pendientes: stats.documentosPendientes, // ⭐ Este es el valor clave
+            rechazados: stats.documentosRechazados,
+            vencidos: stats.documentosVencidos,
+            sinCargar: stats.documentosSinCargar,
+            total: totalDocumentosRequeridos
+          });
           
           return userWithStats;
         } catch (error) {

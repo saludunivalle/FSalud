@@ -136,12 +136,11 @@ const StatusChip = ({ status }) => {
       color = 'info';
       label = 'Pendiente';
       break;
-    case 'no aplica':
-      icon = <Block fontSize="small" />;
-      color = 'default';
-      label = 'No Aplica';
-      break;
     case 'sin cargar':
+      icon = <CloudOff fontSize="small" />;
+      color = 'default';
+      label = 'Sin Cargar';
+      break;
     default:
       icon = <CloudOff fontSize="small" />;
       color = 'default';
@@ -219,22 +218,44 @@ const StudentDocumentManager = () => {
             // Función mejorada para obtener estado de documento individual
             const getDocumentStatus = (userDoc, docType) => {
               // Si no hay documento cargado
-              if (!userDoc) return 'sin cargar';
+              if (!userDoc) {
+                return 'sin cargar';
+              }
               
               // Si existe el documento y tiene archivo o fecha de carga, está cargado
               const hasFile = userDoc.ruta_archivo && userDoc.ruta_archivo.trim() !== '';
               const hasUploadDate = userDoc.fecha_cargue && userDoc.fecha_cargue.trim() !== '';
               
               // Si no tiene archivo ni fecha de carga, considerar sin cargar
-              if (!hasFile && !hasUploadDate) return 'sin cargar';
+              if (!hasFile && !hasUploadDate) {
+                return 'sin cargar';
+              }
               
-              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              // Devolver el estado que tiene asignado
               if (!userDoc.estado || userDoc.estado.trim() === '') {
                 return 'pendiente';
               }
               
-              // Devolver el estado que tiene asignado
-              return userDoc.estado;
+              // Normalizar el estado a los valores estándar
+              const estadoOriginal = userDoc.estado.toLowerCase().trim();
+              switch (estadoOriginal) {
+                case 'aprobado':
+                case 'cumplido':
+                  return 'aprobado';
+                case 'rechazado':
+                  return 'rechazado';
+                case 'vencido':
+                case 'expirado':
+                  return 'vencido';
+                case 'pendiente':
+                case 'sin revisar':
+                  return 'pendiente';
+                case 'sin cargar':
+                  return 'sin cargar';
+                default:
+                  console.warn(`Estado no reconocido: ${estadoOriginal}, usando 'pendiente' como fallback`);
+                  return 'pendiente';
+              }
             };
             
             // Obtener estado consolidado del grupo de dosis
@@ -260,24 +281,9 @@ const StudentDocumentManager = () => {
               fechaRevision: doseGroupStatus.latestReviewDate
             };
           } else {
-            // Procesar documentos normales con lógica mejorada de estado
-            const hasFile = doc.rutaArchivo && doc.rutaArchivo.trim() !== '';
-            const hasUploadDate = doc.fechaCargue && doc.fechaCargue.trim() !== '';
-            
-            let improvedStatus = doc.estado;
-            
-            // Si no tiene archivo ni fecha de carga, considerar sin cargar
-            if (!hasFile && !hasUploadDate) {
-              improvedStatus = 'sin cargar';
-            } else if (!doc.estado || doc.estado.trim() === '') {
-              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
-              improvedStatus = 'pendiente';
-            }
-            
-            return {
-              ...doc,
-              estado: improvedStatus
-            };
+            // Para documentos normales - usar el estado ya procesado por transformUserForManager
+            // Retornar el documento tal como viene de transformUserForManager
+            return doc;
           }
         });
         
@@ -299,11 +305,9 @@ const StudentDocumentManager = () => {
             doc.doseStatuses?.forEach(doseStatus => {
               switch (doseStatus.status?.toLowerCase()) {
                 case 'aprobado':
-                case 'cumplido':
                   stats.aprobados++;
                   break;
                 case 'pendiente':
-                case 'sin revisar':
                   stats.pendientes++;
                   break;
                 case 'rechazado':
@@ -322,11 +326,9 @@ const StudentDocumentManager = () => {
             // Para documentos normales
             switch (doc.estado?.toLowerCase()) {
               case 'aprobado':
-              case 'cumplido':
                 stats.aprobados++;
                 break;
               case 'pendiente':
-              case 'sin revisar':
                 stats.pendientes++;
                 break;
               case 'rechazado':
@@ -390,22 +392,44 @@ const StudentDocumentManager = () => {
             // Función mejorada para obtener estado de documento individual
             const getDocumentStatus = (userDoc, docType) => {
               // Si no hay documento cargado
-              if (!userDoc) return 'sin cargar';
+              if (!userDoc) {
+                return 'sin cargar';
+              }
               
               // Si existe el documento y tiene archivo o fecha de carga, está cargado
               const hasFile = userDoc.ruta_archivo && userDoc.ruta_archivo.trim() !== '';
               const hasUploadDate = userDoc.fecha_cargue && userDoc.fecha_cargue.trim() !== '';
               
               // Si no tiene archivo ni fecha de carga, considerar sin cargar
-              if (!hasFile && !hasUploadDate) return 'sin cargar';
+              if (!hasFile && !hasUploadDate) {
+                return 'sin cargar';
+              }
               
-              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
+              // Devolver el estado que tiene asignado
               if (!userDoc.estado || userDoc.estado.trim() === '') {
                 return 'pendiente';
               }
               
-              // Devolver el estado que tiene asignado
-              return userDoc.estado;
+              // Normalizar el estado a los valores estándar
+              const estadoOriginal = userDoc.estado.toLowerCase().trim();
+              switch (estadoOriginal) {
+                case 'aprobado':
+                case 'cumplido':
+                  return 'aprobado';
+                case 'rechazado':
+                  return 'rechazado';
+                case 'vencido':
+                case 'expirado':
+                  return 'vencido';
+                case 'pendiente':
+                case 'sin revisar':
+                  return 'pendiente';
+                case 'sin cargar':
+                  return 'sin cargar';
+                default:
+                  console.warn(`Estado no reconocido: ${estadoOriginal}, usando 'pendiente' como fallback`);
+                  return 'pendiente';
+              }
             };
             
             // Obtener estado consolidado del grupo de dosis
@@ -431,24 +455,9 @@ const StudentDocumentManager = () => {
               fechaRevision: doseGroupStatus.latestReviewDate
             };
           } else {
-            // Procesar documentos normales con lógica mejorada de estado
-            const hasFile = doc.rutaArchivo && doc.rutaArchivo.trim() !== '';
-            const hasUploadDate = doc.fechaCargue && doc.fechaCargue.trim() !== '';
-            
-            let improvedStatus = doc.estado;
-            
-            // Si no tiene archivo ni fecha de carga, considerar sin cargar
-            if (!hasFile && !hasUploadDate) {
-              improvedStatus = 'sin cargar';
-            } else if (!doc.estado || doc.estado.trim() === '') {
-              // Si tiene archivo o fecha de carga pero no estado, considerar pendiente
-              improvedStatus = 'pendiente';
-            }
-            
-            return {
-              ...doc,
-              estado: improvedStatus
-            };
+            // Para documentos normales - usar el estado ya procesado por transformUserForManager
+            // Retornar el documento tal como viene de transformUserForManager
+            return doc;
           }
         });
         
@@ -469,11 +478,9 @@ const StudentDocumentManager = () => {
             doc.doseStatuses?.forEach(doseStatus => {
               switch (doseStatus.status?.toLowerCase()) {
                 case 'aprobado':
-                case 'cumplido':
                   stats.aprobados++;
                   break;
                 case 'pendiente':
-                case 'sin revisar':
                   stats.pendientes++;
                   break;
                 case 'rechazado':
@@ -492,11 +499,9 @@ const StudentDocumentManager = () => {
             // Para documentos normales
             switch (doc.estado?.toLowerCase()) {
               case 'aprobado':
-              case 'cumplido':
                 stats.aprobados++;
                 break;
               case 'pendiente':
-              case 'sin revisar':
                 stats.pendientes++;
                 break;
               case 'rechazado':

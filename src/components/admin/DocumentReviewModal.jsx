@@ -70,15 +70,16 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     // Mapear estados antiguos a nuevos si es necesario
     const currentState = document.estado || '';
     switch (currentState.toLowerCase()) {
-      case 'aprobado':
-        return 'Cumplido';
+      case 'cumplido':
+        return 'aprobado';
       case 'rechazado':
-        return 'Rechazado';
-      case 'vencido':
-        return 'Expirado';
+        return 'rechazado';
+      case 'expirado':
+        return 'vencido';
       case 'pendiente':
+        return 'pendiente';
       default:
-        return 'Cumplido'; // Por defecto, sugerir como cumplido para revisión
+        return 'pendiente'; // Por defecto, dejar como pendiente para revisión
     }
   });
   const [fechaRevision, setFechaRevision] = useState(() => {
@@ -101,15 +102,16 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       // Mapear estados antiguos a nuevos si es necesario
       const currentState = document.estado || '';
       switch (currentState.toLowerCase()) {
-        case 'aprobado':
-          return 'Cumplido';
+        case 'cumplido':
+          return 'aprobado';
         case 'rechazado':
-          return 'Rechazado';
-        case 'vencido':
-          return 'Expirado';
+          return 'rechazado';
+        case 'expirado':
+          return 'vencido';
         case 'pendiente':
+          return 'pendiente';
         default:
-          return 'Cumplido'; // Por defecto, sugerir como cumplido para revisión
+          return 'pendiente'; // Por defecto, dejar como pendiente para revisión
       }
     });
     setFechaRevision(document.fechaRevision || new Date().toISOString().split('T')[0]);
@@ -169,7 +171,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     }
 
     // Si el estado es rechazado, requerir comentario
-    if (estado === 'Rechazado' && !comentario.trim()) {
+    if (estado === 'rechazado' && !comentario.trim()) {
       errors.comentario = 'Debe proporcionar un motivo del rechazo';
       isValid = false;
     }
@@ -265,10 +267,12 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const getStateColor = (state) => {
     switch (state?.toLowerCase()) {
       case 'cumplido':
+      case 'aprobado':
         return 'success';
       case 'rechazado':
         return 'error';
       case 'expirado':
+      case 'vencido':
         return 'warning';
       case 'no aplica':
         return 'default';
@@ -403,10 +407,10 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                   label="Estado del Documento"
                   disabled={loading}
                 >
-                  <MenuItem value="Cumplido">Cumplido</MenuItem>
-                  <MenuItem value="Rechazado">Rechazado</MenuItem>
-                  <MenuItem value="Expirado">Expirado</MenuItem>
-                  <MenuItem value="No aplica">No aplica</MenuItem>
+                  <MenuItem value="cumplido">Cumplido</MenuItem>
+                  <MenuItem value="rechazado">Rechazado</MenuItem>
+                  <MenuItem value="expirado">Expirado</MenuItem>
+                  <MenuItem value="no aplica">No aplica</MenuItem>
                 </Select>
                 {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
               </FormControl>
@@ -481,11 +485,11 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                 placeholder="Ingrese comentarios sobre el documento..."
                 disabled={loading}
                 error={!!formErrors.comentario}
-                helperText={formErrors.comentario || (estado === 'Rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
+                helperText={formErrors.comentario || (estado === 'rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
               />
             </Grid>
             
-            {estado === 'Rechazado' && (
+            {estado === 'rechazado' && (
               <Grid item xs={12}>
                 <Alert severity="info">
                   Al rechazar un documento, es importante proporcionar un motivo claro para que el estudiante pueda corregirlo adecuadamente.

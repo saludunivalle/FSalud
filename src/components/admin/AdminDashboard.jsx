@@ -42,7 +42,6 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import ReportGeneratorModal from './ReportGeneratorModal';
 import { getAllUsers, transformUsersForDashboard, getUsersWithDocumentStats } from '../../services/userService';
-import { getDocumentStatistics } from '../../services/docsService';
 
 // Tema personalizado
 const theme = createTheme({
@@ -104,14 +103,10 @@ const AdminDashboard = () => {
       try {
         console.log('Cargando datos de usuarios y estadísticas...');
         
-        // Obtener usuarios con estadísticas de documentos y estadísticas generales en paralelo
-        const [usersWithStats, statsResponse] = await Promise.all([
-          getUsersWithDocumentStats(),
-          getDocumentStatistics()
-        ]);
+        // Obtener usuarios con estadísticas de documentos (no necesitamos estadísticas generales del backend)
+        const usersWithStats = await getUsersWithDocumentStats();
         
         console.log('Respuesta de usuarios con estadísticas:', usersWithStats);
-        console.log('Respuesta de estadísticas:', statsResponse);
         
         // Verificar que tenemos datos reales
         if (!usersWithStats || usersWithStats.length === 0) {
@@ -155,23 +150,30 @@ const AdminDashboard = () => {
         
         setStudents(transformedUsers);
         
-        // Procesar estadísticas reales de documentos
-        const documentStats = statsResponse.data || statsResponse || {};
+        // Calcular TODAS las estadísticas en el frontend para asegurar consistencia
         const approvedStudents = transformedUsers.filter(student => student.completado).length;
         const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
         
-        setStats({
-          pendingDocuments: documentStats.porEstado?.pendiente || 0,
-          approvedStudents: approvedStudents,
-          usersWithoutUploads: usersWithoutUploads,
-          rejectedDocuments: documentStats.porEstado?.rechazado || 0,
-          expiredDocuments: documentStats.vencidos || 0
+        // Sumar todos los documentos pendientes/rechazados/vencidos de todos los usuarios
+        const totalPendingDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosPendientes, 0);
+        const totalRejectedDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosRechazados, 0);
+        const totalExpiredDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosVencidos, 0);
+        
+        console.log('📊 Estadísticas calculadas en frontend:', {
+          totalUsuarios: transformedUsers.length,
+          usuariosCompletos: approvedStudents,
+          usuariosSinCargar: usersWithoutUploads,
+          documentosPendientes: totalPendingDocuments,
+          documentosRechazados: totalRejectedDocuments,
+          documentosVencidos: totalExpiredDocuments
         });
         
-        console.log('✅ Datos cargados exitosamente desde la API:', {
-          totalUsuarios: transformedUsers.length,
-          usuariosConDatosReales: transformedUsers.filter(u => u.totalDocumentosRequeridos !== undefined).length,
-          promedioDocumentosAprobados: (transformedUsers.reduce((sum, u) => sum + u.documentosAprobados, 0) / transformedUsers.length).toFixed(2)
+        setStats({
+          pendingDocuments: totalPendingDocuments,
+          approvedStudents: approvedStudents,
+          usersWithoutUploads: usersWithoutUploads,
+          rejectedDocuments: totalRejectedDocuments,
+          expiredDocuments: totalExpiredDocuments
         });
         
       } catch (error) {
@@ -202,10 +204,8 @@ const AdminDashboard = () => {
       try {
         console.log('Recargando datos...');
         
-        const [usersWithStats, statsResponse] = await Promise.all([
-          getUsersWithDocumentStats(),
-          getDocumentStatistics()
-        ]);
+        // Obtener usuarios con estadísticas de documentos (no necesitamos estadísticas generales del backend)
+        const usersWithStats = await getUsersWithDocumentStats();
         
         // Verificar que tenemos datos reales
         if (!usersWithStats || usersWithStats.length === 0) {
@@ -220,16 +220,21 @@ const AdminDashboard = () => {
         
         setStudents(transformedUsers);
         
-        const documentStats = statsResponse.data || statsResponse || {};
+        // Calcular TODAS las estadísticas en el frontend para asegurar consistencia
         const approvedStudents = transformedUsers.filter(student => student.completado).length;
         const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
         
+        // Sumar todos los documentos pendientes/rechazados/vencidos de todos los usuarios
+        const totalPendingDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosPendientes, 0);
+        const totalRejectedDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosRechazados, 0);
+        const totalExpiredDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosVencidos, 0);
+        
         setStats({
-          pendingDocuments: documentStats.porEstado?.pendiente || 0,
+          pendingDocuments: totalPendingDocuments,
           approvedStudents: approvedStudents,
           usersWithoutUploads: usersWithoutUploads,
-          rejectedDocuments: documentStats.porEstado?.rechazado || 0,
-          expiredDocuments: documentStats.vencidos || 0
+          rejectedDocuments: totalRejectedDocuments,
+          expiredDocuments: totalExpiredDocuments
         });
         
         console.log('✅ Datos recargados exitosamente desde la API:', {
@@ -463,7 +468,7 @@ const AdminDashboard = () => {
                   fontWeight: 'bold', 
                   color: statusFilter === 'Completos' ? 'white' : 'success.main' 
                 }}>
-                  {stats.approvedStudents}
+                  {students.reduce((sum, student) => sum + student.documentosAprobados, 0)}
                 </Typography>
               </Box>
               <Box>
@@ -479,7 +484,7 @@ const AdminDashboard = () => {
                   lineHeight: 1.2,
                   fontSize: '0.7rem'
                 }}>
-                  Documentación completa
+                  Documentos aprobados
                 </Typography>
               </Box>
             </Card>
@@ -946,6 +951,30 @@ const AdminDashboard = () => {
                                 }} 
                               />
                             </Tooltip>
+
+                            {/* Indicador de Aprobados - siempre visible */}
+                            <Tooltip title={`${student.documentosAprobados} documentos aprobados`}>
+                              <Chip 
+                                size="small" 
+                                label={student.documentosAprobados} 
+                                sx={{ 
+                                  bgcolor: student.documentosAprobados > 0 ? 'success.light' : 'rgba(76, 175, 80, 0.1)', 
+                                  color: student.documentosAprobados > 0 ? 'success.dark' : 'rgba(76, 175, 80, 0.5)',
+                                  fontWeight: 'bold',
+                                  fontSize: '0.7rem',
+                                  minWidth: '25px',
+                                  height: '24px',
+                                  opacity: student.documentosAprobados > 0 ? 1 : 0.6,
+                                  border: student.documentosAprobados > 0 
+                                    ? '2px solid #4caf50' 
+                                    : '1px solid rgba(76, 175, 80, 0.2)',
+                                  transform: student.documentosAprobados > 0 ? 'scale(1.1)' : 'scale(1)',
+                                  boxShadow: student.documentosAprobados > 0 
+                                    ? '0 2px 8px rgba(76, 175, 80, 0.3)' 
+                                    : 'none'
+                                }} 
+                              />
+                            </Tooltip>
                             
                             {/* Indicador de Pendientes - siempre visible */}
                             <Tooltip title={`${student.documentosPendientes || 0} documentos pendientes de revisión`}>
@@ -1007,24 +1036,7 @@ const AdminDashboard = () => {
                                 }} 
                               />
                             </Tooltip>
-                            
-                            {/* Indicador de Sin Cargar - siempre visible */}
-                            <Tooltip title={`${student.documentosSinCargar} sin cargar`}>
-                              <Chip 
-                                size="small" 
-                                label={student.documentosSinCargar} 
-                                sx={{ 
-                                  bgcolor: student.documentosSinCargar > 0 ? '#f5f5f5' : 'rgba(97, 97, 97, 0.1)', 
-                                  color: student.documentosSinCargar > 0 ? '#616161' : 'rgba(97, 97, 97, 0.5)',
-                                  fontWeight: 'bold',
-                                  fontSize: '0.7rem',
-                                  minWidth: '25px',
-                                  height: '24px',
-                                  opacity: student.documentosSinCargar > 0 ? 1 : 0.6,
-                                  border: student.documentosSinCargar > 0 ? '1px solid #e0e0e0' : '1px solid rgba(97, 97, 97, 0.2)'
-                                }} 
-                              />
-                            </Tooltip>
+
                           </Box>
                         </TableCell>
                       </TableRow>

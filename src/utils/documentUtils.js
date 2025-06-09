@@ -140,10 +140,10 @@ export const getDoseGroupStatus = (doseGroup, userDocuments, getDocumentStatus) 
   }
 
   // Determinar estado consolidado
-  const completedDoses = doseStatuses.filter(d => d.status === 'Aprobado' || d.status === 'aprobado' || d.status === 'cumplido').length;
-  const uploadedDoses = doseStatuses.filter(d => d.userDoc && d.status !== 'Sin cargar').length; // Dosis que han sido cargadas
-  const pendingDoses = doseStatuses.filter(d => d.status === 'Pendiente' || d.status === 'pendiente' || d.status === 'sin revisar').length;
-  const rejectedDoses = doseStatuses.filter(d => d.status === 'Rechazado' || d.status === 'rechazado').length;
+  const completedDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'aprobado').length;
+  const uploadedDoses = doseStatuses.filter(d => d.userDoc && d.status?.toLowerCase() !== 'sin cargar').length; // Dosis que han sido cargadas
+  const pendingDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'pendiente').length;
+  const rejectedDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'rechazado').length;
   const totalDosesCount = isCovid ? Math.max(doseStatuses.length, totalDoses) : totalDoses;
 
   // Extraer fechas más recientes de las dosis cargadas

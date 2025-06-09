@@ -155,14 +155,43 @@ export const getDocumentStatistics = async () => {
  * @param {object} reviewData - Datos de la revisión (estado, comentario)
  */
 export const reviewDocument = async (documentId, reviewData) => {
+  // Mapeo de estados del frontend al backend para asegurar compatibilidad.
+  const estadoBackend = ((estado) => {
+    const estadoMinusculas = estado?.toLowerCase();
+    switch (estadoMinusculas) {
+      case 'aprobado':
+        return 'Aprobado';
+      case 'rechazado':
+        return 'Rechazado';
+      case 'vencido':
+        return 'Vencido';
+      case 'pendiente':
+        return 'Pendiente';
+      case 'sin cargar':
+        return 'Sin cargar';
+      default:
+        // Si el estado no es uno de los conocidos, se loguea y se envía tal cual.
+        console.warn(`Estado no mapeado detectado: '${estado}'. Se intentará enviar sin cambios.`);
+        return estado;
+    }
+  })(reviewData.estado);
+
+  // Crear una copia de los datos para no modificar el objeto original.
+  const dataToSend = {
+    ...reviewData,
+    estado: estadoBackend,
+  };
+
   try {
-    console.log(`Revisando documento ${documentId}:`, reviewData);
-    const response = await api.put(`/api/documentos/revisar/${documentId}`, reviewData);
+    console.log(`Revisando documento ${documentId} (datos para backend):`, dataToSend);
+    const response = await api.put(`/api/documentos/revisar/${documentId}`, dataToSend);
     console.log('Respuesta revisión documento:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error revisando documento:', error);
-    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al revisar el documento');
+    // Extraer un mensaje de error más claro si está disponible
+    const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al revisar el documento';
+    throw new Error(errorMessage);
   }
 };
 
