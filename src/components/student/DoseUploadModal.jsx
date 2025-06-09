@@ -378,80 +378,76 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
               )}
 
               <Grid item xs={12}>
-                <Box
-                  sx={{
-                    border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
-                    borderRadius: 2,
-                    p: 2,
-                    textAlign: 'center',
-                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
-                    '&:hover': {
-                      backgroundColor: '#f0f0f0',
-                      borderColor: '#aaa'
-                    },
-                    cursor: 'pointer',
-                    position: 'relative'
-                  }}
+                <label
+                  htmlFor="dose-file-upload"
+                  style={{ display: 'block', cursor: 'pointer' }}
                 >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    style={{
-                      position: 'absolute',
-                      width: '100%',
-                      height: '100%',
-                      top: 0,
-                      left: 0,
-                      opacity: 0,
-                      cursor: 'pointer'
+                  <Box
+                    sx={{
+                      border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
+                      borderRadius: 2,
+                      p: 2,
+                      textAlign: 'center',
+                      backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: '#f0f0f0',
+                        borderColor: '#aaa'
+                      }
                     }}
-                    onChange={handleFileChange}
-                  />
-                  {previewUrl ? (
-                    <Box>
-                      {file?.type === 'application/pdf' ? (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          flexDirection: 'column' 
-                        }}>
-                          <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
-                          <Typography variant="body1">
-                            <strong>PDF:</strong> {file.name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box>
-                          <img
-                            src={previewUrl}
-                            alt="Vista previa"
-                            style={{ 
-                              maxHeight: '200px', 
-                              maxWidth: '100%', 
-                              display: 'block', 
-                              margin: '0 auto' 
-                            }}
-                          />
-                          <Typography variant="body2" mt={1}>
-                            {file?.name}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  ) : (
-                    <Box py={3}>
-                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
-                      <Typography variant="body1" gutterBottom>
-                        Haz clic o arrastra un archivo aquí
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        PDF, JPG, PNG (Máx. 5MB)
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                  >
+                    <input
+                      id="dose-file-upload"
+                      type="file"
+                      ref={fileInputRef}
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      style={{ display: 'none' }}
+                      onChange={handleFileChange}
+                    />
+                    {previewUrl ? (
+                      <Box>
+                        {file?.type === 'application/pdf' ? (
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            flexDirection: 'column' 
+                          }}>
+                            <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
+                            <Typography variant="body1">
+                              <strong>PDF:</strong> {file.name}
+                            </Typography>
+                          </Box>
+                        ) : (
+                          <Box>
+                            <img
+                              src={previewUrl}
+                              alt="Vista previa"
+                              style={{ 
+                                maxHeight: '200px', 
+                                maxWidth: '100%', 
+                                display: 'block', 
+                                margin: '0 auto' 
+                              }}
+                            />
+                            <Typography variant="body2" mt={1}>
+                              {file?.name}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box py={3}>
+                        <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
+                        <Typography variant="body1" gutterBottom>
+                          Haz clic o arrastra un archivo aquí
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          PDF, JPG, PNG (Máx. 5MB)
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </label>
               </Grid>
             </Grid>
           </Box>
