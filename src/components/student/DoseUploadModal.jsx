@@ -159,34 +159,42 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
   };
 
   const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    
-    if (selectedFile && !validTypes.includes(selectedFile.type)) {
-      setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    
-    if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
-      setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    
-    setFile(selectedFile);
-    setError('');
+    try {
+      const selectedFile = event.target.files?.[0];
+      if (!selectedFile) return;
 
-    // Crear URL de vista previa para imágenes
-    if (selectedFile && selectedFile.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(selectedFile);
-    } else {
+      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      
+      if (!validTypes.includes(selectedFile.type)) {
+        setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
+        setFile(null);
+        setPreviewUrl('');
+        return;
+      }
+      
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
+        setFile(null);
+        setPreviewUrl('');
+        return;
+      }
+      
+      setFile(selectedFile);
+      setError('');
+
+      if (selectedFile.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(selectedFile);
+      } else {
+        setPreviewUrl('');
+      }
+    } catch (error) {
+      console.error('Error al procesar el archivo:', error);
+      setError('Error al procesar el archivo. Por favor, intenta nuevamente.');
+      setFile(null);
       setPreviewUrl('');
     }
   };
@@ -378,76 +386,74 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
               )}
 
               <Grid item xs={12}>
-                <label
-                  htmlFor="dose-file-upload"
-                  style={{ display: 'block', cursor: 'pointer' }}
+                <Button
+                  component="label"
+                  variant="outlined"
+                  fullWidth
+                  sx={{
+                    border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
+                    borderRadius: 2,
+                    p: 2,
+                    textAlign: 'center',
+                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
+                    '&:hover': {
+                      backgroundColor: '#f0f0f0',
+                      borderColor: '#aaa'
+                    },
+                    height: 'auto',
+                    textTransform: 'none'
+                  }}
                 >
-                  <Box
-                    sx={{
-                      border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
-                      borderRadius: 2,
-                      p: 2,
-                      textAlign: 'center',
-                      backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: '#f0f0f0',
-                        borderColor: '#aaa'
-                      }
-                    }}
-                  >
-                    <input
-                      id="dose-file-upload"
-                      type="file"
-                      ref={fileInputRef}
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      style={{ display: 'none' }}
-                      onChange={handleFileChange}
-                    />
-                    {previewUrl ? (
-                      <Box>
-                        {file?.type === 'application/pdf' ? (
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            flexDirection: 'column' 
-                          }}>
-                            <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
-                            <Typography variant="body1">
-                              <strong>PDF:</strong> {file.name}
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Box>
-                            <img
-                              src={previewUrl}
-                              alt="Vista previa"
-                              style={{ 
-                                maxHeight: '200px', 
-                                maxWidth: '100%', 
-                                display: 'block', 
-                                margin: '0 auto' 
-                              }}
-                            />
-                            <Typography variant="body2" mt={1}>
-                              {file?.name}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    ) : (
-                      <Box py={3}>
-                        <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
-                        <Typography variant="body1" gutterBottom>
-                          Haz clic o arrastra un archivo aquí
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          PDF, JPG, PNG (Máx. 5MB)
-                        </Typography>
-                      </Box>
-                    )}
-                  </Box>
-                </label>
+                  <input
+                    type="file"
+                    hidden
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                  />
+                  {previewUrl ? (
+                    <Box width="100%">
+                      {file?.type === 'application/pdf' ? (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          flexDirection: 'column' 
+                        }}>
+                          <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
+                          <Typography variant="body1">
+                            <strong>PDF:</strong> {file.name}
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <Box>
+                          <img
+                            src={previewUrl}
+                            alt="Vista previa"
+                            style={{ 
+                              maxHeight: '200px', 
+                              maxWidth: '100%', 
+                              display: 'block', 
+                              margin: '0 auto' 
+                            }}
+                          />
+                          <Typography variant="body2" mt={1}>
+                            {file?.name}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  ) : (
+                    <Box py={3} width="100%">
+                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
+                      <Typography variant="body1" gutterBottom>
+                        Haz clic o arrastra un archivo aquí
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        PDF, JPG, PNG (Máx. 5MB)
+                      </Typography>
+                    </Box>
+                  )}
+                </Button>
               </Grid>
             </Grid>
           </Box>
