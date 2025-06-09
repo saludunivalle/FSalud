@@ -165,7 +165,7 @@ export const reviewDocument = async (documentId, reviewData) => {
     throw new Error(`Estado '${estado}' no válido. Estados válidos: ${estadosValidos.join(', ')}`);
   }
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('google_token');
   if (!token) {
     throw new Error('Token de autenticación no encontrado');
   }
@@ -181,9 +181,9 @@ export const reviewDocument = async (documentId, reviewData) => {
       case 'vencido':
         return 'Expirado';
       case 'pendiente':
-        return 'Pendiente';
+        return 'No aplica';
       case 'sin cargar':
-        return 'Sin cargar';
+        return 'No aplica';
       default:
         // Este error no debería ocurrir gracias a la validación anterior
         throw new Error(`Estado '${estado}' no se pudo mapear a un estado de backend.`);
