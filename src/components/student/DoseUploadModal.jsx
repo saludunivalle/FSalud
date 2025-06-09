@@ -158,6 +158,12 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     );
   };
 
+  const handleFileClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   const handleFileChange = (event) => {
     const selectedFile = event.target.files[0];
     const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
@@ -178,67 +184,67 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     
     setFile(selectedFile);
     setError('');
+
+    // Crear URL de vista previa para imágenes
+    if (selectedFile && selectedFile.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result);
+      };
+      reader.readAsDataURL(selectedFile);
+    } else {
+      setPreviewUrl('');
+    }
   };
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    setError('');
-
-    if (!expeditionDate) {
-      setError('La fecha de expedición es requerida.');
-      return;
-    }
-
-    if (!file) {
-      setError('Selecciona un archivo para cargar.');
-      return;
-    }
-
-    const expeditionDateObj = new Date(expeditionDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    if (expeditionDateObj > today) {
-      setError('La fecha de expedición no puede ser posterior a hoy.');
-      return;
-    }
-
-    if (expirationDate) {
-      const expirationDateObj = new Date(expirationDate);
-      if (expirationDateObj < expeditionDateObj) {
-        setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición.');
-        return;
-      }
-    }
-
+    e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
+      // Validar fecha de expedición
+      if (!expeditionDate) {
+        throw new Error('La fecha de expedición es requerida');
+      }
+
+      // Validar que la fecha de expedición no sea futura
+      const expDate = new Date(expeditionDate);
+      const today = new Date();
+      if (expDate > today) {
+        throw new Error('La fecha de expedición no puede ser futura');
+      }
+
+      // Validar archivo
+      if (!file) {
+        throw new Error('Por favor, selecciona un archivo');
+      }
+
+      // Crear FormData
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('userId', user.id_usuario || user.id);
+      formData.append('userId', user.id);
       formData.append('documentType', document.id_doc);
-      formData.append('numeroDosis', document.doseNumber);
       formData.append('expeditionDate', expeditionDate);
-      if (expirationDate) {
-        formData.append('expirationDate', expirationDate);
-      }
-      formData.append('userName', user.name || user.nombre || 'Usuario');
-      formData.append('userEmail', user.email || 'unknown@example.com');
-
-      console.log("Submitting FormData to /api/documentos/subir (DoseUploadModal):");
-      for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}: ${value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value}`);
+      
+      // Solo agregar fecha de vencimiento si el documento vence
+      if (document.vence === 'si' && document.tiempo_vencimiento) {
+        const expDate = new Date(expeditionDate);
+        expDate.setMonth(expDate.getMonth() + parseInt(document.tiempo_vencimiento));
+        const formattedExpirationDate = expDate.toISOString().split('T')[0];
+        formData.append('expirationDate', formattedExpirationDate);
       }
 
+      formData.append('userName', `${user.nombre} ${user.apellido}`);
+      formData.append('userEmail', user.email);
+      formData.append('numeroDosis', document.doseNumber);
+
+      // Subir documento
       const response = await axios.post(`${BASE_URL}/api/documentos/subir`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+          'Content-Type': 'multipart/form-data'
+        }
       });
-
-      console.log("Server Response (DoseUploadModal):", response.data);
 
       if (response.data.success) {
         setSuccess(true);
@@ -247,11 +253,11 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
           onClose();
         }, 2000);
       } else {
-        setError(response.data.message || 'Error al cargar el documento');
+        throw new Error(response.data.error || 'Error al subir el documento');
       }
-    } catch (err) {
-      console.error('Error uploading document:', err);
-      setError(err.response?.data?.message || 'Error al cargar el documento');
+    } catch (error) {
+      console.error('Error al subir documento:', error);
+      setError(error.message || 'Error al subir el documento');
     } finally {
       setLoading(false);
     }

@@ -457,7 +457,12 @@ const Dashboard = () => {
 
   const handleViewDose = (doseInfo) => {
     if (doseInfo.userDoc?.ruta_archivo) {
-      window.open(doseInfo.userDoc.ruta_archivo, '_blank', 'noopener,noreferrer');
+      // Abrir el archivo en una nueva pestaña
+      const link = document.createElement('a');
+      link.href = doseInfo.userDoc.ruta_archivo;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.click();
     }
     handleViewMenuClose();
   };

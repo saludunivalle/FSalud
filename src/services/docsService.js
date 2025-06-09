@@ -160,19 +160,17 @@ export const reviewDocument = async (documentId, reviewData) => {
     const estadoMinusculas = estado?.toLowerCase();
     switch (estadoMinusculas) {
       case 'aprobado':
-        return 'Aprobado';
+        return 'Cumplido';
       case 'rechazado':
         return 'Rechazado';
       case 'vencido':
-        return 'Vencido';
+        return 'Expirado';
       case 'pendiente':
         return 'Pendiente';
       case 'sin cargar':
         return 'Sin cargar';
       default:
-        // Si el estado no es uno de los conocidos, se loguea y se envía tal cual.
-        console.warn(`Estado no mapeado detectado: '${estado}'. Se intentará enviar sin cambios.`);
-        return estado;
+        throw new Error(`Estado '${estado}' no válido. Estados válidos: Aprobado, Rechazado, Vencido, Pendiente, Sin cargar`);
     }
   })(reviewData.estado);
 

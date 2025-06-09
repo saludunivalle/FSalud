@@ -71,13 +71,17 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
     const currentState = document.estado || '';
     switch (currentState.toLowerCase()) {
       case 'cumplido':
+      case 'aprobado':
         return 'aprobado';
       case 'rechazado':
         return 'rechazado';
       case 'expirado':
+      case 'vencido':
         return 'vencido';
       case 'pendiente':
         return 'pendiente';
+      case 'sin cargar':
+        return 'sin cargar';
       default:
         return 'pendiente'; // Por defecto, dejar como pendiente para revisión
     }
@@ -103,13 +107,17 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       const currentState = document.estado || '';
       switch (currentState.toLowerCase()) {
         case 'cumplido':
+        case 'aprobado':
           return 'aprobado';
         case 'rechazado':
           return 'rechazado';
         case 'expirado':
+        case 'vencido':
           return 'vencido';
         case 'pendiente':
           return 'pendiente';
+        case 'sin cargar':
+          return 'sin cargar';
         default:
           return 'pendiente'; // Por defecto, dejar como pendiente para revisión
       }
