@@ -155,6 +155,21 @@ export const getDocumentStatistics = async () => {
  * @param {object} reviewData - Datos de la revisión (estado, comentario)
  */
 export const reviewDocument = async (documentId, reviewData) => {
+  const { estado, comentario, fecha_vencimiento } = reviewData;
+
+  // Frontend validation before sending to backend (case-insensitive)
+  const estadosValidos = ['Aprobado', 'Rechazado', 'Vencido', 'Pendiente', 'Sin cargar'];
+  const estadoNormalizado = estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
+
+  if (!estadosValidos.map(s => s.toLowerCase()).includes(estado.toLowerCase())) {
+    throw new Error(`Estado '${estado}' no válido. Estados válidos: ${estadosValidos.join(', ')}`);
+  }
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    throw new Error('Token de autenticación no encontrado');
+  }
+
   // Mapeo de estados del frontend al backend para asegurar compatibilidad.
   const estadoBackend = ((estado) => {
     const estadoMinusculas = estado?.toLowerCase();
@@ -170,9 +185,10 @@ export const reviewDocument = async (documentId, reviewData) => {
       case 'sin cargar':
         return 'Sin cargar';
       default:
-        throw new Error(`Estado '${estado}' no válido. Estados válidos: Aprobado, Rechazado, Vencido, Pendiente, Sin cargar`);
+        // Este error no debería ocurrir gracias a la validación anterior
+        throw new Error(`Estado '${estado}' no se pudo mapear a un estado de backend.`);
     }
-  })(reviewData.estado);
+  })(estadoNormalizado);
 
   // Crear una copia de los datos para no modificar el objeto original.
   const dataToSend = {

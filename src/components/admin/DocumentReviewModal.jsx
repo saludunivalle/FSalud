@@ -66,10 +66,10 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState(null);
   
-  const [estado, setEstado] = useState(() => {
-    // Mapear estados antiguos a nuevos si es necesario
-    const currentState = document.estado || '';
-    switch (currentState.toLowerCase()) {
+  // Normaliza el estado que viene del backend a un estado de frontend estandarizado
+  const getNormalizedState = (backendState) => {
+    const state = backendState?.toLowerCase() || '';
+    switch (state) {
       case 'cumplido':
       case 'aprobado':
         return 'aprobado';
@@ -79,17 +79,17 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       case 'vencido':
         return 'vencido';
       case 'pendiente':
+      case 'sin revisar':
         return 'pendiente';
       case 'sin cargar':
         return 'sin cargar';
       default:
-        return 'pendiente'; // Por defecto, dejar como pendiente para revisión
+        return 'pendiente';
     }
-  });
-  const [fechaRevision, setFechaRevision] = useState(() => {
-    // Si ya tiene fecha de revisión, usarla; si no, usar la fecha actual
-    return document.fechaRevision || new Date().toISOString().split('T')[0];
-  });
+  };
+
+  const [estado, setEstado] = useState(() => getNormalizedState(document.estado));
+  const [fechaRevision, setFechaRevision] = useState(() => document.fechaRevision || new Date().toISOString().split('T')[0]);
   const [fechaVencimiento, setFechaVencimiento] = useState(document.fechaVencimiento || '');
   const [comentario, setComentario] = useState(document.comentarios || '');
   
@@ -102,26 +102,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
 
   useEffect(() => {
     // Resetear estados cuando cambia el documento
-    setEstado(() => {
-      // Mapear estados antiguos a nuevos si es necesario
-      const currentState = document.estado || '';
-      switch (currentState.toLowerCase()) {
-        case 'cumplido':
-        case 'aprobado':
-          return 'aprobado';
-        case 'rechazado':
-          return 'rechazado';
-        case 'expirado':
-        case 'vencido':
-          return 'vencido';
-        case 'pendiente':
-          return 'pendiente';
-        case 'sin cargar':
-          return 'sin cargar';
-        default:
-          return 'pendiente'; // Por defecto, dejar como pendiente para revisión
-      }
-    });
+    setEstado(getNormalizedState(document.estado));
     setFechaRevision(document.fechaRevision || new Date().toISOString().split('T')[0]);
     setFechaVencimiento(document.fechaVencimiento || '');
     setComentario(document.comentarios || '');
@@ -193,67 +174,35 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
       return;
     }
 
-    setLoading(true);
-    setError('');
-
     try {
-      // Preparar datos para enviar al backend según las columnas de DOCUMENTOS_USUARIOS
-      const reviewData = {
-        estado,
-        comentario,
+      setLoading(true);
+      setError(null);
+      setSuccess(false);
+      
+      const normalizedState = estado.charAt(0).toUpperCase() + estado.slice(1);
+      
+      await reviewDocument(document.id_usuarioDoc, {
+        estado: normalizedState,
+        comentario: comentario,
         fecha_revision: fechaRevision,
-        // Si hay fecha de vencimiento, incluirla
         ...(fechaVencimiento && { fecha_vencimiento: fechaVencimiento })
-      };
+      });
 
-      console.log('Enviando datos de revisión:', reviewData);
-
-      // Llamar a la API real
-      const response = await reviewDocument(
-        document.id_usuarioDoc,
-        reviewData
-      );
-
-      if (response.success) {
-        // Mostrar mensaje de éxito con notificación
-        setSuccessMessage({
-          title: 'Documento actualizado',
-          message: response.message,
-          notification: response.notification
+      setSuccess(true);
+      setTimeout(() => {
+        onClose({
+          ...document,
+          estado,
+          fechaRevision,
+          fechaVencimiento: document.vence ? fechaVencimiento : null,
+          comentarios: comentario,
+          fecha_revision: fechaRevision
         });
-        setSuccess(true);
-        
-        // Cerrar el modal después de mostrar el mensaje de éxito
-        setTimeout(() => {
-          onClose({
-            ...document,
-            estado,
-            fechaRevision,
-            fechaVencimiento: document.vence ? fechaVencimiento : null,
-            comentarios: comentario,
-            fecha_revision: fechaRevision
-          });
-        }, 2000); // Dar más tiempo para leer el mensaje
-      }
-    } catch (err) {
-      // Manejar diferentes tipos de errores
-      let errorMessage = 'Ha ocurrido un error al guardar los cambios. Intente nuevamente.';
-      
-      if (err.response) {
-        // Error de la API
-        errorMessage = err.response.data.error || errorMessage;
-        
-        // Si es un error de validación, mostrar los detalles
-        if (err.response.data.details) {
-          console.error('Detalles del error:', err.response.data.details);
-        }
-      } else if (err.request) {
-        // Error de red
-        errorMessage = 'Error de conexión. Verifique su conexión a internet.';
-      }
-      
-      setError(errorMessage);
-      console.error('Error al revisar documento:', err);
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error al revisar documento:', error);
+      setError(error.message || 'Ocurrió un error al guardar la revisión.');
     } finally {
       setLoading(false);
     }
@@ -325,12 +274,12 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                     </svg>
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    {successMessage.title}
+                    {successMessage?.title}
                   </h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    {successMessage.message}
+                    {successMessage?.message}
                   </p>
-                  {successMessage.notification && (
+                  {successMessage?.notification && (
                     <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
                       <div className="flex">
                         <div className="flex-shrink-0">
@@ -340,7 +289,7 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                         </div>
                         <div className="ml-3">
                           <p className="text-sm text-blue-700">
-                            {successMessage.notification}
+                            {successMessage?.notification}
                           </p>
                         </div>
                       </div>
@@ -415,10 +364,10 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
                   label="Estado del Documento"
                   disabled={loading}
                 >
-                  <MenuItem value="cumplido">Cumplido</MenuItem>
+                  <MenuItem value="aprobado">Aprobado</MenuItem>
                   <MenuItem value="rechazado">Rechazado</MenuItem>
-                  <MenuItem value="expirado">Expirado</MenuItem>
-                  <MenuItem value="no aplica">No aplica</MenuItem>
+                  <MenuItem value="vencido">Vencido</MenuItem>
+                  <MenuItem value="pendiente">Pendiente</MenuItem>
                 </Select>
                 {formErrors.estado && <FormHelperText>{formErrors.estado}</FormHelperText>}
               </FormControl>
