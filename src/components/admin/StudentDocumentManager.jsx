@@ -43,10 +43,12 @@ import {
   Search,
   Refresh,
   ExpandMore,
-  VaccinesOutlined
+  VaccinesOutlined,
+  CloudUpload
 } from '@mui/icons-material';
 import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import DocumentReviewModal from './DocumentReviewModal';
+import AdminDocumentUploadModal from './AdminDocumentUploadModal';
 import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager } from '../../services/userService';
 import { groupDocumentsByDose, getDoseGroupStatus } from '../../utils/documentUtils';
 
@@ -166,6 +168,8 @@ const StudentDocumentManager = () => {
   const [loading, setLoading] = useState(true);
   const [student, setStudent] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [selectedDocumentForUpload, setSelectedDocumentForUpload] = useState(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const [documentStats, setDocumentStats] = useState({
     aprobados: 0,
@@ -576,6 +580,22 @@ const StudentDocumentManager = () => {
     }
     
     setSelectedDocument(null);
+  };
+
+  const handleOpenUploadModal = (document) => {
+    setSelectedDocumentForUpload(document);
+    setUploadModalOpen(true);
+  };
+
+  const handleCloseUploadModal = () => {
+    setSelectedDocumentForUpload(null);
+    setUploadModalOpen(false);
+  };
+
+  const handleDocumentUploaded = async () => {
+    // Recargar los datos después de que se haya cargado un documento
+    console.log('Documento cargado por admin, recargando datos...');
+    await handleReload();
   };
 
   const formatDate = (dateString) => {
@@ -1065,12 +1085,13 @@ const StudentDocumentManager = () => {
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Vencimiento</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }}>Comentarios</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }} align="center">Acciones</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f9f9f9' }} align="center">Cargar</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filteredDocuments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} align="center">
+                    <TableCell colSpan={7} align="center">
                       <Typography variant="body1" sx={{ py: 2 }}>
                         {student?.documentos?.length === 0 ? 
                           'No hay documentos cargados para este usuario.' :
@@ -1087,7 +1108,7 @@ const StudentDocumentManager = () => {
                         key={`dose-group-${doc.id}`}
                         sx={{ backgroundColor: getRowBackground(doc.estado) }}
                       >
-                        <TableCell colSpan={6} sx={{ p: 0 }}>
+                        <TableCell colSpan={7} sx={{ p: 0 }}>
                           <Accordion 
                             sx={{ 
                               boxShadow: 'none',
@@ -1204,7 +1225,7 @@ const StudentDocumentManager = () => {
                                             </Typography>
                                           </Tooltip>
                                         )}
-                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                                           {doseInfo.userDoc?.ruta_archivo && (
                                             <Tooltip title="Ver documento">
                                               <IconButton
@@ -1220,6 +1241,41 @@ const StudentDocumentManager = () => {
                                               >
                                                 <Visibility fontSize="small" />
                                               </IconButton>
+                                            </Tooltip>
+                                          )}
+                                          
+                                          {/* Botón para cargar documento si está sin cargar */}
+                                          {doseInfo.status === 'sin cargar' && (
+                                            <Tooltip title="Cargar documento">
+                                              <Button
+                                                variant="contained"
+                                                size="small"
+                                                startIcon={<CloudUpload fontSize="inherit" />}
+                                                onClick={() => handleOpenUploadModal({
+                                                  id: doc.baseDoc.id_tipoDoc,
+                                                  nombre: `${doc.nombre} - ${doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') ? doseInfo.doseNumber : `Dosis ${doseInfo.doseNumber}`}`,
+                                                  vence: doc.vence,
+                                                  tiempo_vencimiento: doc.baseDoc?.tiempo_vencimiento
+                                                })}
+                                                sx={{ 
+                                                  px: 1.5, 
+                                                  py: 0.4, 
+                                                  minWidth: 'auto',
+                                                  fontSize: '0.65rem',
+                                                  backgroundColor: '#4CAF50',
+                                                  color: 'white',
+                                                  borderRadius: 1.5,
+                                                  boxShadow: '0 2px 6px rgba(76, 175, 80, 0.25)',
+                                                  '&:hover': {
+                                                    backgroundColor: '#45A049',
+                                                    boxShadow: '0 3px 10px rgba(76, 175, 80, 0.35)',
+                                                    transform: 'translateY(-1px)',
+                                                  },
+                                                  transition: 'all 0.2s ease-in-out'
+                                                }}
+                                              >
+                                                Cargar
+                                              </Button>
                                             </Tooltip>
                                           )}
                                           
@@ -1342,6 +1398,45 @@ const StudentDocumentManager = () => {
                             </Tooltip>
                           </Stack>
                         </TableCell>
+                        <TableCell align="center">
+                          {doc.estado === 'sin cargar' ? (
+                            <Tooltip title="Cargar documento para este usuario">
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<CloudUpload fontSize="small" />}
+                                onClick={() => handleOpenUploadModal({
+                                  id: doc.id,
+                                  nombre: doc.nombre,
+                                  vence: doc.vence,
+                                  tiempo_vencimiento: doc.tiempo_vencimiento
+                                })}
+                                sx={{ 
+                                  px: 2, 
+                                  py: 0.75, 
+                                  minWidth: 'auto',
+                                  fontSize: '0.75rem',
+                                  backgroundColor: '#e11025',
+                                  color: 'white',
+                                  borderRadius: 2,
+                                  boxShadow: '0 2px 8px rgba(175, 76, 81, 0.3)',
+                                  '&:hover': {
+                                    backgroundColor: '#b30718',
+                                    boxShadow: '0 4px 12px rgba(175, 76, 83, 0.4)',
+                                    transform: 'translateY(-1px)',
+                                  },
+                                  transition: 'all 0.2s ease-in-out'
+                                }}
+                              >
+                                Cargar archivo
+                              </Button>
+                            </Tooltip>
+                          ) : (
+                            <Typography variant="caption" color="text.secondary">
+                              —
+                            </Typography>
+                          )}
+                        </TableCell>
                       </TableRow>
                     )
                   ))
@@ -1358,6 +1453,17 @@ const StudentDocumentManager = () => {
           document={selectedDocument}
           onClose={handleCloseModal}
           studentName={`${student.nombre} ${student.apellido}`}
+        />
+      )}
+
+      {/* Modal de carga de documento por admin */}
+      {selectedDocumentForUpload && (
+        <AdminDocumentUploadModal
+          open={uploadModalOpen}
+          onClose={handleCloseUploadModal}
+          selectedDocument={selectedDocumentForUpload}
+          studentInfo={student}
+          onDocumentUploaded={handleDocumentUploaded}
         />
       )}
     </ThemeProvider>
