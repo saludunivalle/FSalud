@@ -49,7 +49,7 @@ import {
 import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import DocumentReviewModal from './DocumentReviewModal';
 import AdminDocumentUploadModal from './AdminDocumentUploadModal';
-import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager } from '../../services/userService';
+import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager, clearCache } from '../../services/userService';
 import { groupDocumentsByDose, getDoseGroupStatus } from '../../utils/documentUtils';
 
 // Tema personalizado
@@ -353,13 +353,25 @@ const StudentDocumentManager = () => {
         
       } catch (error) {
         console.error('Error cargando datos del estudiante:', error);
-        setError(error.message || 'Error al cargar los datos del estudiante');
         
-        // Si es un error 404, redirigir al dashboard después de un momento
-        if (error.message && error.message.includes('no encontrado')) {
+        // Manejo específico para errores de rate limiting
+        if (error.response?.status === 429 || 
+            (error.response?.status === 500 && error.message?.includes('Quota exceeded'))) {
+          setError('El sistema está experimentando una alta demanda. Los datos se cargarán automáticamente en unos segundos...');
+          
+          // Reintentar después de 10 segundos con mensaje específico
+          setTimeout(() => {
+            console.log('Reintentando carga automática después de rate limit...');
+            loadStudentData();
+          }, 10000);
+        } else if (error.message && error.message.includes('no encontrado')) {
+          setError(error.message || 'Usuario no encontrado');
+          // Si es un error 404, redirigir al dashboard después de un momento
           setTimeout(() => {
             navigate('/admin/dashboard');
           }, 3000);
+        } else {
+          setError(error.message || 'Error al cargar los datos del estudiante');
         }
       } finally {
         setLoading(false);
@@ -378,6 +390,10 @@ const StudentDocumentManager = () => {
       setError(null);
       
       try {
+        // Limpiar cache específico del usuario antes de recargar
+        clearCache(`user-${studentId}`);
+        clearCache(`user-docs-${studentId}`);
+        
         const [userResponse, documentsResponse, documentTypesResponse] = await Promise.all([
           getUserById(studentId),
           getUserDocumentsWithDetails(studentId),
@@ -526,7 +542,20 @@ const StudentDocumentManager = () => {
         
       } catch (error) {
         console.error('Error recargando datos:', error);
-        setError(error.message || 'Error al recargar los datos');
+        
+        // Manejo específico para errores de rate limiting en reload
+        if (error.response?.status === 429 || 
+            (error.response?.status === 500 && error.message?.includes('Quota exceeded'))) {
+          setError('Sistema con alta demanda, reintentando automáticamente...');
+          
+          // Reintentar después de 8 segundos
+          setTimeout(() => {
+            console.log('Reintentando reload automático después de rate limit...');
+            handleReload();
+          }, 8000);
+        } else {
+          setError(error.message || 'Error al recargar los datos');
+        }
       } finally {
         setLoading(false);
       }
@@ -574,8 +603,10 @@ const StudentDocumentManager = () => {
 
   const handleCloseModal = (updatedDoc = null) => {
     if (updatedDoc) {
-      // En lugar de actualizar manualmente el estado, recargar los datos
-      console.log('Documento actualizado, recargando datos...');
+      // Limpiar cache específico antes de recargar datos
+      console.log('Documento actualizado, limpiando cache y recargando datos...');
+      clearCache(`user-${studentId}`);
+      clearCache(`user-docs-${studentId}`);
       handleReload();
     }
     
@@ -593,8 +624,10 @@ const StudentDocumentManager = () => {
   };
 
   const handleDocumentUploaded = async () => {
-    // Recargar los datos después de que se haya cargado un documento
-    console.log('Documento cargado por admin, recargando datos...');
+    // Limpiar cache específico antes de recargar datos
+    console.log('Documento cargado por admin, limpiando cache y recargando datos...');
+    clearCache(`user-${studentId}`);
+    clearCache(`user-docs-${studentId}`);
     await handleReload();
   };
 
@@ -695,7 +728,18 @@ const StudentDocumentManager = () => {
             <Typography variant="h6">Error al cargar usuario</Typography>
           </Stack>
           
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert 
+            severity={error.includes('alta demanda') ? 'warning' : 'error'} 
+            sx={{ mb: 2 }}
+            action={
+              error.includes('alta demanda') ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CircularProgress size={16} />
+                  <Typography variant="caption">Reintentando...</Typography>
+                </Box>
+              ) : null
+            }
+          >
             {error}
           </Alert>
           
@@ -706,6 +750,16 @@ const StudentDocumentManager = () => {
               startIcon={<Refresh />}
             >
               Reintentar
+            </Button>
+            <Button 
+              variant="outlined" 
+              onClick={() => {
+                clearCache();
+                handleReload();
+              }}
+              startIcon={<Refresh />}
+            >
+              Limpiar Cache y Reintentar
             </Button>
             <Button 
               variant="outlined" 

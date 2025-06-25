@@ -2,6 +2,78 @@
 import api from './api';
 import axios from 'axios';
 
+// Sistema de caché simple
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+/**
+ * Utility function para hacer retry con backoff exponencial en el frontend
+ * @param {Function} fn - Función a ejecutar
+ * @param {number} retries - Número de reintentos
+ * @param {number} delay - Delay inicial en ms
+ * @returns {Promise} - Resultado de la función
+ */
+const retryWithBackoff = async (fn, retries = 3, delay = 1000) => {
+  try {
+    return await fn();
+  } catch (error) {
+    // Si es un error de rate limiting (429 o 500 con mensaje de quota) y aún tenemos reintentos
+    const isRateLimit = error.response?.status === 429 || 
+                       error.response?.status === 500 && 
+                       (error.response?.data?.message?.includes('Quota exceeded') || 
+                        error.message?.includes('Quota exceeded'));
+    
+    if (isRateLimit && retries > 0) {
+      console.log(`Rate limit detectado, esperando ${delay}ms antes de reintentar. Reintentos restantes: ${retries}`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return retryWithBackoff(fn, retries - 1, delay * 2); // Duplicar el delay
+    }
+    throw error;
+  }
+};
+
+/**
+ * Función helper para obtener datos con caché
+ * @param {string} cacheKey - Clave del caché
+ * @param {Function} fetchFn - Función para obtener datos
+ * @returns {Promise} - Datos cacheados o frescos
+ */
+const getWithCache = async (cacheKey, fetchFn) => {
+  const cached = cache.get(cacheKey);
+  
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    console.log(`Cache hit para: ${cacheKey}`);
+    return cached.data;
+  }
+  
+  console.log(`Cache miss para: ${cacheKey}, obteniendo datos frescos...`);
+  const data = await retryWithBackoff(fetchFn);
+  
+  cache.set(cacheKey, {
+    data,
+    timestamp: Date.now()
+  });
+  
+  return data;
+};
+
+/**
+ * Función para limpiar cache específico
+ * @param {string} pattern - Patrón para limpiar ciertas entradas
+ */
+export const clearCache = (pattern = null) => {
+  if (pattern) {
+    for (const key of cache.keys()) {
+      if (key.includes(pattern)) {
+        cache.delete(key);
+      }
+    }
+  } else {
+    cache.clear();
+  }
+  console.log('Cache limpiado:', pattern ? `patrón: ${pattern}` : 'completo');
+};
+
 export const getUserData = async (userId) => {
   try {
     const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/getUser`, {
@@ -28,55 +100,51 @@ export const updateUserData = async (userId, userData) => {
 
 // Nueva función para obtener todos los usuarios
 export const getAllUsers = async () => {
-  try {
+  return getWithCache('all-users', async () => {
     console.log('Obteniendo todos los usuarios...');
     const response = await api.get('/api/users/all');
     console.log('Respuesta getAllUsers:', response.data);
     return response.data;
-  } catch (error) {
-    console.error('Error en getAllUsers:', error.response ? error.response.data : error.message);
-    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener lista de usuarios');
-  }
+  });
 };
 
 // Función para obtener usuario específico por ID (para StudentDocumentManager)
 export const getUserById = async (userId) => {
-  try {
+  return getWithCache(`user-${userId}`, async () => {
     console.log(`Obteniendo usuario por ID: ${userId}...`);
     const response = await api.get(`/api/users/id/${userId}`);
     console.log('Respuesta getUserById:', response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error obteniendo usuario ${userId}:`, error);
-    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener datos del usuario');
-  }
+  });
 };
 
 // Función para obtener documentos de un usuario con detalles completos
 export const getUserDocumentsWithDetails = async (userId) => {
-  try {
-    console.log(`Obteniendo documentos detallados para usuario ${userId}...`);
-    const response = await api.get(`/api/documentos/usuario/${userId}`);
-    console.log(`Documentos detallados del usuario ${userId}:`, response.data);
-    return response.data;
-  } catch (error) {
-    console.error(`Error obteniendo documentos detallados del usuario ${userId}:`, error);
-    // Si no tiene documentos, devolver estructura vacía
-    return { success: true, data: [] };
-  }
+  return getWithCache(`user-docs-${userId}`, async () => {
+    try {
+      console.log(`Obteniendo documentos detallados para usuario ${userId}...`);
+      const response = await api.get(`/api/documentos/usuario/${userId}`);
+      console.log(`Documentos detallados del usuario ${userId}:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error obteniendo documentos detallados del usuario ${userId}:`, error);
+      // Si no tiene documentos o hay error, devolver estructura vacía pero válida
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        return { success: true, data: [] };
+      }
+      throw error;
+    }
+  });
 };
 
 // Función para obtener tipos de documentos requeridos
 export const getRequiredDocumentTypes = async () => {
-  try {
+  return getWithCache('document-types', async () => {
     console.log('Obteniendo tipos de documentos requeridos...');
     const response = await api.get('/api/documentos/tipos');
     console.log('Tipos de documentos:', response.data);
     return response.data;
-  } catch (error) {
-    console.error('Error obteniendo tipos de documentos:', error);
-    throw new Error(error.response?.data?.message || error.response?.data?.error || 'Error al obtener tipos de documentos');
-  }
+  });
 };
 
 // Función para transformar datos del usuario para el StudentDocumentManager
