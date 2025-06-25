@@ -614,6 +614,21 @@ const StudentDocumentManager = () => {
   };
 
   const handleOpenUploadModal = (document) => {
+    console.log('DEBUG - Opening upload modal with:', { document, student });
+    
+    // Validar que tengamos la información necesaria
+    if (!student || (!student.id && !student.id_usuario)) {
+      console.error('Error: Información del estudiante incompleta:', student);
+      setError('Error: No se pudo obtener la información del estudiante');
+      return;
+    }
+    
+    if (!document || !document.id) {
+      console.error('Error: Información del documento incompleta:', document);
+      setError('Error: No se pudo obtener la información del documento');
+      return;
+    }
+    
     setSelectedDocumentForUpload(document);
     setUploadModalOpen(true);
   };
@@ -1306,7 +1321,7 @@ const StudentDocumentManager = () => {
                                                 size="small"
                                                 startIcon={<CloudUpload fontSize="inherit" />}
                                                 onClick={() => handleOpenUploadModal({
-                                                  id: doc.baseDoc.id_tipoDoc,
+                                                  id: doc.baseDoc.id_doc || doc.baseDoc.id_tipoDoc || doc.id,
                                                   nombre: `${doc.nombre} - ${doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') ? doseInfo.doseNumber : `Dosis ${doseInfo.doseNumber}`}`,
                                                   vence: doc.vence,
                                                   tiempo_vencimiento: doc.baseDoc?.tiempo_vencimiento
@@ -1460,10 +1475,10 @@ const StudentDocumentManager = () => {
                                 size="small"
                                 startIcon={<CloudUpload fontSize="small" />}
                                 onClick={() => handleOpenUploadModal({
-                                  id: doc.id,
+                                  id: doc.id_tipo_documento || doc.id,
                                   nombre: doc.nombre,
                                   vence: doc.vence,
-                                  tiempo_vencimiento: doc.tiempo_vencimiento
+                                  tiempo_vencimiento: doc.tiempo_vencimiento || doc.tiempoVencimiento
                                 })}
                                 sx={{ 
                                   px: 2, 

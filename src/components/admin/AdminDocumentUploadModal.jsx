@@ -112,12 +112,23 @@ const AdminDocumentUploadModal = ({
     if (e) e.preventDefault();
     setError('');
 
+    // Debug information
+    console.log('DEBUG - handleSubmit called with:', {
+      selectedDocument,
+      studentInfo,
+      expeditionDate,
+      expirationDate,
+      file
+    });
+
     if (!selectedDocument?.id) {
-      setError('Error interno: Falta información del documento.');
+      setError('Error interno: No se ha seleccionado un documento válido para cargar.');
+      console.error('selectedDocument recibido:', selectedDocument);
       return;
     }
-    if (!studentInfo?.id_usuario) {
-      setError('Error interno: Falta información del estudiante.');
+    if (!studentInfo?.id && !studentInfo?.id_usuario) {
+      setError('Error interno: No se ha seleccionado un estudiante válido para cargar el documento.');
+      console.error('studentInfo recibido:', studentInfo);
       return;
     }
     if (!expeditionDate) {
@@ -149,7 +160,8 @@ const AdminDocumentUploadModal = ({
     }
 
     const formData = new FormData();
-    formData.append('userId', studentInfo.id_usuario);
+    const userId = studentInfo.id_usuario || studentInfo.id;
+    formData.append('userId', userId);
     formData.append('documentType', selectedDocument.id);
     formData.append('expeditionDate', expeditionDate);
     if (expirationDate && selectedDocument?.vence) {
@@ -157,11 +169,19 @@ const AdminDocumentUploadModal = ({
     }
     formData.append('file', file);
     formData.append('userName', `${studentInfo.nombre} ${studentInfo.apellido}`);
-    formData.append('userEmail', studentInfo.email || 'unknown@example.com');
+    formData.append('userEmail', studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com');
     formData.append('uploadedByAdmin', 'true'); // Marcar que fue cargado por admin
+    
+    // Si es un documento de dosis (nombre contiene "Dosis" o es tipo COVID), agregar número de dosis
+    if (selectedDocument.nombre?.includes('Dosis') || selectedDocument.nombre?.includes('COVID')) {
+      const doseNumber = selectedDocument.nombre.match(/Dosis (\d+)|(\d+)ª dosis|(\d+)/i)?.[1] || 
+                        selectedDocument.nombre.match(/(\d+)/)?.[1] || '1';
+      formData.append('numeroDosis', doseNumber);
+      console.log(`Documento de dosis detectado: ${selectedDocument.nombre}, número de dosis: ${doseNumber}`);
+    }
 
     console.log("Admin uploading document for user:", {
-      userId: studentInfo.id_usuario,
+      userId: userId,
       documentType: selectedDocument.id,
       documentName: selectedDocument.nombre,
       studentName: `${studentInfo.nombre} ${studentInfo.apellido}`
@@ -184,6 +204,9 @@ const AdminDocumentUploadModal = ({
         setSuccess(true);
         setRefreshing(true);
         
+        // Log específico para carga por admin
+        console.log('Documento cargado por admin exitosamente:', response.data);
+        
         // Notificar al componente padre que se ha cargado un documento
         if (onDocumentUploaded) {
           await onDocumentUploaded();
@@ -191,7 +214,9 @@ const AdminDocumentUploadModal = ({
         
         setRefreshing(false);
       } else {
-        setError(response.data?.details || response.data?.error || 'Ocurrió un error inesperado en el servidor.');
+        const errorMsg = response.data?.details || response.data?.error || 'Ocurrió un error inesperado en el servidor.';
+        console.error('Error en respuesta del servidor:', response.data);
+        setError(`Error al cargar documento para el usuario: ${errorMsg}`);
       }
     } catch (error) {
       console.error('Error during admin document upload:', error);
@@ -256,7 +281,10 @@ const AdminDocumentUploadModal = ({
                   ¡Documento cargado exitosamente!
                 </Typography>
                 <Typography variant="body1" paragraph>
-                  El documento ha sido cargado para el usuario y está pendiente de revisión.
+                  El documento ha sido cargado para <strong>{studentInfo?.nombre} {studentInfo?.apellido}</strong> y está pendiente de revisión por otro administrador.
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  El usuario recibirá una notificación cuando el documento sea revisado.
                 </Typography>
                 <Box mt={3}>
                   <Button
