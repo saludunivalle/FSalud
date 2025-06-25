@@ -470,3 +470,13 @@ export const transformUsersForDashboard = (backendUsers) => {
     return transformedUser;
   }).filter(user => user.id && user.email); // Filtrar usuarios sin datos básicos
 };
+
+// Crear usuario desde el panel de administración
+export const createUserFromAdmin = async (userData) => {
+  try {
+    const response = await api.post('/api/admin/create-user', userData);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.error || 'Error al crear usuario');
+  }
+};

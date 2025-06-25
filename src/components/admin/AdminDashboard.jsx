@@ -41,6 +41,7 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import ReportGeneratorModal from './ReportGeneratorModal';
+import UserCreateModal from './UserCreateModal';
 import { getAllUsers, transformUsersForDashboard, getUsersWithDocumentStats } from '../../services/userService';
 
 // Tema personalizado
@@ -95,6 +96,7 @@ const AdminDashboard = () => {
   });
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [userCreateModalOpen, setUserCreateModalOpen] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -427,6 +429,13 @@ const AdminDashboard = () => {
               onClick={() => setReportModalOpen(true)}
             >
               Generar Reporte
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => setUserCreateModalOpen(true)}
+            >
+              Crear usuario nuevo
             </Button>
           </Box>
         </Box>
@@ -1062,6 +1071,11 @@ const AdminDashboard = () => {
           open={reportModalOpen}
           onClose={() => setReportModalOpen(false)}
           students={filteredStudents}
+        />
+        <UserCreateModal
+          open={userCreateModalOpen}
+          onClose={() => setUserCreateModalOpen(false)}
+          onUserCreated={handleRetry}
         />
       </Box>
     </ThemeProvider>
