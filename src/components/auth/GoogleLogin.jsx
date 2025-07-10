@@ -24,7 +24,7 @@ const GoogleLogin = ({ setIsLogin, setUserInfo, onSuccess, buttonColor = '#B2222
     const initializeGoogleLogin = () => {
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: '340874428494-ot9uprkvvq4ha529arl97e9mehfojm5b.apps.googleusercontent.com',
+          client_id: '1095230822376-9c1lomp0nfhrlblbr43nn30943v9af2o.apps.googleusercontent.com',
           callback: handleCredentialResponse,
           auto_select: false,
         });
