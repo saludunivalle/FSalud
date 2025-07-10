@@ -3,7 +3,7 @@
  */
 
 // Google client ID from your Google Cloud Console
-export const GOOGLE_CLIENT_ID = '340874428494-ot9uprkvvq4ha529arl97e9mehfojm5b.apps.googleusercontent.com';
+export const GOOGLE_CLIENT_ID = '1095230822376-9c1lomp0nfhrlblbr43nn30943v9af2o.apps.googleusercontent.com';
 
 /**
  * Loads the Google API script and initializes the Sign-In client
