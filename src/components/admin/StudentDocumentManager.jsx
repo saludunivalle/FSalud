@@ -26,7 +26,8 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Card
+  Card,
+  Snackbar
 } from '@mui/material';
 import {
   ArrowBack,
@@ -51,6 +52,8 @@ import DocumentReviewModal from './DocumentReviewModal';
 import AdminDocumentUploadModal from './AdminDocumentUploadModal';
 import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager, clearCache } from '../../services/userService';
 import { groupDocumentsByDose, getDoseGroupStatus } from '../../utils/documentUtils';
+import { useSaturation } from '../../context/SaturationContext';
+import { Autorenew } from '@mui/icons-material';
 
 // Tema personalizado
 const theme = createTheme({
@@ -183,6 +186,8 @@ const StudentDocumentManager = () => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDocuments, setFilteredDocuments] = useState([]);
+
+  const { modoSaturado } = useSaturation();
 
   // Cargar datos del estudiante
   useEffect(() => {
@@ -715,7 +720,9 @@ const StudentDocumentManager = () => {
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
         <Typography variant="body1" sx={{ ml: 2 }}>
-          Cargando datos del usuario...
+          {modoSaturado
+            ? "Cargando datos del usuario..."
+            : "Hay demasiadas solicitudes en la aplicación, esto puede tomar unos minutos..."}
         </Typography>
       </Box>
     );
@@ -1535,6 +1542,22 @@ const StudentDocumentManager = () => {
           onDocumentUploaded={handleDocumentUploaded}
         />
       )}
+
+      {/* Indicador sutil en la UI */}
+      {modoSaturado && (
+        <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 2000 }}>
+          <Autorenew sx={{ color: 'warning.main', animation: 'spin 1.5s linear infinite' }} />
+          {/* O un CircularProgress pequeño */}
+          {/* <CircularProgress size={24} color="warning" /> */}
+        </Box>
+      )}
+
+      {/* Alert persistente o Snackbar */}
+      <Snackbar open={modoSaturado} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert severity="warning" sx={{ width: '100%' }}>
+          Hay demasiadas solicitudes en la aplicación, esto puede tomar unos minutos.
+        </Alert>
+      </Snackbar>
     </ThemeProvider>
   );
 };

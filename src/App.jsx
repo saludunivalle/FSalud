@@ -4,15 +4,18 @@ import { BrowserRouter } from 'react-router-dom';
 import AppRoutes from './routes/AppRoutes';
 import { UserProvider } from './context/UserContext';
 import { DocumentProvider } from './context/DocumentContext';
+import { SaturationProvider } from './context/SaturationContext';
 
 function App() {
   return (
     <BrowserRouter>
-      <UserProvider>
-        <DocumentProvider>
-          <AppRoutes />
-        </DocumentProvider>
-      </UserProvider>
+      <SaturationProvider>
+        <UserProvider>
+          <DocumentProvider>
+            <AppRoutes />
+          </DocumentProvider>
+        </UserProvider>
+      </SaturationProvider>
     </BrowserRouter>
   );
 }

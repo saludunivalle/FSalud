@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../../context/UserContext';
+import { useSaturation } from '../../context/SaturationContext';
 import { 
   Box, 
   Typography, 
@@ -372,12 +373,14 @@ const AdminDashboard = () => {
     console.log('=== FIN DEBUG ===');
   };
 
+  const { modoSaturado } = useSaturation();
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
         <Typography variant="body1" sx={{ ml: 2 }}>
-          Cargando datos del dashboard...
+          {modoSaturado ? 'Cargando datos del dashboard...' : 'Hay demasiadas solicitudes en la aplicación, esto puede tomar unos minutos.'}
         </Typography>
       </Box>
     );
