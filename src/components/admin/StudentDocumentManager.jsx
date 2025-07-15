@@ -187,7 +187,7 @@ const StudentDocumentManager = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredDocuments, setFilteredDocuments] = useState([]);
 
-  const { modoSaturado } = useSaturation();
+  const { modoSaturado, setModoSaturado } = useSaturation();
 
   // Cargar datos del estudiante
   useEffect(() => {
@@ -362,6 +362,7 @@ const StudentDocumentManager = () => {
         // Manejo específico para errores de rate limiting
         if (error.response?.status === 429 || 
             (error.response?.status === 500 && error.message?.includes('Quota exceeded'))) {
+          setModoSaturado(true);
           setError('El sistema está experimentando una alta demanda. Los datos se cargarán automáticamente en unos segundos...');
           
           // Reintentar después de 10 segundos con mensaje específico
@@ -386,7 +387,7 @@ const StudentDocumentManager = () => {
     if (studentId) {
       loadStudentData();
     }
-  }, [studentId, navigate]);
+  }, [studentId, navigate, setModoSaturado]);
 
   // Función para recargar datos
   const handleReload = () => {
@@ -551,6 +552,7 @@ const StudentDocumentManager = () => {
         // Manejo específico para errores de rate limiting en reload
         if (error.response?.status === 429 || 
             (error.response?.status === 500 && error.message?.includes('Quota exceeded'))) {
+          setModoSaturado(true);
           setError('Sistema con alta demanda, reintentando automáticamente...');
           
           // Reintentar después de 8 segundos
@@ -715,14 +717,12 @@ const StudentDocumentManager = () => {
     setSearchTerm('');
   };
 
-  if (loading) {
+  if (loading || modoSaturado) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
         <CircularProgress />
         <Typography variant="body1" sx={{ ml: 2 }}>
-          {modoSaturado
-            ? "Cargando datos del usuario..."
-            : "Hay demasiadas solicitudes en la aplicación, esto puede tomar unos minutos..."}
+          Hay demasiadas solicitudes en la aplicación, esto puede tomar unos minutos...
         </Typography>
       </Box>
     );

@@ -110,12 +110,13 @@ export const getAllUsers = async () => {
 
 // Función para obtener usuario específico por ID (para StudentDocumentManager)
 export const getUserById = async (userId) => {
-  return getWithCache(`user-${userId}`, async () => {
-    console.log(`Obteniendo usuario por ID: ${userId}...`);
-    const response = await api.get(`/api/users/id/${userId}`);
-    console.log('Respuesta getUserById:', response.data);
+  try {
+    const response = await axios.get(`https://fsalud-server-saludunivalles-projects.vercel.app/api/users/id/${userId}`);
     return response.data;
-  });
+  } catch (error) {
+    // Solo retorna el error, no intentes setear el contexto aquí
+    throw error;
+  }
 };
 
 // Función para obtener documentos de un usuario con detalles completos
