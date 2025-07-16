@@ -242,6 +242,9 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
     }
   };
 
+  const userDoc = Array.isArray(userDocuments) ? userDocuments.find(doc => doc.id_doc === selectedDocumentId) : null;
+  const isApproved = userDoc && (userDoc.estado?.toLowerCase() === 'aprobado' || userDoc.estado?.toLowerCase() === 'cumplido');
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -258,7 +261,14 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
             <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
             </Alert>
         </Box>
-        {success ? (
+        {isApproved ? (
+          <Box textAlign="center" py={3}>
+            <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              Este documento ya fue aprobado y no puede ser modificado.
+            </Typography>
+          </Box>
+        ) : success ? (
           <Box textAlign="center" py={3}>
             {refreshing ? (
               <>
@@ -321,6 +331,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                   InputLabelProps={{ shrink: true }}
                   required
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
+                  disabled={isApproved}
                 />
               </Grid>
 
@@ -335,6 +346,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                     InputLabelProps={{ shrink: true }}
                     required
                     inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
+                    disabled={isApproved}
                   />
                 </Grid>
               )}
@@ -348,6 +360,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                   required
                   placeholder="https://drive.google.com/file/d/..."
                   helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                  disabled={isApproved}
                 />
               </Grid>
             </Grid>
@@ -355,7 +368,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
         )}
       </DialogContent>
 
-      {!success && (
+      {!success && !isApproved && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar

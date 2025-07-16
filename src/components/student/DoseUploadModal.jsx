@@ -224,6 +224,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
   }
 
   const currentStatus = getDoseStatus();
+  const isApproved = currentStatus?.toLowerCase() === 'aprobado' || currentStatus?.toLowerCase() === 'cumplido';
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -250,7 +251,14 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
             <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
             </Alert>
         </Box>
-        {success ? (
+        {isApproved ? (
+          <Box textAlign="center" py={3}>
+            <CheckCircle color="success" sx={{ fontSize: 60, mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              Este documento ya fue aprobado y no puede ser modificado.
+            </Typography>
+          </Box>
+        ) : success ? (
           <Box textAlign="center" py={3}>
             <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
             <Typography variant="h6" gutterBottom>
@@ -306,6 +314,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   InputLabelProps={{ shrink: true }}
                   required
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
+                  disabled={isApproved}
                 />
               </Grid>
               {document?.vence === 'si' && (
@@ -317,7 +326,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                     value={expirationDate}
                     onChange={(e) => setExpirationDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    disabled={!!document?.tiempo_vencimiento}
+                    disabled={!!document?.tiempo_vencimiento || isApproved}
                     helperText={document?.tiempo_vencimiento ? 
                       `Se calcula automáticamente (${document.tiempo_vencimiento} meses)` : 
                       'Opcional'}
@@ -334,13 +343,14 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   required
                   placeholder="https://drive.google.com/file/d/..."
                   helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                  disabled={isApproved}
                 />
               </Grid>
             </Grid>
           </Box>
         )}
       </DialogContent>
-      {!success && (
+      {!success && !isApproved && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar

@@ -428,18 +428,20 @@ const DocumentReviewModal = ({ document, onClose, studentName }) => {
             </Grid>
             
             <Grid item xs={12}>
-              <TextField
-                label="Comentarios"
-                multiline
-                rows={4}
-                value={comentario}
-                onChange={(e) => setComentario(e.target.value)}
-                fullWidth
-                placeholder="Ingrese comentarios sobre el documento..."
-                disabled={loading}
-                error={!!formErrors.comentario}
-                helperText={formErrors.comentario || (estado === 'Rechazado' ? 'Debe indicar el motivo del rechazo' : '')}
-              />
+              {estado === 'Rechazado' && (
+                <TextField
+                  label="Observaciones"
+                  multiline
+                  rows={4}
+                  value={comentario}
+                  onChange={(e) => setComentario(e.target.value)}
+                  fullWidth
+                  placeholder="Ingrese el motivo del rechazo..."
+                  disabled={loading}
+                  error={!!formErrors.comentario}
+                  helperText={formErrors.comentario || 'Debe indicar el motivo del rechazo'}
+                />
+              )}
             </Grid>
             
             {estado === 'Rechazado' && (

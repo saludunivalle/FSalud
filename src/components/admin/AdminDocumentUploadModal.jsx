@@ -45,12 +45,14 @@ const AdminDocumentUploadModal = ({
   onClose, 
   selectedDocument, 
   studentInfo,
-  onDocumentUploaded
+  onDocumentUploaded,
+  isApproved = false
 }) => {
   const theme = useTheme();
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
+  const [uploadDate, setUploadDate] = useState(''); // Nueva fecha de carga
   const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -66,6 +68,7 @@ const AdminDocumentUploadModal = ({
     if (open) {
       setExpeditionDate('');
       setExpirationDate('');
+      setUploadDate(''); // Resetear fecha de carga
       setFileUrl('');
       setSuccess(false);
       setError('');
@@ -129,6 +132,10 @@ const AdminDocumentUploadModal = ({
       setError('Pega la URL del archivo.');
       return;
     }
+    if (!uploadDate) {
+      setError('La fecha de carga es requerida.');
+      return;
+    }
     try {
       new URL(fileUrl);
     } catch {
@@ -157,6 +164,7 @@ const AdminDocumentUploadModal = ({
     if (expirationDate && selectedDocument?.vence) {
       formData.append('expirationDate', expirationDate);
     }
+    formData.append('uploadDate', uploadDate); // Agregar fecha de carga
     formData.append('fileUrl', fileUrl);
     formData.append('userName', `${studentInfo.nombre} ${studentInfo.apellido}`);
     formData.append('userEmail', studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com');
@@ -188,6 +196,7 @@ const AdminDocumentUploadModal = ({
         documentType: selectedDocument.id,
         expeditionDate,
         expirationDate,
+        uploadDate, // Agregar fecha de carga
         fileUrl,
         userName: `${studentInfo.nombre} ${studentInfo.apellido}`,
         userEmail: studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com',
@@ -287,7 +296,14 @@ const AdminDocumentUploadModal = ({
             <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
           </Alert>
         </Box>
-        {success ? (
+        {isApproved ? (
+          <Box textAlign="center" py={3}>
+            <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
+            <Typography variant="h6" gutterBottom>
+              Este documento ya fue aprobado y no puede ser modificado.
+            </Typography>
+          </Box>
+        ) : success ? (
           <Box textAlign="center" py={3}>
             {refreshing ? (
               <>
@@ -361,6 +377,7 @@ const AdminDocumentUploadModal = ({
                   InputLabelProps={{ shrink: true }}
                   required
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
+                  disabled={isApproved}
                 />
               </Grid>
               {selectedDocument?.vence && (
@@ -374,9 +391,24 @@ const AdminDocumentUploadModal = ({
                     InputLabelProps={{ shrink: true }}
                     required
                     inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
+                    disabled={isApproved}
                   />
                 </Grid>
               )}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Fecha de Carga"
+                  type="date"
+                  fullWidth
+                  value={uploadDate}
+                  onChange={(e) => setUploadDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  inputProps={{ max: new Date().toISOString().split("T")[0] }}
+                  helperText="Fecha en la que se está cargando el documento."
+                  disabled={isApproved}
+                />
+              </Grid>
               <Grid item xs={12}>
                 <TextField
                   label="URL del archivo (Google Drive, Dropbox, etc.)"
@@ -386,13 +418,14 @@ const AdminDocumentUploadModal = ({
                   required
                   placeholder="https://drive.google.com/file/d/..."
                   helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                  disabled={isApproved}
                 />
               </Grid>
             </Grid>
           </Box>
         )}
       </DialogContent>
-      {!success && (
+      {!success && !isApproved && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar
