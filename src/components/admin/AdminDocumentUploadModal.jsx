@@ -51,8 +51,7 @@ const AdminDocumentUploadModal = ({
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -67,8 +66,7 @@ const AdminDocumentUploadModal = ({
     if (open) {
       setExpeditionDate('');
       setExpirationDate('');
-      setFile(null);
-      setPreviewUrl('');
+      setFileUrl('');
       setSuccess(false);
       setError('');
       setLoading(false);
@@ -77,50 +75,38 @@ const AdminDocumentUploadModal = ({
   }, [open]);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl('');
+    if (!fileUrl) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => setPreviewUrl(reader.result);
-    reader.readAsDataURL(file);
+    const isValidUrl = (url) => {
+      try {
+        new URL(url);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    };
+
+    if (!isValidUrl(fileUrl)) {
+      setError('La URL del archivo no es válida.');
+      return;
+    }
 
     return () => {};
-  }, [file]);
-
-  const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (selectedFile && !validTypes.includes(selectedFile.type)) {
-      setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
-      setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    setFile(selectedFile);
-    setError('');
-  };
+  }, [fileUrl]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
-
     // Debug information
     console.log('DEBUG - handleSubmit called with:', {
       selectedDocument,
       studentInfo,
       expeditionDate,
       expirationDate,
-      file
+      fileUrl
     });
-
     if (!selectedDocument?.id) {
       setError('Error interno: No se ha seleccionado un documento válido para cargar.');
       console.error('selectedDocument recibido:', selectedDocument);
@@ -139,11 +125,16 @@ const AdminDocumentUploadModal = ({
       setError('La fecha de vencimiento es requerida para este documento.');
       return;
     }
-    if (!file) {
-      setError('Selecciona un archivo para cargar.');
+    if (!fileUrl) {
+      setError('Pega la URL del archivo.');
       return;
     }
-
+    try {
+      new URL(fileUrl);
+    } catch {
+      setError('La URL del archivo no es válida.');
+      return;
+    }
     const expeditionDateObj = new Date(expeditionDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -158,7 +149,6 @@ const AdminDocumentUploadModal = ({
         return;
       }
     }
-
     const formData = new FormData();
     const userId = studentInfo.id_usuario || studentInfo.id;
     formData.append('userId', userId);
@@ -167,12 +157,10 @@ const AdminDocumentUploadModal = ({
     if (expirationDate && selectedDocument?.vence) {
       formData.append('expirationDate', expirationDate);
     }
-    formData.append('file', file);
+    formData.append('fileUrl', fileUrl);
     formData.append('userName', `${studentInfo.nombre} ${studentInfo.apellido}`);
     formData.append('userEmail', studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com');
-    formData.append('uploadedByAdmin', 'true'); // Marcar que fue cargado por admin
-    
-    // Si es un documento de dosis (nombre contiene "Dosis" o es tipo COVID), agregar número de dosis
+    formData.append('uploadedByAdmin', 'true');
     if (selectedDocument.nombre?.includes('Dosis') || selectedDocument.nombre?.includes('COVID')) {
       const doseNumber = selectedDocument.nombre.match(/Dosis (\d+)|(\d+)ª dosis|(\d+)/i)?.[1] || 
                         selectedDocument.nombre.match(/(\d+)/)?.[1] || '1';
@@ -194,12 +182,38 @@ const AdminDocumentUploadModal = ({
       
       console.log('🔑 Enviando token JWT:', token ? token.substring(0, 50) + '...' : 'No token found');
 
-      const response = await axios.post(uploadUrl, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
+      // Si solo hay fileUrl, envía como JSON:
+      const data = {
+        userId,
+        documentType: selectedDocument.id,
+        expeditionDate,
+        expirationDate,
+        fileUrl,
+        userName: `${studentInfo.nombre} ${studentInfo.apellido}`,
+        userEmail: studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com',
+        uploadedByAdmin: true,
+      };
+
+      if (expirationDate && selectedDocument?.vence) {
+        data.expirationDate = expirationDate;
+      }
+
+      if (selectedDocument.nombre?.includes('Dosis') || selectedDocument.nombre?.includes('COVID')) {
+        const doseNumber = selectedDocument.nombre.match(/Dosis (\d+)|(\d+)ª dosis|(\d+)/i)?.[1] || 
+                          selectedDocument.nombre.match(/(\d+)/)?.[1] || '1';
+        data.numeroDosis = doseNumber;
+      }
+
+      const response = await axios.post(
+        uploadUrl,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
         }
-      });
+      );
 
       console.log("Server Response:", response.data);
 
@@ -266,8 +280,13 @@ const AdminDocumentUploadModal = ({
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-
       <DialogContent dividers>
+        <Box mb={3}>
+          <Alert severity="info" sx={{ fontSize: '1rem', bgcolor: '#e3f2fd', color: '#1565c0', mb: 3 }}>
+            <strong>Nota:</strong> El archivo debe estar en la nube (Google Drive, Dropbox, etc.) y tener permisos de acceso para cualquiera con el enlace. <br />
+            <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
+          </Alert>
+        </Box>
         {success ? (
           <Box textAlign="center" py={3}>
             {refreshing ? (
@@ -308,7 +327,6 @@ const AdminDocumentUploadModal = ({
                 {error}
               </Alert>
             )}
-
             <Grid container spacing={3}>
               {selectedDocument && (
                 <Grid item xs={12}>
@@ -333,7 +351,6 @@ const AdminDocumentUploadModal = ({
                   </Box>
                 </Grid>
               )}
-
               <Grid item xs={12} md={6}>
                 <TextField
                   label="Fecha de Expedición"
@@ -346,7 +363,6 @@ const AdminDocumentUploadModal = ({
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
                 />
               </Grid>
-
               {selectedDocument?.vence && (
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -361,87 +377,31 @@ const AdminDocumentUploadModal = ({
                   />
                 </Grid>
               )}
-
               <Grid item xs={12}>
-                <Box
-                  sx={{
-                    border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
-                    borderRadius: 2,
-                    p: 2,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
-                    '&:hover': {
-                      backgroundColor: '#f0f0f0',
-                      borderColor: '#aaa'
-                    }
-                  }}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files?.[0]) {
-                      handleFileChange({ target: { files: e.dataTransfer.files } });
-                    }
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
-                  {previewUrl ? (
-                    <Box>
-                      {file?.type === 'application/pdf' ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                          <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
-                          <Typography variant="body1">
-                            <strong>PDF:</strong> {file.name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box>
-                          <img
-                            src={previewUrl}
-                            alt="Vista previa"
-                            style={{ maxHeight: '200px', maxWidth: '100%', display: 'block', margin: '0 auto' }}
-                          />
-                          <Typography variant="body2" mt={1}>
-                            {file?.name}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  ) : (
-                    <Box py={3}>
-                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
-                      <Typography variant="body1" gutterBottom>
-                        Haz clic o arrastra un archivo aquí
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        PDF, JPG, PNG (Máx. 5MB)
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <TextField
+                  label="URL del archivo (Google Drive, Dropbox, etc.)"
+                  fullWidth
+                  value={fileUrl}
+                  onChange={e => setFileUrl(e.target.value)}
+                  required
+                  placeholder="https://drive.google.com/file/d/..."
+                  helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                />
               </Grid>
             </Grid>
           </Box>
         )}
       </DialogContent>
-
       {!success && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
           <Button
-            type="button"
+            type="submit"
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading || !file}
+            disabled={loading || !fileUrl}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
             sx={{
               backgroundColor: '#B22222',
@@ -454,7 +414,7 @@ const AdminDocumentUploadModal = ({
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Subir Documento'}
+            {loading ? 'Cargando...' : 'Enviar URL'}
           </Button>
         </DialogActions>
       )}

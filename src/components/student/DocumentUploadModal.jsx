@@ -46,8 +46,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -63,8 +62,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
     if (open) {
       setExpeditionDate('');
       setExpirationDate(''); // Clear expiration date on open
-      setFile(null);
-      setPreviewUrl('');
+      setFileUrl('');
       setSuccess(false);
       setError('');
       setLoading(false);
@@ -87,34 +85,35 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   }, [open, selectedDocumentId, documentTypes]);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl('');
+    if (!fileUrl) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => setPreviewUrl(reader.result);
-    reader.readAsDataURL(file);
+    // No longer need to read file as it's a URL
+    // const reader = new FileReader();
+    // reader.onloadend = () => setPreviewUrl(reader.result);
+    // reader.readAsDataURL(file);
 
     return () => {};
-  }, [file]);
+  }, [fileUrl]);
 
   const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
-    const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (selectedFile && !validTypes.includes(selectedFile.type)) {
-      setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
-      setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
-      setFile(null);
-      setPreviewUrl('');
-      return;
-    }
-    setFile(selectedFile);
+    // This function is no longer needed for file selection
+    // const selectedFile = event.target.files[0];
+    // const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    // if (selectedFile && !validTypes.includes(selectedFile.type)) {
+    //   setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
+    //   setFile(null);
+    //   setPreviewUrl('');
+    //   return;
+    // }
+    // if (selectedFile && selectedFile.size > 5 * 1024 * 1024) {
+    //   setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
+    //   setFile(null);
+    //   setPreviewUrl('');
+    //   return;
+    // }
+    // setFile(selectedFile);
     setError('');
   };
 
@@ -154,7 +153,6 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
-
     if (!selectedDocumentId) {
       setError('Error interno: Falta el ID del tipo de documento.');
       return;
@@ -167,8 +165,14 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setError('La fecha de vencimiento es requerida para este documento.');
       return;
     }
-    if (!file) {
-      setError('Selecciona un archivo para cargar.');
+    if (!fileUrl) {
+      setError('Pega la URL del archivo.');
+      return;
+    }
+    try {
+      new URL(fileUrl);
+    } catch {
+      setError('La URL del archivo no es válida.');
       return;
     }
     const expeditionDateObj = new Date(expeditionDate);
@@ -185,57 +189,40 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
         return;
       }
     }
-
-    const formData = new FormData();
-    formData.append('userId', user.id);
-    formData.append('documentType', selectedDocumentId);
-    formData.append('expeditionDate', expeditionDate);
+    // Construir el objeto de datos para JSON
+    const data = {
+      userId: user.id,
+      documentType: selectedDocumentId,
+      expeditionDate,
+      userName: user.name || user.email?.split('@')[0] || 'UnknownUser',
+      userEmail: user.email || 'unknown@example.com',
+      fileUrl,
+    };
     if (expirationDate && documentInfo?.vence === 'si') {
-      formData.append('expirationDate', expirationDate);
+      data.expirationDate = expirationDate;
     }
-    formData.append('file', file);
-    formData.append('userName', user.name || user.email?.split('@')[0] || 'UnknownUser');
-    formData.append('userEmail', user.email || 'unknown@example.com');
-
-    console.log("Submitting FormData to /api/documentos/subir:");
-    for (let [key, value] of formData.entries()) {
-      console.log(`  ${key}: ${value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value}`);
-    }
-
     setLoading(true);
     try {
       const uploadUrl = `${BASE_URL}/api/documentos/subir`;
-
-      const response = await axios.post(uploadUrl, formData, {
+      const response = await axios.post(uploadUrl, data, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('google_token')}`
         }
       });
-
-      console.log("Server Response:", response.data);
-
       if (response.data?.success) {
         setSuccess(true);
-        
-        // Actualizar los documentos localmente antes de cerrar el modal
         setRefreshing(true);
-        
-        // Obtener los documentos actualizados directamente
         const updatedDocs = await getUserDocsDirectly();
-        
         if (updatedDocs) {
-          // Actualizar el estado directamente en vez de llamar a refreshDocuments
           setUserDocuments(updatedDocs);
         } else {
-          // Si falla, intentar con refreshDocuments como respaldo
           try {
             await refreshDocuments();
           } catch (refreshError) {
-            console.error("Error al actualizar documentos:", refreshError);
+            console.error('Error al actualizar documentos:', refreshError);
           }
         }
-        
         setRefreshing(false);
       } else {
         setError(response.data?.details || response.data?.error || 'Ocurrió un error inesperado en el servidor.');
@@ -265,6 +252,12 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       </DialogTitle>
 
       <DialogContent dividers>
+        <Box mb={3}>
+            <Alert severity="info" sx={{ fontSize: '1rem', bgcolor: '#e3f2fd', color: '#1565c0', mb: 3 }}>
+            <strong>Nota:</strong> El archivo debe estar en la nube (Google Drive, Dropbox, etc.) y tener permisos de acceso para cualquiera con el enlace. <br />
+            <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
+            </Alert>
+        </Box>
         {success ? (
           <Box textAlign="center" py={3}>
             {refreshing ? (
@@ -347,69 +340,15 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
               )}
 
               <Grid item xs={12}>
-                <Box
-                  sx={{
-                    border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
-                    borderRadius: 2,
-                    p: 2,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
-                    '&:hover': {
-                      backgroundColor: '#f0f0f0',
-                      borderColor: '#aaa'
-                    }
-                  }}
-                  onClick={() => fileInputRef.current?.click()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files?.[0]) {
-                      handleFileChange({ target: { files: e.dataTransfer.files } });
-                    }
-                  }}
-                  onDragOver={(e) => e.preventDefault()}
-                >
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                  />
-                  {previewUrl ? (
-                    <Box>
-                      {file?.type === 'application/pdf' ? (
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
-                          <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
-                          <Typography variant="body1">
-                            <strong>PDF:</strong> {file.name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box>
-                          <img
-                            src={previewUrl}
-                            alt="Vista previa"
-                            style={{ maxHeight: '200px', maxWidth: '100%', display: 'block', margin: '0 auto' }}
-                          />
-                          <Typography variant="body2" mt={1}>
-                            {file?.name}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  ) : (
-                    <Box py={3}>
-                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
-                      <Typography variant="body1" gutterBottom>
-                        Haz clic o arrastra un archivo aquí
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        PDF, JPG, PNG (Máx. 5MB)
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
+                <TextField
+                  label="URL del archivo (Google Drive, Dropbox, etc.)"
+                  fullWidth
+                  value={fileUrl}
+                  onChange={e => setFileUrl(e.target.value)}
+                  required
+                  placeholder="https://drive.google.com/file/d/..."
+                  helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                />
               </Grid>
             </Grid>
           </Box>
@@ -422,10 +361,10 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
             Cancelar
           </Button>
           <Button
-            type="button"
+            type="submit"
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading || !file}
+            disabled={loading || !fileUrl}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
             sx={{
               backgroundColor: '#B22222',
@@ -438,7 +377,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Subir Documento'}
+            {loading ? 'Cargando...' : 'Enviar URL'}
           </Button>
         </DialogActions>
       )}

@@ -41,8 +41,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -55,24 +54,12 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     if (open) {
       setExpeditionDate('');
       setExpirationDate('');
-      setFile(null);
-      setPreviewUrl('');
+      setFileUrl('');
       setSuccess(false);
       setError('');
       setLoading(false);
     }
   }, [open]);
-
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl('');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => setPreviewUrl(reader.result);
-    reader.readAsDataURL(file);
-  }, [file]);
 
   useEffect(() => {
     if (expeditionDate && document?.vence === 'si' && document?.tiempo_vencimiento) {
@@ -158,100 +145,51 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     );
   };
 
-  const handleFileChange = (event) => {
-    try {
-      const selectedFile = event.target.files?.[0];
-      if (!selectedFile) return;
-
-      const validTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-      
-      if (!validTypes.includes(selectedFile.type)) {
-        setError('Formato de archivo no válido. Por favor, sube un PDF o una imagen (JPG, PNG).');
-        setFile(null);
-        setPreviewUrl('');
-        return;
-      }
-      
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        setError('El archivo es demasiado grande. El tamaño máximo permitido es 5MB.');
-        setFile(null);
-        setPreviewUrl('');
-        return;
-      }
-      
-      setFile(selectedFile);
-      setError('');
-
-      if (selectedFile.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(selectedFile);
-      } else {
-        setPreviewUrl('');
-      }
-    } catch (error) {
-      console.error('Error al procesar el archivo:', error);
-      setError('Error al procesar el archivo. Por favor, intenta nuevamente.');
-      setFile(null);
-      setPreviewUrl('');
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
-      // Validar fecha de expedición
       if (!expeditionDate) {
         throw new Error('La fecha de expedición es requerida');
       }
-
-      // Validar que la fecha de expedición no sea futura
       const expDate = new Date(expeditionDate);
       const today = new Date();
       if (expDate > today) {
         throw new Error('La fecha de expedición no puede ser futura');
       }
-
-      // Validar archivo
-      if (!file) {
-        throw new Error('Por favor, selecciona un archivo');
+      if (!fileUrl) {
+        throw new Error('Por favor, pega la URL del archivo');
       }
-
-      // Crear FormData
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', user.id);
-      formData.append('documentType', document.id_doc);
-      formData.append('expeditionDate', expeditionDate);
-      
-      // Solo agregar fecha de vencimiento si el documento vence
+      // Validar que la URL sea válida
+      try {
+        new URL(fileUrl);
+      } catch {
+        throw new Error('La URL del archivo no es válida');
+      }
+      // Construir el objeto de datos para JSON
+      const data = {
+        userId: user.id,
+        documentType: document.id_doc,
+        expeditionDate,
+        userName: `${user.nombre || ''} ${user.apellido || ''}`.trim(),
+        userEmail: user.email,
+        numeroDosis: document.doseNumber,
+        fileUrl,
+      };
       if (document.vence === 'si' && document.tiempo_vencimiento) {
         const expDate = new Date(expeditionDate);
         expDate.setMonth(expDate.getMonth() + parseInt(document.tiempo_vencimiento));
         const formattedExpirationDate = expDate.toISOString().split('T')[0];
-        formData.append('expirationDate', formattedExpirationDate);
+        data.expirationDate = formattedExpirationDate;
       }
-
-      formData.append('userName', `${user.nombre} ${user.apellido}`);
-      formData.append('userEmail', user.email);
-      formData.append('numeroDosis', document.doseNumber);
-
-      // Subir documento
       const token = localStorage.getItem('google_token');
-      console.log('🔑 Enviando token JWT desde DoseUploadModal:', token ? token.substring(0, 50) + '...' : 'No token found');
-      
-      const response = await axios.post(`${BASE_URL}/api/documentos/subir`, formData, {
+      const response = await axios.post(`${BASE_URL}/api/documentos/subir`, data, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
-
       if (response.data.success) {
         setSuccess(true);
         await refreshDocuments();
@@ -262,7 +200,6 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
         throw new Error(response.data.error || 'Error al subir el documento');
       }
     } catch (error) {
-      console.error('Error al subir documento:', error);
       setError(error.message || 'Error al subir el documento');
     } finally {
       setLoading(false);
@@ -273,8 +210,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
     if (!loading) {
       setExpeditionDate('');
       setExpirationDate('');
-      setFile(null);
-      setPreviewUrl('');
+      setFileUrl('');
       setSuccess(false);
       setError('');
       setLoading(false);
@@ -307,8 +243,13 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-
       <DialogContent dividers>
+        <Box mb={3}>
+            <Alert severity="info" sx={{ fontSize: '1rem', bgcolor: '#e3f2fd', color: '#1565c0', mb: 3 }}>
+            <strong>Nota:</strong> El archivo debe estar en la nube (Google Drive, Dropbox, etc.) y tener permisos de acceso para cualquiera con el enlace. <br />
+            <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
+            </Alert>
+        </Box>
         {success ? (
           <Box textAlign="center" py={3}>
             <CheckIcon color="success" sx={{ fontSize: 60, mb: 2 }} />
@@ -338,9 +279,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                 {error}
               </Alert>
             )}
-
             <Grid container spacing={3}>
-              {/* Estado actual de la dosis */}
               <Grid item xs={12}>
                 <Box display="flex" alignItems="center" sx={{ 
                   bgcolor: 'grey.100', 
@@ -357,7 +296,6 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   {getStatusChip(currentStatus)}
                 </Box>
               </Grid>
-
               <Grid item xs={12} md={6}>
                 <TextField
                   label="Fecha de Expedición"
@@ -370,7 +308,6 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
                 />
               </Grid>
-
               {document?.vence === 'si' && (
                 <Grid item xs={12} md={6}>
                   <TextField
@@ -388,92 +325,31 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   />
                 </Grid>
               )}
-
               <Grid item xs={12}>
-                <Button
-                  component="label"
-                  variant="outlined"
+                <TextField
+                  label="URL del archivo (Google Drive, Dropbox, etc.)"
                   fullWidth
-                  sx={{
-                    border: `2px dashed ${error && !file ? theme.palette.error.main : '#ccc'}`,
-                    borderRadius: 2,
-                    p: 2,
-                    textAlign: 'center',
-                    backgroundColor: previewUrl ? '#f9f9f9' : 'inherit',
-                    '&:hover': {
-                      backgroundColor: '#f0f0f0',
-                      borderColor: '#aaa'
-                    },
-                    height: 'auto',
-                    textTransform: 'none'
-                  }}
-                >
-                  <input
-                    type="file"
-                    hidden
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                  />
-                  {previewUrl ? (
-                    <Box width="100%">
-                      {file?.type === 'application/pdf' ? (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center', 
-                          flexDirection: 'column' 
-                        }}>
-                          <Description sx={{ fontSize: 48, color: theme.palette.error.main, mb: 1 }} />
-                          <Typography variant="body1">
-                            <strong>PDF:</strong> {file.name}
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box>
-                          <img
-                            src={previewUrl}
-                            alt="Vista previa"
-                            style={{ 
-                              maxHeight: '200px', 
-                              maxWidth: '100%', 
-                              display: 'block', 
-                              margin: '0 auto' 
-                            }}
-                          />
-                          <Typography variant="body2" mt={1}>
-                            {file?.name}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  ) : (
-                    <Box py={3} width="100%">
-                      <CloudUploadIcon sx={{ fontSize: 48, color: '#666', mb: 1 }} />
-                      <Typography variant="body1" gutterBottom>
-                        Haz clic o arrastra un archivo aquí
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        PDF, JPG, PNG (Máx. 5MB)
-                      </Typography>
-                    </Box>
-                  )}
-                </Button>
+                  value={fileUrl}
+                  onChange={e => setFileUrl(e.target.value)}
+                  required
+                  placeholder="https://drive.google.com/file/d/..."
+                  helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                />
               </Grid>
             </Grid>
           </Box>
         )}
       </DialogContent>
-
       {!success && (
         <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
           <Button onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
           <Button
-            type="button"
+            type="submit"
             onClick={handleSubmit}
             variant="contained"
-            disabled={loading || !file}
+            disabled={loading || !fileUrl}
             startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
             sx={{
               backgroundColor: '#B22222',
@@ -486,7 +362,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Subir Documento'}
+            {loading ? 'Cargando...' : 'Enviar URL'}
           </Button>
         </DialogActions>
       )}
