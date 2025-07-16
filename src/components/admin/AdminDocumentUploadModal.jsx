@@ -190,11 +190,14 @@ const AdminDocumentUploadModal = ({
     setLoading(true);
     try {
       const uploadUrl = `${BASE_URL}/api/documentos/subir`;
+      const token = localStorage.getItem('google_token');
+      
+      console.log('🔑 Enviando token JWT:', token ? token.substring(0, 50) + '...' : 'No token found');
 
       const response = await axios.post(uploadUrl, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${localStorage.getItem('google_token')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 

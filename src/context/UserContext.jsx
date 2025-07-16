@@ -127,6 +127,8 @@ export const UserProvider = ({ children }) => {
     const userObject = backendResponse.user;
     const token = backendResponse.token;
 
+    console.log('🔑 Guardando JWT token en localStorage:', token.substring(0, 50) + '...');
+
     const rawRole = userObject.role || 'estudiante'; // Role from backend user object
     const normalizedRole = rawRole.toLowerCase();
     

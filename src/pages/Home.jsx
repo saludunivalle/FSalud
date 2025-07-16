@@ -87,7 +87,9 @@ const Home = () => {
   
   // Google client ID
   const GOOGLE_CLIENT_ID = '1095230822376-9c1lomp0nfhrlblbr43nn30943v9af2o.apps.googleusercontent.com';
-  const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
+  const BASE_URL = process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' 
+    ? 'https://fsalud-server-saludunivalles-projects.vercel.app' 
+    : 'http://localhost:3001');
 
   // Initialize Google Sign-In
   useEffect(() => {

@@ -51,6 +51,7 @@ import { createTheme, ThemeProvider, alpha } from '@mui/material/styles';
 import DocumentReviewModal from './DocumentReviewModal';
 import AdminDocumentUploadModal from './AdminDocumentUploadModal';
 import { getUserById, getUserDocumentsWithDetails, getRequiredDocumentTypes, transformUserForManager, clearCache } from '../../services/userService';
+import { getUserProfile, transformUserProfileForComponents, clearUserProfileCache } from '../../services/userProfileService';
 import { groupDocumentsByDose, getDoseGroupStatus } from '../../utils/documentUtils';
 import { useSaturation } from '../../context/SaturationContext';
 import { Autorenew } from '@mui/icons-material';
@@ -198,28 +199,17 @@ const StudentDocumentManager = () => {
       try {
         console.log(`Cargando datos del estudiante: ${studentId}`);
         
-        // Obtener datos del usuario, sus documentos y tipos de documentos en paralelo
-        const [userResponse, documentsResponse, documentTypesResponse] = await Promise.all([
-          getUserById(studentId),
-          getUserDocumentsWithDetails(studentId),
-          getRequiredDocumentTypes()
-        ]);
+        // Usar el nuevo endpoint consolidado
+        const userProfileResponse = await getUserProfile(studentId);
         
-        console.log('Respuesta usuario:', userResponse);
-        console.log('Respuesta documentos:', documentsResponse);
-        console.log('Respuesta tipos:', documentTypesResponse);
+        console.log('Respuesta del perfil consolidado:', userProfileResponse);
         
-        // Procesar datos
-        const userData = userResponse.data || userResponse;
-        const userDocuments = documentsResponse.data || [];
-        const documentTypes = documentTypesResponse.data || [];
-        
-        if (!userData || !userData.id_usuario) {
+        if (!userProfileResponse.data || !userProfileResponse.data.user) {
           throw new Error('Usuario no encontrado');
         }
         
         // Transformar datos al formato esperado por el componente
-        const transformedStudent = transformUserForManager(userData, userDocuments, documentTypes);
+        const transformedStudent = transformUserProfileForComponents(userProfileResponse);
         
         // Procesar grupos de dosis y calcular estado consolidado
         const processedDocuments = transformedStudent.documentos.map(doc => {
@@ -399,18 +389,19 @@ const StudentDocumentManager = () => {
         // Limpiar cache específico del usuario antes de recargar
         clearCache(`user-${studentId}`);
         clearCache(`user-docs-${studentId}`);
+        clearUserProfileCache(`user-profile-${studentId}`);
         
-        const [userResponse, documentsResponse, documentTypesResponse] = await Promise.all([
-          getUserById(studentId),
-          getUserDocumentsWithDetails(studentId),
-          getRequiredDocumentTypes()
-        ]);
+        // Usar el nuevo endpoint consolidado
+        const userProfileResponse = await getUserProfile(studentId);
         
-        const userData = userResponse.data || userResponse;
-        const userDocuments = documentsResponse.data || [];
-        const documentTypes = documentTypesResponse.data || [];
+        console.log('Respuesta del perfil consolidado (reload):', userProfileResponse);
         
-        const transformedStudent = transformUserForManager(userData, userDocuments, documentTypes);
+        if (!userProfileResponse.data || !userProfileResponse.data.user) {
+          throw new Error('Usuario no encontrado');
+        }
+        
+        // Transformar datos al formato esperado por el componente
+        const transformedStudent = transformUserProfileForComponents(userProfileResponse);
         
         // Procesar grupos de dosis y calcular estado consolidado
         const processedDocuments = transformedStudent.documentos.map(doc => {
@@ -614,6 +605,7 @@ const StudentDocumentManager = () => {
       console.log('Documento actualizado, limpiando cache y recargando datos...');
       clearCache(`user-${studentId}`);
       clearCache(`user-docs-${studentId}`);
+      clearUserProfileCache(`user-profile-${studentId}`);
       handleReload();
     }
     
@@ -650,6 +642,7 @@ const StudentDocumentManager = () => {
     console.log('Documento cargado por admin, limpiando cache y recargando datos...');
     clearCache(`user-${studentId}`);
     clearCache(`user-docs-${studentId}`);
+    clearUserProfileCache(`user-profile-${studentId}`);
     await handleReload();
   };
 

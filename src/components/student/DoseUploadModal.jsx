@@ -242,9 +242,13 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
       formData.append('numeroDosis', document.doseNumber);
 
       // Subir documento
+      const token = localStorage.getItem('google_token');
+      console.log('🔑 Enviando token JWT desde DoseUploadModal:', token ? token.substring(0, 50) + '...' : 'No token found');
+      
       const response = await axios.post(`${BASE_URL}/api/documentos/subir`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         }
       });
 

@@ -195,6 +195,74 @@ export const reviewDocument = async (documentId, reviewData) => {
   }
 };
 
+/**
+ * Obtiene datos consolidados para la revisión de un documento específico
+ * @param {string} documentId - ID del documento a revisar
+ * @returns {Promise<Object>} - Datos consolidados para revisión
+ */
+export const getDocumentReviewData = async (documentId) => {
+  try {
+    console.log(`🔄 Obteniendo datos para revisión del documento ${documentId}...`);
+    
+    const response = await api.get(`/api/v1/document-review/${documentId}`);
+    
+    console.log(`✅ Datos para revisión del documento ${documentId} obtenidos exitosamente`);
+    return response.data;
+  } catch (error) {
+    console.error(`❌ Error obteniendo datos para revisión del documento ${documentId}:`, error);
+    
+    // Manejo específico para errores de rate limiting
+    if (error.response?.status === 429) {
+      throw new Error('El sistema está experimentando una alta demanda. Inténtalo de nuevo en unos momentos.');
+    }
+    
+    // Manejo para documento no encontrado
+    if (error.response?.status === 404) {
+      throw new Error('Documento no encontrado');
+    }
+    
+    throw new Error(error.response?.data?.error || 'Error al obtener datos para revisión');
+  }
+};
+
+/**
+ * Actualiza múltiples documentos de forma masiva
+ * @param {Array} updates - Array de actualizaciones de documentos
+ * @returns {Promise<Object>} - Resultado de la actualización masiva
+ */
+export const batchUpdateDocuments = async (updates) => {
+  try {
+    console.log(`🔄 Iniciando actualización masiva de ${updates.length} documentos...`);
+    
+    const response = await api.post('/api/v1/documents/batch-update', {
+      updates: updates
+    });
+    
+    console.log(`✅ Actualización masiva completada exitosamente`);
+    return response.data;
+  } catch (error) {
+    console.error('❌ Error en actualización masiva de documentos:', error);
+    
+    // Manejo específico para errores de rate limiting
+    if (error.response?.status === 429) {
+      throw new Error('El sistema está experimentando una alta demanda. Inténtalo de nuevo en unos momentos.');
+    }
+    
+    // Manejo para documentos no encontrados
+    if (error.response?.status === 404) {
+      throw new Error('Uno o más documentos no fueron encontrados');
+    }
+    
+    // Manejo para errores de validación
+    if (error.response?.status === 400) {
+      const details = error.response?.data?.details || [];
+      throw new Error(`Datos de actualización inválidos: ${details.join(', ')}`);
+    }
+    
+    throw new Error(error.response?.data?.error || 'Error al realizar la actualización masiva');
+  }
+};
+
 export default {
   getUserDocuments,
   uploadDocument,

@@ -44,6 +44,7 @@ import { createTheme, ThemeProvider } from '@mui/material/styles';
 import ReportGeneratorModal from './ReportGeneratorModal';
 import UserCreateModal from './UserCreateModal';
 import { getAllUsers, transformUsersForDashboard, getUsersWithDocumentStats } from '../../services/userService';
+import { getAdminDashboard, refreshAdminDashboard } from '../../services/adminDashboardService';
 
 // Tema personalizado
 const theme = createTheme({
@@ -104,32 +105,27 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        console.log('Cargando datos de usuarios y estadísticas...');
+        console.log('Cargando datos del dashboard de admin usando endpoint consolidado...');
         
-        // Obtener usuarios con estadísticas de documentos (no necesitamos estadísticas generales del backend)
-        const usersWithStats = await getUsersWithDocumentStats();
+        // Usar el nuevo servicio consolidado
+        const dashboardData = await getAdminDashboard();
         
-        console.log('Respuesta de usuarios con estadísticas:', usersWithStats);
+        console.log('Respuesta del dashboard consolidado:', dashboardData);
         
         // Verificar que tenemos datos reales
-        if (!usersWithStats || usersWithStats.length === 0) {
+        if (!dashboardData || !dashboardData.users || dashboardData.users.length === 0) {
           throw new Error('No se encontraron usuarios en la base de datos');
         }
         
-        // Procesar usuarios
-        const transformedUsers = transformUsersForDashboard(usersWithStats);
+        // Los datos ya vienen transformados del servicio consolidado
+        const transformedUsers = dashboardData.users;
         
-        console.log('Usuarios transformados en AdminDashboard:', transformedUsers.map(u => ({ 
+        console.log('Usuarios del dashboard consolidado:', transformedUsers.map(u => ({ 
           nombre: u.nombre, 
           apellido: u.apellido,
-          aprobados: u.documentosAprobados, 
-          pendientes: u.documentosPendientes,
-          rechazados: u.documentosRechazados,
-          vencidos: u.documentosVencidos,
-          sinCargar: u.documentosSinCargar,
-          total: u.totalDocumentosRequeridos,
-          indicador: `${u.documentosAprobados}/${u.totalDocumentosRequeridos || 'undefined'}`,
-          hasRealData: u.totalDocumentosRequeridos !== undefined
+          rol: u.rol,
+          programa: u.programa,
+          completado: u.completado
         })));
         
         if (transformedUsers.length === 0) {
@@ -153,16 +149,14 @@ const AdminDashboard = () => {
         
         setStudents(transformedUsers);
         
-        // Calcular TODAS las estadísticas en el frontend para asegurar consistencia
+        // Calcular estadísticas desde los usuarios transformados
         const approvedStudents = transformedUsers.filter(student => student.completado).length;
         const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
-        
-        // Sumar todos los documentos pendientes/rechazados/vencidos de todos los usuarios
         const totalPendingDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosPendientes, 0);
         const totalRejectedDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosRechazados, 0);
         const totalExpiredDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosVencidos, 0);
         
-        console.log('📊 Estadísticas calculadas en frontend:', {
+        console.log('📊 Estadísticas calculadas desde usuarios transformados:', {
           totalUsuarios: transformedUsers.length,
           usuariosCompletos: approvedStudents,
           usuariosSinCargar: usersWithoutUploads,
@@ -180,7 +174,7 @@ const AdminDashboard = () => {
         });
         
       } catch (error) {
-        console.error('Error cargando datos:', error);
+        console.error('Error cargando datos del dashboard consolidado:', error);
         setError(error.message || 'Error cargando datos del dashboard');
         // En caso de error, usar datos vacíos
         setStudents([]);
@@ -205,17 +199,20 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
       try {
-        console.log('Recargando datos...');
+        console.log('Recargando datos del dashboard consolidado...');
         
-        // Obtener usuarios con estadísticas de documentos (no necesitamos estadísticas generales del backend)
-        const usersWithStats = await getUsersWithDocumentStats();
+        // Usar el nuevo servicio consolidado con refresh
+        const dashboardData = await refreshAdminDashboard();
+        
+        console.log('Respuesta del dashboard consolidado (refresh):', dashboardData);
         
         // Verificar que tenemos datos reales
-        if (!usersWithStats || usersWithStats.length === 0) {
+        if (!dashboardData || !dashboardData.users || dashboardData.users.length === 0) {
           throw new Error('No se encontraron usuarios en la base de datos');
         }
         
-        const transformedUsers = transformUsersForDashboard(usersWithStats);
+        // Los datos ya vienen transformados del servicio consolidado
+        const transformedUsers = dashboardData.users;
         
         if (transformedUsers.length === 0) {
           throw new Error('No se pudieron procesar los datos de usuarios');
@@ -223,14 +220,21 @@ const AdminDashboard = () => {
         
         setStudents(transformedUsers);
         
-        // Calcular TODAS las estadísticas en el frontend para asegurar consistencia
+        // Calcular estadísticas desde los usuarios transformados
         const approvedStudents = transformedUsers.filter(student => student.completado).length;
         const usersWithoutUploads = transformedUsers.filter(student => student.documentosSinCargar > 0).length;
-        
-        // Sumar todos los documentos pendientes/rechazados/vencidos de todos los usuarios
         const totalPendingDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosPendientes, 0);
         const totalRejectedDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosRechazados, 0);
         const totalExpiredDocuments = transformedUsers.reduce((sum, user) => sum + user.documentosVencidos, 0);
+        
+        console.log('📊 Estadísticas calculadas desde usuarios transformados:', {
+          totalUsuarios: transformedUsers.length,
+          usuariosCompletos: approvedStudents,
+          usuariosSinCargar: usersWithoutUploads,
+          documentosPendientes: totalPendingDocuments,
+          documentosRechazados: totalRejectedDocuments,
+          documentosVencidos: totalExpiredDocuments
+        });
         
         setStats({
           pendingDocuments: totalPendingDocuments,
@@ -240,13 +244,19 @@ const AdminDashboard = () => {
           expiredDocuments: totalExpiredDocuments
         });
         
-        console.log('✅ Datos recargados exitosamente desde la API:', {
+        console.log('✅ Datos recargados exitosamente desde el endpoint consolidado:', {
           totalUsuarios: transformedUsers.length,
-          usuariosConDatosReales: transformedUsers.filter(u => u.totalDocumentosRequeridos !== undefined).length
+          estadisticas: {
+            pendingDocuments: totalPendingDocuments,
+            approvedStudents: approvedStudents,
+            usersWithoutUploads: usersWithoutUploads,
+            rejectedDocuments: totalRejectedDocuments,
+            expiredDocuments: totalExpiredDocuments
+          }
         });
         
       } catch (error) {
-        console.error('Error recargando datos:', error);
+        console.error('Error recargando datos del dashboard consolidado:', error);
         setError(error.message || 'Error recargando datos del dashboard');
       } finally {
         setLoading(false);
