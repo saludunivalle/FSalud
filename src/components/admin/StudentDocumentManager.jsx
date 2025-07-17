@@ -1259,9 +1259,7 @@ const StudentDocumentManager = () => {
                                     >
                                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
                                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                                          {doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') 
-                                            ? doseInfo.doseNumber 
-                                            : `Dosis ${doseInfo.doseNumber}`}
+                                          {`Dosis ${doseInfo.doseNumber}`}
                                         </Typography>
                                         <StatusChip status={doseInfo.status} />
                                       </Box>
@@ -1322,7 +1320,7 @@ const StudentDocumentManager = () => {
                                                 startIcon={<CloudUpload fontSize="inherit" />}
                                                 onClick={() => handleOpenUploadModal({
                                                   id: doc.baseDoc.id_doc || doc.baseDoc.id_tipoDoc || doc.id,
-                                                  nombre: `${doc.nombre} - ${doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') ? doseInfo.doseNumber : `Dosis ${doseInfo.doseNumber}`}`,
+                                                  nombre: `${doc.nombre} - Dosis ${doseInfo.doseNumber}`,
                                                   vence: doc.vence,
                                                   tiempo_vencimiento: doc.baseDoc?.tiempo_vencimiento
                                                 })}
@@ -1356,7 +1354,7 @@ const StudentDocumentManager = () => {
                                                 size="small"
                                                 onClick={() => handleOpenModal({
                                                   ...doseInfo.userDoc,
-                                                  nombre: `${doc.nombre} - ${doc.baseDoc?.nombre_doc?.toLowerCase().includes('covid') ? doseInfo.doseNumber : `Dosis ${doseInfo.doseNumber}`}`,
+                                                  nombre: `${doc.nombre} - Dosis ${doseInfo.doseNumber}`,
                                                   vence: doc.vence
                                                 })}
                                                 sx={{ 

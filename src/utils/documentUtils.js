@@ -101,50 +101,34 @@ export const getDoseGroupStatus = (doseGroup, userDocuments, getDocumentStatus) 
   }
   
   const totalDoses = doseGroup.totalDoses || parseInt(doseGroup.baseDoc.dosis) || 1;
-  const isCovid = doseGroup.baseDoc?.nombre_doc?.toLowerCase().includes('covid');
   
-  // Para COVID, obtener todas las dosis cargadas sin importar el número
+  // Para todos los documentos con dosis múltiples, usar la misma lógica de agrupación y renderizado.
   let doseStatuses = [];
   
-  if (isCovid) {
-    // Para COVID, mostrar todas las dosis realmente cargadas
-    const covidDoses = userDocuments.filter(ud => ud.id_doc === doseGroup.baseDoc.id_doc);
-    doseStatuses = covidDoses.map((userDoc, index) => {
-      const status = getDocumentStatus(userDoc, doseGroup.baseDoc);
-      return {
-        doseNumber: userDoc.numero_dosis, // Para COVID puede ser texto
-        status,
-        userDoc,
-        originalDoc: doseGroup.baseDoc
-      };
-    });
-  } else {
-    // Para documentos regulares, verificar cada dosis numerada
-    doseStatuses = Array.from(
-      { length: totalDoses },
-      (_, i) => i + 1
-    ).map(doseNumber => {
-      const userDoc = userDocuments.find(ud => 
-        ud.id_doc === doseGroup.baseDoc.id_doc && 
-        parseInt(ud.numero_dosis) === doseNumber
-      );
-      const status = getDocumentStatus(userDoc, doseGroup.baseDoc);
-      
-      return {
-        doseNumber,
-        status,
-        userDoc,
-        originalDoc: doseGroup.baseDoc
-      };
-    });
-  }
+  doseStatuses = Array.from(
+    { length: totalDoses },
+    (_, i) => i + 1
+  ).map(doseNumber => {
+    const userDoc = userDocuments.find(ud => 
+      ud.id_doc === doseGroup.baseDoc.id_doc && 
+      parseInt(ud.numero_dosis) === doseNumber
+    );
+    const status = getDocumentStatus(userDoc, doseGroup.baseDoc);
+    
+    return {
+      doseNumber,
+      status,
+      userDoc,
+      originalDoc: doseGroup.baseDoc
+    };
+  });
 
   // Determinar estado consolidado
   const completedDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'aprobado').length;
   const uploadedDoses = doseStatuses.filter(d => d.userDoc && d.status?.toLowerCase() !== 'sin cargar').length; // Dosis que han sido cargadas
   const pendingDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'pendiente').length;
   const rejectedDoses = doseStatuses.filter(d => d.status?.toLowerCase() === 'rechazado').length;
-  const totalDosesCount = isCovid ? Math.max(doseStatuses.length, totalDoses) : totalDoses;
+  const totalDosesCount = totalDoses;
 
   // Extraer fechas más recientes de las dosis cargadas
   const uploadedDoseStatuses = doseStatuses.filter(d => d.userDoc);
@@ -219,7 +203,7 @@ export const getDoseGroupStatus = (doseGroup, userDocuments, getDocumentStatus) 
     uploadedDoses,
     totalDoses: totalDosesCount,
     doseStatuses,
-    progress: isCovid ? `${uploadedDoses} dosis` : `${uploadedDoses}/${totalDosesCount}`,
+    progress: `${uploadedDoses}/${totalDosesCount}`,
     latestUploadDate,
     latestExpeditionDate,
     latestExpirationDate,
