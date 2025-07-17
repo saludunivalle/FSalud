@@ -395,32 +395,6 @@ const AdminDocumentUploadModal = ({
                   />
                 </Grid>
               )}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Fecha de Carga"
-                  type="date"
-                  fullWidth
-                  value={uploadDate}
-                  onChange={(e) => setUploadDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  required
-                  inputProps={{ max: new Date().toISOString().split("T")[0] }}
-                  helperText="Fecha en la que se está cargando el documento."
-                  disabled={isApproved}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="URL del archivo"
-                  fullWidth
-                  value={fileUrl}
-                  onChange={e => setFileUrl(e.target.value)}
-                  required
-                  placeholder="https://drive.google.com/file/d/..."
-                  helperText="Pega aquí el enlace de tu documento en Google Drive."
-                  disabled={isApproved}
-                />
-              </Grid>
             </Grid>
           </Box>
         )}
