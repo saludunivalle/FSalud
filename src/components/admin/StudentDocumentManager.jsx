@@ -364,7 +364,7 @@ const StudentDocumentManager = () => {
           setError(error.message || 'Usuario no encontrado');
           // Si es un error 404, redirigir al dashboard después de un momento
           setTimeout(() => {
-            navigate('/admin/dashboard');
+            navigate('/dashboard');
           }, 3000);
         } else {
           setError(error.message || 'Error al cargar los datos del estudiante');
@@ -728,7 +728,7 @@ const StudentDocumentManager = () => {
           <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 3 }}>
             <IconButton
               size="small"
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/dashboard')}
               sx={{ 
                 color: 'primary.main', 
                 borderRadius: 1.5,
@@ -778,7 +778,7 @@ const StudentDocumentManager = () => {
             </Button>
             <Button 
               variant="outlined" 
-              onClick={() => navigate('/admin/dashboard')}
+              onClick={() => navigate('/dashboard')}
             >
               Volver al Dashboard
             </Button>
