@@ -292,8 +292,8 @@ const AdminDocumentUploadModal = ({
       <DialogContent dividers>
         <Box mb={3}>
           <Alert severity="info" sx={{ fontSize: '1rem', bgcolor: '#e3f2fd', color: '#1565c0', mb: 3 }}>
-            <strong>Nota:</strong> El archivo debe estar en la nube (Google Drive, Dropbox, etc.) y tener permisos de acceso para cualquiera con el enlace. <br />
-            <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace" y copia la URL aquí.
+          <strong>Nota:</strong>Sube tu archivo a Google Drive y asegura que tenga permisos de visualiación pública o para cualquiera con el enlace, y pega la URL aquí.<br />
+          <strong>¿Cómo hacerlo?</strong> En Google Drive: haz clic derecho en el archivo → "Obtener enlace" → selecciona "Cualquier persona con el enlace".
           </Alert>
         </Box>
         {isApproved ? (
@@ -411,13 +411,13 @@ const AdminDocumentUploadModal = ({
               </Grid>
               <Grid item xs={12}>
                 <TextField
-                  label="URL del archivo (Google Drive, Dropbox, etc.)"
+                  label="URL del archivo"
                   fullWidth
                   value={fileUrl}
                   onChange={e => setFileUrl(e.target.value)}
                   required
                   placeholder="https://drive.google.com/file/d/..."
-                  helperText="Pega aquí el enlace al archivo. Asegúrate de que el archivo tenga permisos de acceso para cualquiera con el enlace."
+                  helperText="Pega aquí el enlace de tu documento en Google Drive."
                   disabled={isApproved}
                 />
               </Grid>
