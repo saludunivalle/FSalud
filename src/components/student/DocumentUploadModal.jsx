@@ -39,7 +39,7 @@ const calculateExpirationDate = (expeditionDateStr, months) => {
   }
 };
 
-const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }) => {
+const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, existingDocument = null }) => {
   const theme = useTheme();
   const { user } = useUser();
   const { documentTypes, refreshDocuments, userDocuments, setUserDocuments } = useDocuments();
@@ -58,11 +58,21 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   // Base URL para API
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
 
+  // Determinar si es una actualización
+  const isUpdate = existingDocument && (existingDocument.ruta_archivo || existingDocument.fecha_cargue);
+
   useEffect(() => {
     if (open) {
-      setExpeditionDate('');
-      setExpirationDate(''); // Clear expiration date on open
-      setFileUrl('');
+      // Si es una actualización, pre-llenar los campos con datos existentes
+      if (isUpdate && existingDocument) {
+        setExpeditionDate(existingDocument.fecha_expedicion || '');
+        setExpirationDate(existingDocument.fecha_vencimiento || '');
+        setFileUrl(existingDocument.ruta_archivo || '');
+      } else {
+        setExpeditionDate('');
+        setExpirationDate(''); // Clear expiration date on open
+        setFileUrl('');
+      }
       setSuccess(false);
       setError('');
       setLoading(false);
@@ -86,7 +96,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
         setDocumentInfo(null);
       }
     }
-  }, [open, selectedDocumentId, documentTypes]);
+  }, [open, selectedDocumentId, documentTypes, isUpdate, existingDocument]);
 
   useEffect(() => {
     if (!fileUrl) {
@@ -255,7 +265,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {documentName ? `Cargar / Actualizar: ${documentName}` : 'Cargar Documento'}
+        {documentName ? `${isUpdate ? 'Actualizar' : 'Cargar'}: ${documentName}` : `${isUpdate ? 'Actualizar' : 'Cargar'} Documento`}
         <IconButton onClick={handleClose} aria-label="cerrar" disabled={loading || refreshing}>
           <CloseIcon />
         </IconButton>
@@ -397,7 +407,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Enviar URL'}
+            {loading ? 'Cargando...' : (isUpdate ? 'Actualizar URL' : 'Enviar URL')}
           </Button>
         </DialogActions>
       )}

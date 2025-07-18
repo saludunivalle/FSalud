@@ -297,10 +297,12 @@ const Dashboard = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState('');
   const [selectedDocumentName, setSelectedDocumentName] = useState('');
+  const [existingDocument, setExistingDocument] = useState(null);
   
   // State for controlling the dose upload modal
   const [doseModalOpen, setDoseModalOpen] = useState(false);
   const [selectedDoseGroup, setSelectedDoseGroup] = useState(null);
+  const [existingDoseDocument, setExistingDoseDocument] = useState(null);
 
   // State for controlling the view menu
   const [viewMenuAnchor, setViewMenuAnchor] = useState(null);
@@ -437,11 +439,13 @@ const Dashboard = () => {
     if (doc.isDoseGroup) {
       // Abrir modal de dosis - pasar el documento base del grupo
       setSelectedDoseGroup(doc.doseGroup.baseDoc);
+      setExistingDoseDocument(doc.userDocData); // Pasar el documento existente del usuario
       setDoseModalOpen(true);
     } else {
       // Abrir modal normal
       setSelectedDocumentId(doc.id_doc);
       setSelectedDocumentName(doc.name);
+      setExistingDocument(doc.userDocData); // Pasar el documento existente del usuario
       setUploadModalOpen(true);
     }
   };
@@ -449,12 +453,14 @@ const Dashboard = () => {
   // Function to close the upload modal
   const handleCloseUploadModal = () => {
     setUploadModalOpen(false);
+    setExistingDocument(null);
   };
 
   // Function to close the dose modal
   const handleCloseDoseModal = () => {
     setDoseModalOpen(false);
     setSelectedDoseGroup(null);
+    setExistingDoseDocument(null);
   };
 
   // Functions to handle view menu
@@ -694,6 +700,7 @@ const Dashboard = () => {
                                               ...doc.doseGroup.baseDoc,
                                               doseNumber: doseInfo.doseNumber
                                             });
+                                            setExistingDoseDocument(doseInfo.userDoc); // Pasar el documento existente del usuario
                                             setDoseModalOpen(true);
                                           }}
                                           sx={{ 
@@ -861,6 +868,7 @@ const Dashboard = () => {
               onClose={handleCloseUploadModal}
               selectedDocumentId={selectedDocumentId}
               documentName={selectedDocumentName}
+              existingDocument={existingDocument}
             />
 
             {/* Render the Dose Upload Modal */}
@@ -869,6 +877,7 @@ const Dashboard = () => {
               onClose={handleCloseDoseModal}
               document={selectedDoseGroup}
               documentName={selectedDoseGroup?.nombre_doc || ''}
+              existingDocument={existingDoseDocument}
             />
           </Box>
         </Container>

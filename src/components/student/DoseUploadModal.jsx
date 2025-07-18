@@ -34,7 +34,7 @@ import { useUser } from '../../context/UserContext';
 import { useDocuments } from '../../context/DocumentContext';
 import axios from 'axios';
 
-const DoseUploadModal = ({ open, onClose, document, documentName }) => {
+const DoseUploadModal = ({ open, onClose, document, documentName, existingDocument = null }) => {
   const theme = useTheme();
   const { user } = useUser();
   const { refreshDocuments, userDocuments, getDocumentStatus } = useDocuments();
@@ -50,16 +50,26 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
 
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
 
+  // Determinar si es una actualización
+  const isUpdate = existingDocument && (existingDocument.ruta_archivo || existingDocument.fecha_cargue);
+
   useEffect(() => {
     if (open) {
-      setExpeditionDate('');
-      setExpirationDate('');
-      setFileUrl('');
+      // Si es una actualización, pre-llenar los campos con datos existentes
+      if (isUpdate && existingDocument) {
+        setExpeditionDate(existingDocument.fecha_expedicion || '');
+        setExpirationDate(existingDocument.fecha_vencimiento || '');
+        setFileUrl(existingDocument.ruta_archivo || '');
+      } else {
+        setExpeditionDate('');
+        setExpirationDate('');
+        setFileUrl('');
+      }
       setSuccess(false);
       setError('');
       setLoading(false);
     }
-  }, [open]);
+  }, [open, isUpdate, existingDocument]);
 
   useEffect(() => {
     if (expeditionDate && document?.vence === 'si' && document?.tiempo_vencimiento) {
@@ -237,7 +247,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <VaccinesOutlined color="primary" />
           <Typography variant="h6">
-            {document?.nombre_doc} - Dosis {document.doseNumber}
+            {document?.nombre_doc} - Dosis {document.doseNumber} {isUpdate ? '(Actualizar)' : '(Cargar)'}
           </Typography>
         </Box>
         <IconButton onClick={handleClose} aria-label="cerrar" disabled={loading}>
@@ -372,7 +382,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Enviar URL'}
+            {loading ? 'Cargando...' : (isUpdate ? 'Actualizar URL' : 'Enviar URL')}
           </Button>
         </DialogActions>
       )}
