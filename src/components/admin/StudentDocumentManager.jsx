@@ -173,6 +173,7 @@ const StudentDocumentManager = () => {
   const [student, setStudent] = useState(null);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [selectedDocumentForUpload, setSelectedDocumentForUpload] = useState(null);
+  const [existingDocumentForUpdate, setExistingDocumentForUpdate] = useState(null);
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [error, setError] = useState(null);
   const [documentStats, setDocumentStats] = useState({
@@ -612,8 +613,8 @@ const StudentDocumentManager = () => {
     setSelectedDocument(null);
   };
 
-  const handleOpenUploadModal = (document) => {
-    console.log('DEBUG - Opening upload modal with:', { document, student });
+  const handleOpenUploadModal = (document, existingDoc = null) => {
+    console.log('DEBUG - Opening upload modal with:', { document, student, existingDoc });
     
     // Validar que tengamos la información necesaria
     if (!student || (!student.id && !student.id_usuario)) {
@@ -629,11 +630,13 @@ const StudentDocumentManager = () => {
     }
     
     setSelectedDocumentForUpload(document);
+    setExistingDocumentForUpdate(existingDoc);
     setUploadModalOpen(true);
   };
 
   const handleCloseUploadModal = () => {
     setSelectedDocumentForUpload(null);
+    setExistingDocumentForUpdate(null);
     setUploadModalOpen(false);
   };
 
@@ -1312,7 +1315,7 @@ const StudentDocumentManager = () => {
                                           )}
                                           
                                           {/* Botón para cargar documento si está sin cargar */}
-                                          {doseInfo.status === 'sin cargar' && (
+                                          {doseInfo.status === 'sin cargar' ? (
                                             <Tooltip title="Cargar documento">
                                               <Button
                                                 variant="contained"
@@ -1344,7 +1347,39 @@ const StudentDocumentManager = () => {
                                                 Cargar
                                               </Button>
                                             </Tooltip>
-                                          )}
+                                          ) : doseInfo.status !== 'aprobado' && doseInfo.status !== 'cumplido' ? (
+                                            <Tooltip title="Actualizar documento">
+                                              <Button
+                                                variant="contained"
+                                                size="small"
+                                                startIcon={<CloudUpload fontSize="inherit" />}
+                                                onClick={() => handleOpenUploadModal({
+                                                  id: doc.baseDoc.id_doc || doc.baseDoc.id_tipoDoc || doc.id,
+                                                  nombre: `${doc.nombre} - Dosis ${doseInfo.doseNumber}`,
+                                                  vence: doc.vence,
+                                                  tiempo_vencimiento: doc.baseDoc?.tiempo_vencimiento
+                                                }, doseInfo.userDoc)}
+                                                sx={{ 
+                                                  px: 1.5, 
+                                                  py: 0.4, 
+                                                  minWidth: 'auto',
+                                                  fontSize: '0.65rem',
+                                                  backgroundColor: '#1976d2',
+                                                  color: 'white',
+                                                  borderRadius: 1.5,
+                                                  boxShadow: '0 2px 6px rgba(25, 118, 210, 0.25)',
+                                                  '&:hover': {
+                                                    backgroundColor: '#1565c0',
+                                                    boxShadow: '0 3px 10px rgba(25, 118, 210, 0.35)',
+                                                    transform: 'translateY(-1px)',
+                                                  },
+                                                  transition: 'all 0.2s ease-in-out'
+                                                }}
+                                              >
+                                                Actualizar
+                                              </Button>
+                                            </Tooltip>
+                                          ) : null}
                                           
                                           {doseInfo.userDoc && (
                                             <Tooltip title="Revisar dosis">
@@ -1498,6 +1533,38 @@ const StudentDocumentManager = () => {
                                 Cargar archivo
                               </Button>
                             </Tooltip>
+                          ) : doc.estado !== 'aprobado' && doc.estado !== 'cumplido' ? (
+                            <Tooltip title="Actualizar documento para este usuario">
+                              <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<CloudUpload fontSize="small" />}
+                                onClick={() => handleOpenUploadModal({
+                                  id: doc.id_tipo_documento || doc.id,
+                                  nombre: doc.nombre,
+                                  vence: doc.vence,
+                                  tiempo_vencimiento: doc.tiempo_vencimiento || doc.tiempoVencimiento
+                                }, doc)}
+                                sx={{ 
+                                  px: 2, 
+                                  py: 0.75, 
+                                  minWidth: 'auto',
+                                  fontSize: '0.75rem',
+                                  backgroundColor: '#1976d2',
+                                  color: 'white',
+                                  borderRadius: 2,
+                                  boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+                                  '&:hover': {
+                                    backgroundColor: '#1565c0',
+                                    boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+                                    transform: 'translateY(-1px)',
+                                  },
+                                  transition: 'all 0.2s ease-in-out'
+                                }}
+                              >
+                                Actualizar
+                              </Button>
+                            </Tooltip>
                           ) : (
                             <Typography variant="caption" color="text.secondary">
                               —
@@ -1531,6 +1598,7 @@ const StudentDocumentManager = () => {
           selectedDocument={selectedDocumentForUpload}
           studentInfo={student}
           onDocumentUploaded={handleDocumentUploaded}
+          existingDocument={existingDocumentForUpdate}
         />
       )}
 

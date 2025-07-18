@@ -46,7 +46,8 @@ const AdminDocumentUploadModal = ({
   selectedDocument, 
   studentInfo,
   onDocumentUploaded,
-  isApproved = false
+  isApproved = false,
+  existingDocument = null // Nuevo prop para documento existente
 }) => {
   const theme = useTheme();
 
@@ -64,18 +65,29 @@ const AdminDocumentUploadModal = ({
   // Base URL para API
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
 
+  // Determinar si es una actualización
+  const isUpdate = existingDocument && (existingDocument.ruta_archivo || existingDocument.fecha_cargue);
+
   useEffect(() => {
     if (open) {
-      setExpeditionDate('');
-      setExpirationDate('');
-      setUploadDate(''); // Resetear fecha de carga
-      setFileUrl('');
+      // Si es una actualización, pre-llenar los campos con datos existentes
+      if (isUpdate && existingDocument) {
+        setExpeditionDate(existingDocument.fecha_expedicion || '');
+        setExpirationDate(existingDocument.fecha_vencimiento || '');
+        setFileUrl(existingDocument.ruta_archivo || '');
+        setUploadDate(new Date().toISOString().split('T')[0]); // Fecha actual para la actualización
+      } else {
+        setExpeditionDate('');
+        setExpirationDate('');
+        setFileUrl('');
+        setUploadDate('');
+      }
       setSuccess(false);
       setError('');
       setLoading(false);
       setRefreshing(false);
     }
-  }, [open]);
+  }, [open, isUpdate, existingDocument]);
 
   useEffect(() => {
     if (!fileUrl) {
@@ -264,7 +276,7 @@ const AdminDocumentUploadModal = ({
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Typography variant="h6">
-            Cargar Documento para Usuario
+            {isUpdate ? 'Actualizar Documento' : 'Cargar Documento'} para Usuario
           </Typography>
           {studentInfo && (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -395,6 +407,19 @@ const AdminDocumentUploadModal = ({
                   />
                 </Grid>
               )}
+              {/* Campo URL del archivo, igual que en DoseUploadModal.jsx */}
+              <Grid item xs={12}>
+                <TextField
+                  label="URL del archivo"
+                  fullWidth
+                  value={fileUrl}
+                  onChange={e => setFileUrl(e.target.value)}
+                  required
+                  placeholder="https://drive.google.com/file/d/..."
+                  helperText="Pega aquí el enlace de tu documento en Google Drive."
+                  disabled={isApproved}
+                />
+              </Grid>
             </Grid>
           </Box>
         )}
@@ -421,7 +446,7 @@ const AdminDocumentUploadModal = ({
               }
             }}
           >
-            {loading ? 'Cargando...' : 'Enviar URL'}
+            {loading ? 'Cargando...' : (isUpdate ? 'Actualizar URL' : 'Enviar URL')}
           </Button>
         </DialogActions>
       )}

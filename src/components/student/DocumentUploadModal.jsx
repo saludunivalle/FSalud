@@ -68,10 +68,14 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setLoading(false);
       setRefreshing(false);
 
+      // Depuración: mostrar selectedDocumentId y documentTypes
+      console.log('selectedDocumentId:', selectedDocumentId);
+      console.log('documentTypes:', documentTypes);
+
       if (selectedDocumentId && Array.isArray(documentTypes)) {
-        const doc = documentTypes.find(doc => doc.id_tipoDoc === selectedDocumentId);
+        // Comparar como string para evitar problemas de tipo
+        const doc = documentTypes.find(doc => String(doc.id_tipoDoc) === String(selectedDocumentId));
         if (doc) {
-          console.log("Document Type Info Found:", doc);
           setDocumentInfo(doc);
         } else {
           console.warn(`Document type info not found for ID: ${selectedDocumentId}`);
@@ -161,7 +165,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setError('La fecha de expedición es requerida.');
       return;
     }
-    if (documentInfo?.vence === 'si' && !expirationDate) {
+    if (documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si' && !expirationDate) {
       setError('La fecha de vencimiento es requerida para este documento.');
       return;
     }
@@ -182,7 +186,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       setError('La fecha de expedición no puede ser posterior a hoy.');
       return;
     }
-    if (expirationDate) {
+    if (expirationDate && documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si') {
       const expirationDateObj = new Date(expirationDate);
       if (expirationDateObj < expeditionDateObj) {
         setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición.');
@@ -198,7 +202,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
       userEmail: user.email || 'unknown@example.com',
       fileUrl,
     };
-    if (expirationDate && documentInfo?.vence === 'si') {
+    if (expirationDate && documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si') {
       data.expirationDate = expirationDate;
     }
     setLoading(true);
@@ -244,6 +248,9 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
 
   const userDoc = Array.isArray(userDocuments) ? userDocuments.find(doc => doc.id_doc === selectedDocumentId) : null;
   const isApproved = userDoc && (userDoc.estado?.toLowerCase() === 'aprobado' || userDoc.estado?.toLowerCase() === 'cumplido');
+
+  // Depuración: mostrar documentInfo en consola
+  console.log('DocumentUploadModal.jsx documentInfo:', documentInfo);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -335,14 +342,14 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName }
                 />
               </Grid>
 
-              {documentInfo?.vence === 'si' && (
+              {documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si' && (
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Fecha de Vencimiento"
                     type="date"
                     fullWidth
                     value={expirationDate}
-                    onChange={(e) => setExpirationDate(e.target.value)} // Add this
+                    onChange={(e) => setExpirationDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
                     required
                     inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}

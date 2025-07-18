@@ -317,7 +317,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                   disabled={isApproved}
                 />
               </Grid>
-              {document?.vence === 'si' && (
+              {document?.vence && document.vence.toLowerCase().replace('í', 'i') === 'si' && (
                 <Grid item xs={12} md={6}>
                   <TextField
                     label="Fecha de Vencimiento"
@@ -326,7 +326,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName }) => {
                     value={expirationDate}
                     onChange={(e) => setExpirationDate(e.target.value)}
                     InputLabelProps={{ shrink: true }}
-                    disabled={!!document?.tiempo_vencimiento || isApproved}
+                    disabled={isApproved}
                     helperText={document?.tiempo_vencimiento ? 
                       `Se calcula automáticamente (${document.tiempo_vencimiento} meses)` : 
                       'Opcional'}
