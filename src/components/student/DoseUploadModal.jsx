@@ -46,6 +46,11 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   
+  // Estados para validación visual
+  const [expeditionDateError, setExpeditionDateError] = useState(false);
+  const [expirationDateError, setExpirationDateError] = useState(false);
+  const [fileUrlError, setFileUrlError] = useState(false);
+  
   const fileInputRef = useRef(null);
 
   const BASE_URL = process.env.REACT_APP_API_URL || 'https://fsalud-server-saludunivalles-projects.vercel.app';
@@ -74,7 +79,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
   useEffect(() => {
     if (expeditionDate && document?.vence === 'si' && document?.tiempo_vencimiento) {
       const expDate = new Date(expeditionDate);
-      expDate.setMonth(expDate.getMonth() + parseInt(document.tiempo_vencimiento));
+      expDate.setDate(expDate.getDate() + (parseInt(document.tiempo_vencimiento) * 7)); // Convertir semanas a días
       setExpirationDate(expDate.toISOString().split('T')[0]);
     }
   }, [expeditionDate, document]);
@@ -159,22 +164,34 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
     e.preventDefault();
     setLoading(true);
     setError('');
+    
+    // Reset error states
+    setExpeditionDateError(false);
+    setExpirationDateError(false);
+    setFileUrlError(false);
+    
+    let hasErrors = false;
+    
     try {
       if (!expeditionDate) {
+        setExpeditionDateError(true);
         throw new Error('La fecha de expedición es requerida');
       }
       const expDate = new Date(expeditionDate);
       const today = new Date();
       if (expDate > today) {
+        setExpeditionDateError(true);
         throw new Error('La fecha de expedición no puede ser futura');
       }
       if (!fileUrl) {
+        setFileUrlError(true);
         throw new Error('Por favor, pega la URL del archivo');
       }
       // Validar que la URL sea válida
       try {
         new URL(fileUrl);
       } catch {
+        setFileUrlError(true);
         throw new Error('La URL del archivo no es válida');
       }
       // Construir el objeto de datos para JSON
@@ -189,7 +206,7 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
       };
       if (document.vence === 'si' && document.tiempo_vencimiento) {
         const expDate = new Date(expeditionDate);
-        expDate.setMonth(expDate.getMonth() + parseInt(document.tiempo_vencimiento));
+        expDate.setDate(expDate.getDate() + (parseInt(document.tiempo_vencimiento) * 7)); // Convertir semanas a días
         const formattedExpirationDate = expDate.toISOString().split('T')[0];
         data.expirationDate = formattedExpirationDate;
       }
@@ -320,9 +337,14 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
                   type="date"
                   fullWidth
                   value={expeditionDate}
-                  onChange={(e) => setExpeditionDate(e.target.value)}
+                  onChange={(e) => {
+                    setExpeditionDate(e.target.value);
+                    setExpeditionDateError(false);
+                  }}
                   InputLabelProps={{ shrink: true }}
                   required
+                  error={expeditionDateError}
+                  helperText={expeditionDateError ? 'La fecha de expedición es requerida' : ''}
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
                   disabled={isApproved}
                 />
@@ -334,12 +356,18 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
                     type="date"
                     fullWidth
                     value={expirationDate}
-                    onChange={(e) => setExpirationDate(e.target.value)}
+                    onChange={(e) => {
+                      setExpirationDate(e.target.value);
+                      setExpirationDateError(false);
+                    }}
                     InputLabelProps={{ shrink: true }}
+                    required
+                    error={expirationDateError}
+                    helperText={expirationDateError ? 'La fecha de vencimiento es requerida' : 
+                      (document?.tiempo_vencimiento ? 
+                        `Se calcula automáticamente (${document.tiempo_vencimiento} semanas)` : 
+                        '')}
                     disabled={isApproved}
-                    helperText={document?.tiempo_vencimiento ? 
-                      `Se calcula automáticamente (${document.tiempo_vencimiento} meses)` : 
-                      'Opcional'}
                     inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
                   />
                 </Grid>
@@ -349,10 +377,14 @@ const DoseUploadModal = ({ open, onClose, document, documentName, existingDocume
                   label="URL del archivo"
                   fullWidth
                   value={fileUrl}
-                  onChange={e => setFileUrl(e.target.value)}
+                  onChange={e => {
+                    setFileUrl(e.target.value);
+                    setFileUrlError(false);
+                  }}
                   required
+                  error={fileUrlError}
+                  helperText={fileUrlError ? 'La URL del archivo es requerida' : 'Pega aquí el enlace de tu documento en Google Drive.'}
                   placeholder="https://drive.google.com/file/d/..."
-                  helperText="Pega aquí el enlace de tu documento en Google Drive."
                   disabled={isApproved}
                 />
               </Grid>

@@ -53,6 +53,11 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
   const [documentInfo, setDocumentInfo] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   
+  // Estados para validación visual
+  const [expeditionDateError, setExpeditionDateError] = useState(false);
+  const [expirationDateError, setExpirationDateError] = useState(false);
+  const [fileUrlError, setFileUrlError] = useState(false);
+  
   const fileInputRef = useRef(null);
 
   // Base URL para API
@@ -111,6 +116,29 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
     return () => {};
   }, [fileUrl]);
 
+  // Helper function to determine if document should show expiration date
+  const shouldShowExpirationDate = () => {
+    if (documentInfo?.vence) {
+      return documentInfo.vence.toLowerCase() === 'sí' || documentInfo.vence.toLowerCase() === 'si';
+    }
+    // Fallback: check if document name contains keywords that suggest it expires
+    if (documentName) {
+      const lowerName = documentName.toLowerCase();
+      const expirationKeywords = ['vacuna', 'vacunación', 'certificado', 'carné', 'carnet', 'licencia', 'permiso', 'certificado médico'];
+      return expirationKeywords.some(keyword => lowerName.includes(keyword));
+    }
+    return false;
+  };
+
+  // Auto-calculate expiration date when expedition date changes
+  useEffect(() => {
+    if (expeditionDate && documentInfo?.tiempo_vencimiento) {
+      const expDate = new Date(expeditionDate);
+      expDate.setDate(expDate.getDate() + (parseInt(documentInfo.tiempo_vencimiento) * 7)); // Convertir semanas a días
+      setExpirationDate(expDate.toISOString().split('T')[0]);
+    }
+  }, [expeditionDate, documentInfo]);
+
   const handleFileChange = (event) => {
     // This function is no longer needed for file selection
     // const selectedFile = event.target.files[0];
@@ -167,38 +195,64 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
+    
+    // Reset error states
+    setExpeditionDateError(false);
+    setExpirationDateError(false);
+    setFileUrlError(false);
+    
+    let hasErrors = false;
+    
     if (!selectedDocumentId) {
       setError('Error interno: Falta el ID del tipo de documento.');
       return;
     }
+    
+    // Validar fecha de expedición (siempre requerida)
     if (!expeditionDate) {
+      setExpeditionDateError(true);
       setError('La fecha de expedición es requerida.');
-      return;
+      hasErrors = true;
     }
-    if (documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si' && !expirationDate) {
+    
+    // Validar fecha de vencimiento si el documento la requiere
+    if (documentInfo?.vence && (documentInfo.vence.toLowerCase() === 'sí' || documentInfo.vence.toLowerCase() === 'si') && !expirationDate) {
+      setExpirationDateError(true);
       setError('La fecha de vencimiento es requerida para este documento.');
-      return;
+      hasErrors = true;
     }
+    
+    // Validar URL del archivo (siempre requerida)
     if (!fileUrl) {
+      setFileUrlError(true);
       setError('Pega la URL del archivo.');
+      hasErrors = true;
+    } else {
+      try {
+        new URL(fileUrl);
+      } catch {
+        setFileUrlError(true);
+        setError('La URL del archivo no es válida.');
+        hasErrors = true;
+      }
+    }
+    
+    if (hasErrors) {
       return;
     }
-    try {
-      new URL(fileUrl);
-    } catch {
-      setError('La URL del archivo no es válida.');
-      return;
-    }
+    
     const expeditionDateObj = new Date(expeditionDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (expeditionDateObj > today) {
+      setExpeditionDateError(true);
       setError('La fecha de expedición no puede ser posterior a hoy.');
       return;
     }
-    if (expirationDate && documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si') {
+    if (expirationDate) {
       const expirationDateObj = new Date(expirationDate);
       if (expirationDateObj < expeditionDateObj) {
+        setExpirationDateError(true);
         setError('La fecha de vencimiento no puede ser anterior a la fecha de expedición.');
         return;
       }
@@ -212,8 +266,14 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
       userEmail: user.email || 'unknown@example.com',
       fileUrl,
     };
-    if (expirationDate && documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si') {
+    // Siempre incluir fecha de vencimiento si está presente o se puede calcular
+    if (expirationDate) {
       data.expirationDate = expirationDate;
+    } else if (documentInfo?.tiempo_vencimiento && expeditionDate) {
+      // Auto-calculate if not provided
+      const expDate = new Date(expeditionDate);
+      expDate.setDate(expDate.getDate() + (parseInt(documentInfo.tiempo_vencimiento) * 7)); // Convertir semanas a días
+      data.expirationDate = expDate.toISOString().split('T')[0];
     }
     setLoading(true);
     try {
@@ -261,6 +321,9 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
 
   // Depuración: mostrar documentInfo en consola
   console.log('DocumentUploadModal.jsx documentInfo:', documentInfo);
+  console.log('DocumentUploadModal.jsx documentInfo?.vence:', documentInfo?.vence);
+  console.log('DocumentUploadModal.jsx shouldShowExpiration:', shouldShowExpirationDate());
+  console.log('DocumentUploadModal.jsx documentName:', documentName);
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
@@ -329,9 +392,9 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
                   <Box display="flex" alignItems="center" sx={{ bgcolor: 'grey.100', p: 1, borderRadius: 1 }}>
                     <InfoIcon color="info" sx={{ mr: 1 }} />
                     <Typography variant="body2" color="text.secondary">
-                      {documentInfo.vence === 'si' && documentInfo.tiempo_vencimiento
-                        ? `Este documento vence. Vigencia aprox.: ${documentInfo.tiempo_vencimiento} meses.`
-                        : 'Este documento no requiere fecha de vencimiento.'}
+                      {documentInfo?.tiempo_vencimiento
+                        ? `Esta vacuna tiene una fecha de caducidad de ${documentInfo.tiempo_vencimiento} semanas.`
+                        : 'Fecha de vencimiento disponible.'}
                       <span style={{ marginLeft: '10px', fontStyle: 'italic' }}>(ID: {selectedDocumentId})</span>
                     </Typography>
                   </Box>
@@ -344,39 +407,55 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
                   type="date"
                   fullWidth
                   value={expeditionDate}
-                  onChange={(e) => setExpeditionDate(e.target.value)}
+                  onChange={(e) => {
+                    setExpeditionDate(e.target.value);
+                    setExpeditionDateError(false);
+                  }}
                   InputLabelProps={{ shrink: true }}
                   required
+                  error={expeditionDateError}
+                  helperText={expeditionDateError ? 'La fecha de expedición es requerida' : ''}
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
                   disabled={isApproved}
                 />
               </Grid>
 
-              {documentInfo?.vence && documentInfo.vence.toLowerCase().replace('í', 'i') === 'si' && (
-                <Grid item xs={12} md={6}>
-                  <TextField
-                    label="Fecha de Vencimiento"
-                    type="date"
-                    fullWidth
-                    value={expirationDate}
-                    onChange={(e) => setExpirationDate(e.target.value)}
-                    InputLabelProps={{ shrink: true }}
-                    required
-                    inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
-                    disabled={isApproved}
-                  />
-                </Grid>
-              )}
+              {/* Input de fecha de vencimiento - siempre visible */}
+              <Grid item xs={12} md={6}>
+                <TextField
+                  label="Fecha de Vencimiento"
+                  type="date"
+                  fullWidth
+                  value={expirationDate}
+                  onChange={(e) => {
+                    setExpirationDate(e.target.value);
+                    setExpirationDateError(false);
+                  }}
+                  InputLabelProps={{ shrink: true }}
+                  required={documentInfo?.vence && (documentInfo.vence.toLowerCase() === 'sí' || documentInfo.vence.toLowerCase() === 'si')}
+                  error={expirationDateError}
+                  helperText={expirationDateError ? 'La fecha de vencimiento es requerida' : 
+                    (documentInfo?.tiempo_vencimiento ? 
+                      `Se calcula automáticamente (${documentInfo.tiempo_vencimiento} semanas)` : 
+                      '')}
+                  disabled={isApproved}
+                  inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
+                />
+              </Grid>
 
               <Grid item xs={12}>
                 <TextField
                   label="URL del archivo"
                   fullWidth
                   value={fileUrl}
-                  onChange={e => setFileUrl(e.target.value)}
+                  onChange={e => {
+                    setFileUrl(e.target.value);
+                    setFileUrlError(false);
+                  }}
                   required
+                  error={fileUrlError}
+                  helperText={fileUrlError ? 'La URL del archivo es requerida' : 'Pega aquí el enlace de tu documento en Google Drive.'}
                   placeholder="https://drive.google.com/file/d/..."
-                  helperText="Pega aquí el enlace de tu documento en Google Drive."
                   disabled={isApproved}
                 />
               </Grid>

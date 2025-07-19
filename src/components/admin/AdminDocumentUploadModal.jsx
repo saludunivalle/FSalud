@@ -60,6 +60,11 @@ const AdminDocumentUploadModal = ({
   const [error, setError] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   
+  // Estados para validación visual
+  const [expeditionDateError, setExpeditionDateError] = useState(false);
+  const [expirationDateError, setExpirationDateError] = useState(false);
+  const [fileUrlError, setFileUrlError] = useState(false);
+  
   const fileInputRef = useRef(null);
 
   // Base URL para API
@@ -114,6 +119,14 @@ const AdminDocumentUploadModal = ({
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setError('');
+    
+    // Reset error states
+    setExpeditionDateError(false);
+    setExpirationDateError(false);
+    setFileUrlError(false);
+    
+    let hasErrors = false;
+    
     // Debug information
     console.log('DEBUG - handleSubmit called with:', {
       selectedDocument,
@@ -133,25 +146,34 @@ const AdminDocumentUploadModal = ({
       return;
     }
     if (!expeditionDate) {
+      setExpeditionDateError(true);
       setError('La fecha de expedición es requerida.');
-      return;
+      hasErrors = true;
     }
     if (selectedDocument?.vence && !expirationDate) {
+      setExpirationDateError(true);
       setError('La fecha de vencimiento es requerida para este documento.');
-      return;
+      hasErrors = true;
     }
     if (!fileUrl) {
+      setFileUrlError(true);
       setError('Pega la URL del archivo.');
-      return;
+      hasErrors = true;
+    } else {
+      try {
+        new URL(fileUrl);
+      } catch {
+        setFileUrlError(true);
+        setError('La URL del archivo no es válida.');
+        hasErrors = true;
+      }
     }
     if (!uploadDate) {
       setError('La fecha de carga es requerida.');
       return;
     }
-    try {
-      new URL(fileUrl);
-    } catch {
-      setError('La URL del archivo no es válida.');
+    
+    if (hasErrors) {
       return;
     }
     const expeditionDateObj = new Date(expeditionDate);
@@ -373,7 +395,7 @@ const AdminDocumentUploadModal = ({
                     </Box>
                     <Typography variant="body2" color="text.secondary">
                       {selectedDocument.vence 
-                        ? `Este documento vence. ${selectedDocument.tiempo_vencimiento ? `Vigencia aprox.: ${selectedDocument.tiempo_vencimiento} meses.` : ''}`
+                        ? `Esta vacuna tiene una fecha de caducidad de ${selectedDocument.tiempo_vencimiento || 'desconocido'} semanas.`
                         : 'Este documento no requiere fecha de vencimiento.'}
                     </Typography>
                   </Box>
@@ -385,9 +407,14 @@ const AdminDocumentUploadModal = ({
                   type="date"
                   fullWidth
                   value={expeditionDate}
-                  onChange={(e) => setExpeditionDate(e.target.value)}
+                  onChange={(e) => {
+                    setExpeditionDate(e.target.value);
+                    setExpeditionDateError(false);
+                  }}
                   InputLabelProps={{ shrink: true }}
                   required
+                  error={expeditionDateError}
+                  helperText={expeditionDateError ? 'La fecha de expedición es requerida' : ''}
                   inputProps={{ max: new Date().toISOString().split("T")[0] }}
                   disabled={isApproved}
                 />
@@ -399,9 +426,14 @@ const AdminDocumentUploadModal = ({
                     type="date"
                     fullWidth
                     value={expirationDate}
-                    onChange={(e) => setExpirationDate(e.target.value)}
+                    onChange={(e) => {
+                      setExpirationDate(e.target.value);
+                      setExpirationDateError(false);
+                    }}
                     InputLabelProps={{ shrink: true }}
                     required
+                    error={expirationDateError}
+                    helperText={expirationDateError ? 'La fecha de vencimiento es requerida' : ''}
                     inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
                     disabled={isApproved}
                   />
@@ -413,10 +445,14 @@ const AdminDocumentUploadModal = ({
                   label="URL del archivo"
                   fullWidth
                   value={fileUrl}
-                  onChange={e => setFileUrl(e.target.value)}
+                  onChange={e => {
+                    setFileUrl(e.target.value);
+                    setFileUrlError(false);
+                  }}
                   required
+                  error={fileUrlError}
+                  helperText={fileUrlError ? 'La URL del archivo es requerida' : 'Pega aquí el enlace de tu documento en Google Drive.'}
                   placeholder="https://drive.google.com/file/d/..."
-                  helperText="Pega aquí el enlace de tu documento en Google Drive."
                   disabled={isApproved}
                 />
               </Grid>
