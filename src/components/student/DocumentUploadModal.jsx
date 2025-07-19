@@ -216,7 +216,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
     }
     
     // Validar fecha de vencimiento si el documento la requiere
-    if (documentInfo?.vence && (documentInfo.vence.toLowerCase() === 'sí' || documentInfo.vence.toLowerCase() === 'si') && !expirationDate) {
+    if (documentInfo?.vence && !expirationDate) {
       setExpirationDateError(true);
       setError('La fecha de vencimiento es requerida para este documento.');
       hasErrors = true;
@@ -401,7 +401,7 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
                 </Grid>
               )}
 
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={documentInfo?.vence ? 6 : 12}>
                 <TextField
                   label="Fecha de Expedición"
                   type="date"
@@ -420,28 +420,30 @@ const DocumentUploadModal = ({ open, onClose, selectedDocumentId, documentName, 
                 />
               </Grid>
 
-              {/* Input de fecha de vencimiento - siempre visible */}
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Fecha de Vencimiento"
-                  type="date"
-                  fullWidth
-                  value={expirationDate}
-                  onChange={(e) => {
-                    setExpirationDate(e.target.value);
-                    setExpirationDateError(false);
-                  }}
-                  InputLabelProps={{ shrink: true }}
-                  required={documentInfo?.vence && (documentInfo.vence.toLowerCase() === 'sí' || documentInfo.vence.toLowerCase() === 'si')}
-                  error={expirationDateError}
-                  helperText={expirationDateError ? 'La fecha de vencimiento es requerida' : 
-                    (documentInfo?.tiempo_vencimiento ? 
-                      `Se calcula automáticamente (${documentInfo.tiempo_vencimiento} semanas)` : 
-                      '')}
-                  disabled={isApproved}
-                  inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
-                />
-              </Grid>
+              {/* Input de fecha de vencimiento - solo visible si el documento vence */}
+              {documentInfo?.vence && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Fecha de Vencimiento"
+                    type="date"
+                    fullWidth
+                    value={expirationDate}
+                    onChange={(e) => {
+                      setExpirationDate(e.target.value);
+                      setExpirationDateError(false);
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                    error={expirationDateError}
+                    helperText={expirationDateError ? 'La fecha de vencimiento es requerida' : 
+                      (documentInfo?.tiempo_vencimiento ? 
+                        `Se calcula automáticamente (${documentInfo.tiempo_vencimiento} semanas)` : 
+                        '')}
+                    disabled={isApproved}
+                    inputProps={{ min: expeditionDate || new Date().toISOString().split("T")[0] }}
+                  />
+                </Grid>
+              )}
 
               <Grid item xs={12}>
                 <TextField

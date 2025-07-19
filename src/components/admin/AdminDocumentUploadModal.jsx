@@ -53,7 +53,6 @@ const AdminDocumentUploadModal = ({
 
   const [expeditionDate, setExpeditionDate] = useState('');
   const [expirationDate, setExpirationDate] = useState('');
-  const [uploadDate, setUploadDate] = useState(''); // Nueva fecha de carga
   const [fileUrl, setFileUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -80,12 +79,10 @@ const AdminDocumentUploadModal = ({
         setExpeditionDate(existingDocument.fecha_expedicion || '');
         setExpirationDate(existingDocument.fecha_vencimiento || '');
         setFileUrl(existingDocument.ruta_archivo || '');
-        setUploadDate(new Date().toISOString().split('T')[0]); // Fecha actual para la actualización
       } else {
         setExpeditionDate('');
         setExpirationDate('');
         setFileUrl('');
-        setUploadDate('');
       }
       setSuccess(false);
       setError('');
@@ -168,10 +165,7 @@ const AdminDocumentUploadModal = ({
         hasErrors = true;
       }
     }
-    if (!uploadDate) {
-      setError('La fecha de carga es requerida.');
-      return;
-    }
+
     
     if (hasErrors) {
       return;
@@ -198,7 +192,7 @@ const AdminDocumentUploadModal = ({
     if (expirationDate && selectedDocument?.vence) {
       formData.append('expirationDate', expirationDate);
     }
-    formData.append('uploadDate', uploadDate); // Agregar fecha de carga
+
     formData.append('fileUrl', fileUrl);
     formData.append('userName', `${studentInfo.nombre} ${studentInfo.apellido}`);
     formData.append('userEmail', studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com');
@@ -230,7 +224,6 @@ const AdminDocumentUploadModal = ({
         documentType: selectedDocument.id,
         expeditionDate,
         expirationDate,
-        uploadDate, // Agregar fecha de carga
         fileUrl,
         userName: `${studentInfo.nombre} ${studentInfo.apellido}`,
         userEmail: studentInfo.email || studentInfo.correo_usuario || 'unknown@example.com',
